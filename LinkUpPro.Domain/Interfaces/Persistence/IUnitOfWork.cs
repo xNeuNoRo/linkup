@@ -3,7 +3,8 @@ using System.Data;
 namespace LinkUpPro.Domain.Interfaces.Persistence;
 
 /// <summary>
-/// Coordinates atomic persistence operations without exposing infrastructure details to Application.
+/// Interfaz que define el contrato para la unidad de trabajo, que maneja las transacciones
+/// y la persistencia de datos en el contexto del dominio.
 /// </summary>
 public interface IUnitOfWork : IDisposable, IAsyncDisposable
 {
@@ -11,7 +12,8 @@ public interface IUnitOfWork : IDisposable, IAsyncDisposable
 
     Task BeginTransactionAsync(
         CancellationToken cancellationToken = default,
-        IsolationLevel isolationLevel = IsolationLevel.ReadCommitted);
+        IsolationLevel isolationLevel = IsolationLevel.ReadCommitted
+    );
 
     Task CommitAsync(CancellationToken cancellationToken = default);
 

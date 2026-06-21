@@ -1,25 +1,23 @@
 namespace LinkUpPro.Domain.Exceptions;
 
 /// <summary>
-/// Base exception for business-rule violations inside the domain model.
+/// Excepción base para errores de dominio que pueden
+/// ocurrir durante la ejecución de comandos o reglas de negocio.
 /// </summary>
 public class DomainException : Exception
 {
     public DomainException(string message, string code)
-        : this(message, code, null, null)
-    {
-    }
+        : this(message, code, null, null) { }
 
     public DomainException(string message, string code, Exception? innerException)
-        : this(message, code, null, innerException)
-    {
-    }
+        : this(message, code, null, innerException) { }
 
     public DomainException(
         string message,
         string code,
         IReadOnlyDictionary<string, object?>? metadata,
-        Exception? innerException = null)
+        Exception? innerException = null
+    )
         : base(message, innerException)
     {
         if (string.IsNullOrWhiteSpace(code))

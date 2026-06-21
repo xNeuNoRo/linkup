@@ -4,13 +4,15 @@ using LinkUpPro.Domain.Exceptions;
 namespace LinkUpPro.Domain.ValueObjects;
 
 /// <summary>
-/// Represents a validated YouTube video identifier extracted from supported YouTube URLs.
+/// Representa un identificador de video de YouTube, con validación integrada para asegurar que el formato
+/// sea correcto, y métodos para generar URLs de visualización y embebido a partir del ID.
 /// </summary>
 public sealed record YouTubeVideoId
 {
     private static readonly Regex VideoIdRegex = new(
         @"^[A-Za-z0-9_-]{11}$",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        RegexOptions.Compiled | RegexOptions.CultureInvariant
+    );
 
     private YouTubeVideoId(string value)
     {
@@ -29,7 +31,8 @@ public sealed record YouTubeVideoId
         {
             throw new DomainException(
                 "Debe ingresar un enlace valido de YouTube.",
-                "Post.YouTubeUrlRequired");
+                "Post.YouTubeUrlRequired"
+            );
         }
 
         var candidate = ExtractVideoId(urlOrId.Trim());
@@ -38,7 +41,8 @@ public sealed record YouTubeVideoId
         {
             throw new DomainException(
                 "Debe ingresar un enlace valido de YouTube.",
-                "Post.InvalidYouTubeUrl");
+                "Post.InvalidYouTubeUrl"
+            );
         }
 
         return new YouTubeVideoId(candidate);
@@ -62,7 +66,10 @@ public sealed record YouTubeVideoId
 
         if (host is "youtu.be" or "www.youtu.be")
         {
-            return uri.AbsolutePath.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
+            return uri.AbsolutePath.Trim('/')
+                    .Split('/', StringSplitOptions.RemoveEmptyEntries)
+                    .FirstOrDefault()
+                ?? string.Empty;
         }
 
         if (!host.EndsWith("youtube.com", StringComparison.OrdinalIgnoreCase))

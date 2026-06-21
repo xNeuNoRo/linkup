@@ -1,7 +1,8 @@
 namespace LinkUpPro.Domain.Enums;
 
 /// <summary>
-/// Defines the direction used to place a Battleship ship from its starting coordinate.
+/// Enum que representa las direcciones en las que un barco
+/// puede ser colocado en el juego de Battleship.
 /// </summary>
 public enum ShipDirection
 {

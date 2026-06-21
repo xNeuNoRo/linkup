@@ -4,13 +4,15 @@ using LinkUpPro.Domain.Exceptions;
 namespace LinkUpPro.Domain.ValueObjects;
 
 /// <summary>
-/// Immutable Battleship ship placement defined by start coordinate, direction and size.
+/// Representa la colocación de un barco en el tablero de Battleship, incluyendo su posición inicial,
+/// dirección y tamaño, con métodos para obtener las celdas ocupadas y verificar solapamientos con otras colocaciones.
 /// </summary>
 public sealed record ShipPlacement(Coordinates Start, ShipDirection Direction, ShipSize Size)
 {
     public int Length => (int)Size;
 
-    public IReadOnlyList<Coordinates> GetOccupiedCells() => Start.GetCellsTowards(Direction, Length);
+    public IReadOnlyList<Coordinates> GetOccupiedCells() =>
+        Start.GetCellsTowards(Direction, Length);
 
     public static ShipPlacement Create(Coordinates start, ShipDirection direction, ShipSize size)
     {
@@ -18,14 +20,16 @@ public sealed record ShipPlacement(Coordinates Start, ShipDirection Direction, S
         {
             throw new GameRuleException(
                 "El tamano del barco seleccionado no es valido.",
-                "Battleship.InvalidShipSize");
+                "Battleship.InvalidShipSize"
+            );
         }
 
         if (!Enum.IsDefined(direction))
         {
             throw new GameRuleException(
                 "La direccion seleccionada no es valida.",
-                "Battleship.InvalidShipDirection");
+                "Battleship.InvalidShipDirection"
+            );
         }
 
         var placement = new ShipPlacement(start, direction, size);

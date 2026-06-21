@@ -1,7 +1,7 @@
 namespace LinkUpPro.Domain.Enums;
 
 /// <summary>
-/// Defines the multimedia type attached to a post.
+/// Enum que representa los tipos de contenido que un usuario puede compartir en una publicación.
 /// </summary>
 public enum PostContentType
 {

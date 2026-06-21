@@ -1,9 +1,9 @@
 namespace LinkUpPro.Domain.Common;
 
 /// <summary>
-/// Represents a paginated set of items returned by read use cases.
+/// Representa un resultado paginado de una consulta.
 /// </summary>
-/// <typeparam name="T">Item type.</typeparam>
+/// <typeparam name="T">El tipo de los elementos.</typeparam>
 public sealed record PagedResult<T>(
     IReadOnlyCollection<T> Items,
     int TotalCount,

@@ -6,9 +6,7 @@ public sealed class Comment : AuditableBaseEntity<long>
 {
     public const string DeletedCommentText = "Este comentario fue eliminado.";
 
-    private Comment()
-    {
-    }
+    private Comment() { }
 
     public long PostId { get; private set; }
 
@@ -25,7 +23,8 @@ public sealed class Comment : AuditableBaseEntity<long>
         string authorId,
         string content,
         long? parentCommentId = null,
-        DateTimeOffset? createdAt = null)
+        DateTimeOffset? createdAt = null
+    )
     {
         var errors = Validate(postId, authorId, content, parentCommentId);
 
@@ -34,15 +33,17 @@ public sealed class Comment : AuditableBaseEntity<long>
             return Result<Comment>.Failure(errors);
         }
 
-        return Result<Comment>.Success(new Comment
-        {
-            PostId = postId,
-            AuthorId = authorId.Trim(),
-            ParentCommentId = parentCommentId,
-            Content = content.Trim(),
-            IsEdited = false,
-            CreatedAt = createdAt ?? DateTimeOffset.UtcNow,
-        });
+        return Result<Comment>.Success(
+            new Comment
+            {
+                PostId = postId,
+                AuthorId = authorId.Trim(),
+                ParentCommentId = parentCommentId,
+                Content = content.Trim(),
+                IsEdited = false,
+                CreatedAt = createdAt ?? DateTimeOffset.UtcNow,
+            }
+        );
     }
 
     public Result Edit(string content, DateTimeOffset? updatedAt = null)
@@ -75,32 +76,53 @@ public sealed class Comment : AuditableBaseEntity<long>
 
     public bool CanBeEditedBy(string userId) => !IsDeleted && AuthorId == userId;
 
-    private static List<DomainError> Validate(long postId, string authorId, string content, long? parentCommentId)
+    private static List<DomainError> Validate(
+        long postId,
+        string authorId,
+        string content,
+        long? parentCommentId
+    )
     {
         var errors = new List<DomainError>();
 
         if (postId <= 0)
         {
-            errors.Add(new DomainError("Comment.InvalidPost", "La publicacion relacionada no es valida."));
+            errors.Add(
+                new DomainError("Comment.InvalidPost", "La publicacion relacionada no es valida.")
+            );
         }
 
         if (string.IsNullOrWhiteSpace(authorId))
         {
-            errors.Add(new DomainError("Comment.AuthorRequired", "El autor del comentario es requerido."));
+            errors.Add(
+                new DomainError("Comment.AuthorRequired", "El autor del comentario es requerido.")
+            );
         }
 
         if (parentCommentId <= 0)
         {
-            errors.Add(new DomainError("Comment.InvalidParent", "El comentario padre no es valido."));
+            errors.Add(
+                new DomainError("Comment.InvalidParent", "El comentario padre no es valido.")
+            );
         }
 
         if (string.IsNullOrWhiteSpace(content))
         {
-            errors.Add(new DomainError("Comment.ContentRequired", "Debe ingresar el contenido del comentario."));
+            errors.Add(
+                new DomainError(
+                    "Comment.ContentRequired",
+                    "Debe ingresar el contenido del comentario."
+                )
+            );
         }
         else if (content.Trim().Length > DomainConstants.MaxCommentContentLength)
         {
-            errors.Add(new DomainError("Comment.ContentTooLong", "El comentario no puede superar los 500 caracteres."));
+            errors.Add(
+                new DomainError(
+                    "Comment.ContentTooLong",
+                    "El comentario no puede superar los 500 caracteres."
+                )
+            );
         }
 
         return errors;

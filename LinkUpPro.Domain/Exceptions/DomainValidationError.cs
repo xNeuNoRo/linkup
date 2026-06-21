@@ -1,9 +1,9 @@
 namespace LinkUpPro.Domain.Exceptions;
 
 /// <summary>
-/// Represents a single field-level domain validation error.
+/// Representa un error de validación en el dominio.
 /// </summary>
-/// <param name="PropertyName">Property or rule name that failed.</param>
-/// <param name="Message">User-safe validation message.</param>
-/// <param name="Code">Stable validation code.</param>
+/// <param name="PropertyName">Nombre de la propiedad que falló la validación.</param>
+/// <param name="Message">Mensaje de validación para el usuario.</param>
+/// <param name="Code">Código de validación.</param>
 public sealed record DomainValidationError(string PropertyName, string Message, string Code);

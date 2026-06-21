@@ -1,7 +1,8 @@
 namespace LinkUpPro.Domain.Enums;
 
 /// <summary>
-/// Defines who can view a post.
+/// Enum que representa los niveles de privacidad que un usuario puede 
+/// configurar para su perfil o publicaciones.
 /// </summary>
 public enum PrivacyLevel
 {

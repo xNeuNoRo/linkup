@@ -3,7 +3,7 @@ using System.Collections.ObjectModel;
 namespace LinkUpPro.Domain.Common;
 
 /// <summary>
-/// Centralized functional constants extracted from the LinkUp Pro requirements.
+/// Constantes centralizadas de todas las reglas de negocio
 /// </summary>
 public static class DomainConstants
 {
@@ -33,13 +33,8 @@ public static class DomainConstants
     public const long MaxImageFileSizeBytes = 5 * 1024 * 1024;
 
     public static readonly IReadOnlySet<string> AllowedImageExtensions = new ReadOnlySet<string>(
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ".jpg",
-            ".jpeg",
-            ".png",
-            ".webp",
-        });
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".webp" }
+    );
 
     public static readonly IReadOnlyList<int> RequiredBattleshipFleetSizes = Array.AsReadOnly([
         5,

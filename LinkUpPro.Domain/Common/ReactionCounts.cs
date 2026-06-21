@@ -1,7 +1,7 @@
 namespace LinkUpPro.Domain.Common;
 
 /// <summary>
-/// Aggregated post reaction counters.
+/// Representa los conteos de reacciones (me gusta y no me gusta) para una publicación o comentario.
 /// </summary>
 public sealed record ReactionCounts(int Likes, int Dislikes)
 {

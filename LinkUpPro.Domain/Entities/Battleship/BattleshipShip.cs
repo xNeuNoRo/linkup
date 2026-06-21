@@ -6,9 +6,7 @@ namespace LinkUpPro.Domain.Entities.Battleship;
 
 public sealed class BattleshipShip : BaseEntity<long>
 {
-    private BattleshipShip()
-    {
-    }
+    private BattleshipShip() { }
 
     public long GameId { get; private set; }
 
@@ -23,11 +21,13 @@ public sealed class BattleshipShip : BaseEntity<long>
     public ShipDirection Direction { get; private set; }
 
     public bool IsSunk { get; private set; }
+
     public static Result<BattleshipShip> Place(
         long gameId,
         string playerId,
         ShipPlacement placement,
-        DateTimeOffset? createdAt = null)
+        DateTimeOffset? createdAt = null
+    )
     {
         ArgumentNullException.ThrowIfNull(placement);
 
@@ -35,12 +35,16 @@ public sealed class BattleshipShip : BaseEntity<long>
 
         if (gameId < 0)
         {
-            errors.Add(new DomainError("Battleship.InvalidGame", "La partida seleccionada no es valida."));
+            errors.Add(
+                new DomainError("Battleship.InvalidGame", "La partida seleccionada no es valida.")
+            );
         }
 
         if (string.IsNullOrWhiteSpace(playerId))
         {
-            errors.Add(new DomainError("Battleship.PlayerRequired", "El jugador del barco es requerido."));
+            errors.Add(
+                new DomainError("Battleship.PlayerRequired", "El jugador del barco es requerido.")
+            );
         }
 
         if (errors.Count > 0)
@@ -48,17 +52,19 @@ public sealed class BattleshipShip : BaseEntity<long>
             return Result<BattleshipShip>.Failure(errors);
         }
 
-        return Result<BattleshipShip>.Success(new BattleshipShip
-        {
-            GameId = gameId,
-            PlayerId = playerId.Trim(),
-            Size = placement.Size,
-            StartX = placement.Start.X,
-            StartY = placement.Start.Y,
-            Direction = placement.Direction,
-            IsSunk = false,
-            CreatedAt = createdAt ?? DateTimeOffset.UtcNow,
-        });
+        return Result<BattleshipShip>.Success(
+            new BattleshipShip
+            {
+                GameId = gameId,
+                PlayerId = playerId.Trim(),
+                Size = placement.Size,
+                StartX = placement.Start.X,
+                StartY = placement.Start.Y,
+                Direction = placement.Direction,
+                IsSunk = false,
+                CreatedAt = createdAt ?? DateTimeOffset.UtcNow,
+            }
+        );
     }
 
     public IReadOnlyList<Coordinates> GetOccupiedCells() =>
@@ -66,7 +72,10 @@ public sealed class BattleshipShip : BaseEntity<long>
 
     public bool Occupies(Coordinates coordinates) => GetOccupiedCells().Contains(coordinates);
 
-    public bool RefreshSunkState(IEnumerable<BattleshipAttack> attacks, DateTimeOffset? updatedAt = null)
+    public bool RefreshSunkState(
+        IEnumerable<BattleshipAttack> attacks,
+        DateTimeOffset? updatedAt = null
+    )
     {
         ArgumentNullException.ThrowIfNull(attacks);
 

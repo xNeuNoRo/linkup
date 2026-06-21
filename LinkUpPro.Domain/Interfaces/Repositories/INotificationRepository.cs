@@ -8,21 +8,31 @@ public interface INotificationRepository : IGenericRepository<Notification, long
     Task<IReadOnlyCollection<Notification>> GetByRecipientAsync(
         string recipientId,
         QueryOptions<Notification>? options = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 
     Task<IReadOnlyCollection<Notification>> GetRecentAsync(
         string recipientId,
         int count,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 
-    Task<int> GetUnreadCountAsync(string recipientId, CancellationToken cancellationToken = default);
+    Task<int> GetUnreadCountAsync(
+        string recipientId,
+        CancellationToken cancellationToken = default
+    );
 
     Task<Notification?> GetForRecipientAsync(
         long notificationId,
         string recipientId,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 
-    Task MarkAsReadAsync(long notificationId, string recipientId, CancellationToken cancellationToken = default);
+    Task MarkAsReadAsync(
+        long notificationId,
+        string recipientId,
+        CancellationToken cancellationToken = default
+    );
 
     Task MarkAllAsReadAsync(string recipientId, CancellationToken cancellationToken = default);
 }

@@ -3,7 +3,7 @@ using LinkUpPro.Domain.Common;
 namespace LinkUpPro.Domain.Settings;
 
 /// <summary>
-/// Battleship game settings derived from the functional document.
+/// Configuración relacionada con las reglas y parámetros del juego de Battleship
 /// </summary>
 public sealed class GameSettings
 {
@@ -11,15 +11,16 @@ public sealed class GameSettings
 
     public int BoardSize { get; init; } = DomainConstants.BoardSize;
 
-    public int TurnTimeoutHours { get; init; } = (int)DomainConstants.BattleshipTurnTimeout.TotalHours;
+    public int TurnTimeoutHours { get; init; } =
+        (int)DomainConstants.BattleshipTurnTimeout.TotalHours;
 
-    public IReadOnlyList<int> RequiredFleetSizes { get; init; } = DomainConstants.RequiredBattleshipFleetSizes;
+    public IReadOnlyList<int> RequiredFleetSizes { get; init; } =
+        DomainConstants.RequiredBattleshipFleetSizes;
 
     public TimeSpan TurnTimeout => TimeSpan.FromHours(TurnTimeoutHours);
 
     public bool IsValidCoordinate(int x, int y) =>
-        x >= 0 && x < BoardSize &&
-        y >= 0 && y < BoardSize;
+        x >= 0 && x < BoardSize && y >= 0 && y < BoardSize;
 
     public bool HasValidFleetComposition(IEnumerable<int> fleetSizes)
     {

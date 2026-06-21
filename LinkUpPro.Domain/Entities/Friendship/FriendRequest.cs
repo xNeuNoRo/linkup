@@ -5,9 +5,7 @@ namespace LinkUpPro.Domain.Entities.Friendship;
 
 public sealed class FriendRequest : BaseEntity<long>
 {
-    private FriendRequest()
-    {
-    }
+    private FriendRequest() { }
 
     public string SenderId { get; private set; } = null!;
 
@@ -20,7 +18,12 @@ public sealed class FriendRequest : BaseEntity<long>
     public DateTimeOffset? RespondedAt { get; private set; }
 
     public bool IsVisibleForSender { get; private set; }
-    public static Result<FriendRequest> Create(string senderId, string receiverId, DateTimeOffset? sentAt = null)
+
+    public static Result<FriendRequest> Create(
+        string senderId,
+        string receiverId,
+        DateTimeOffset? sentAt = null
+    )
     {
         var errors = ValidateUsers(senderId, receiverId);
 
@@ -31,20 +34,26 @@ public sealed class FriendRequest : BaseEntity<long>
 
         var date = sentAt ?? DateTimeOffset.UtcNow;
 
-        return Result<FriendRequest>.Success(new FriendRequest
-        {
-            SenderId = senderId.Trim(),
-            ReceiverId = receiverId.Trim(),
-            Status = FriendRequestStatus.Pending,
-            SentAt = date,
-            CreatedAt = date,
-            IsVisibleForSender = true,
-        });
+        return Result<FriendRequest>.Success(
+            new FriendRequest
+            {
+                SenderId = senderId.Trim(),
+                ReceiverId = receiverId.Trim(),
+                Status = FriendRequestStatus.Pending,
+                SentAt = date,
+                CreatedAt = date,
+                IsVisibleForSender = true,
+            }
+        );
     }
 
     public Result Accept(string receiverId, DateTimeOffset? respondedAt = null)
     {
-        var authorization = EnsureCanBeRespondedBy(receiverId, "FriendRequest.AcceptNotAllowed", "No posee permisos para aceptar esta solicitud.");
+        var authorization = EnsureCanBeRespondedBy(
+            receiverId,
+            "FriendRequest.AcceptNotAllowed",
+            "No posee permisos para aceptar esta solicitud."
+        );
 
         if (authorization.IsFailure)
         {
@@ -57,7 +66,11 @@ public sealed class FriendRequest : BaseEntity<long>
 
     public Result Reject(string receiverId, DateTimeOffset? respondedAt = null)
     {
-        var authorization = EnsureCanBeRespondedBy(receiverId, "FriendRequest.RejectNotAllowed", "No posee permisos para rechazar esta solicitud.");
+        var authorization = EnsureCanBeRespondedBy(
+            receiverId,
+            "FriendRequest.RejectNotAllowed",
+            "No posee permisos para rechazar esta solicitud."
+        );
 
         if (authorization.IsFailure)
         {
@@ -72,16 +85,22 @@ public sealed class FriendRequest : BaseEntity<long>
     {
         if (SenderId != senderId)
         {
-            return Result.Failure(new DomainError(
-                "FriendRequest.CancelNotAllowed",
-                "No posee permisos para cancelar esta solicitud."));
+            return Result.Failure(
+                new DomainError(
+                    "FriendRequest.CancelNotAllowed",
+                    "No posee permisos para cancelar esta solicitud."
+                )
+            );
         }
 
         if (Status != FriendRequestStatus.Pending)
         {
-            return Result.Failure(new DomainError(
-                "FriendRequest.NotPending",
-                "Esta solicitud ya no se encuentra disponible."));
+            return Result.Failure(
+                new DomainError(
+                    "FriendRequest.NotPending",
+                    "Esta solicitud ya no se encuentra disponible."
+                )
+            );
         }
 
         SetStatus(FriendRequestStatus.Canceled, canceledAt);
@@ -92,16 +111,22 @@ public sealed class FriendRequest : BaseEntity<long>
     {
         if (SenderId != senderId)
         {
-            return Result.Failure(new DomainError(
-                "FriendRequest.HideNotAllowed",
-                "No posee permisos para eliminar esta solicitud del historial."));
+            return Result.Failure(
+                new DomainError(
+                    "FriendRequest.HideNotAllowed",
+                    "No posee permisos para eliminar esta solicitud del historial."
+                )
+            );
         }
 
         if (Status is not (FriendRequestStatus.Accepted or FriendRequestStatus.Rejected))
         {
-            return Result.Failure(new DomainError(
-                "FriendRequest.InvalidStatusForHistoryHide",
-                "Solo las solicitudes aceptadas o rechazadas pueden eliminarse del historial."));
+            return Result.Failure(
+                new DomainError(
+                    "FriendRequest.InvalidStatusForHistoryHide",
+                    "Solo las solicitudes aceptadas o rechazadas pueden eliminarse del historial."
+                )
+            );
         }
 
         if (!IsVisibleForSender)
@@ -116,17 +141,20 @@ public sealed class FriendRequest : BaseEntity<long>
     }
 
     public bool IsBetween(string firstUserId, string secondUserId) =>
-        (SenderId == firstUserId && ReceiverId == secondUserId) ||
-        (SenderId == secondUserId && ReceiverId == firstUserId);
+        (SenderId == firstUserId && ReceiverId == secondUserId)
+        || (SenderId == secondUserId && ReceiverId == firstUserId);
 
-    public bool CanBeAcceptedBy(string userId) => ReceiverId == userId && Status == FriendRequestStatus.Pending;
+    public bool CanBeAcceptedBy(string userId) =>
+        ReceiverId == userId && Status == FriendRequestStatus.Pending;
 
     public bool CanBeRejectedBy(string userId) => CanBeAcceptedBy(userId);
 
-    public bool CanBeCanceledBy(string userId) => SenderId == userId && Status == FriendRequestStatus.Pending;
+    public bool CanBeCanceledBy(string userId) =>
+        SenderId == userId && Status == FriendRequestStatus.Pending;
 
     public bool CanBeHiddenBy(string userId) =>
-        SenderId == userId && Status is FriendRequestStatus.Accepted or FriendRequestStatus.Rejected;
+        SenderId == userId
+        && Status is FriendRequestStatus.Accepted or FriendRequestStatus.Rejected;
 
     private Result EnsureCanBeRespondedBy(string receiverId, string code, string message)
     {
@@ -137,9 +165,12 @@ public sealed class FriendRequest : BaseEntity<long>
 
         if (Status != FriendRequestStatus.Pending)
         {
-            return Result.Failure(new DomainError(
-                "FriendRequest.NotPending",
-                "Esta solicitud ya no se encuentra disponible."));
+            return Result.Failure(
+                new DomainError(
+                    "FriendRequest.NotPending",
+                    "Esta solicitud ya no se encuentra disponible."
+                )
+            );
         }
 
         return Result.Success();
@@ -159,17 +190,32 @@ public sealed class FriendRequest : BaseEntity<long>
 
         if (string.IsNullOrWhiteSpace(senderId))
         {
-            errors.Add(new DomainError("FriendRequest.SenderRequired", "El emisor de la solicitud es requerido."));
+            errors.Add(
+                new DomainError(
+                    "FriendRequest.SenderRequired",
+                    "El emisor de la solicitud es requerido."
+                )
+            );
         }
 
         if (string.IsNullOrWhiteSpace(receiverId))
         {
-            errors.Add(new DomainError("FriendRequest.ReceiverRequired", "El receptor de la solicitud es requerido."));
+            errors.Add(
+                new DomainError(
+                    "FriendRequest.ReceiverRequired",
+                    "El receptor de la solicitud es requerido."
+                )
+            );
         }
 
         if (!string.IsNullOrWhiteSpace(senderId) && senderId.Trim() == receiverId?.Trim())
         {
-            errors.Add(new DomainError("FriendRequest.SelfRequestNotAllowed", "Un usuario no puede enviarse una solicitud a si mismo."));
+            errors.Add(
+                new DomainError(
+                    "FriendRequest.SelfRequestNotAllowed",
+                    "Un usuario no puede enviarse una solicitud a si mismo."
+                )
+            );
         }
 
         return errors;

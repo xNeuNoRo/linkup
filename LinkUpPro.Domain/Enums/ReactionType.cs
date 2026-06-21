@@ -1,7 +1,8 @@
 namespace LinkUpPro.Domain.Enums;
 
 /// <summary>
-/// Defines the supported reaction types for posts.
+/// Enum que representa los tipos de reacciones que un
+/// usuario puede hacer a una publicación o comentario.
 /// </summary>
 public enum ReactionType
 {

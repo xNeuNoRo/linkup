@@ -13,16 +13,19 @@ public interface IGenericRepository<T, TId>
 {
     Task<IReadOnlyCollection<T>> GetAllAsync(
         QueryOptions<T>? options = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 
     Task<T?> GetFirstOrDefaultAsync(
         QueryOptions<T> options,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 
     Task<T?> GetByIdAsync(
         TId id,
         CancellationToken cancellationToken = default,
-        params Expression<Func<T, object>>[] includes);
+        params Expression<Func<T, object>>[] includes
+    );
 
     Task AddAsync(T entity, CancellationToken cancellationToken = default);
 
@@ -32,9 +35,11 @@ public interface IGenericRepository<T, TId>
 
     Task<bool> ExistsAsync(
         Expression<Func<T, bool>> predicate,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 
     Task<int> CountAsync(
         Expression<Func<T, bool>>? predicate = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 }

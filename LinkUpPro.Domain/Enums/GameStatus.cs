@@ -1,7 +1,7 @@
 namespace LinkUpPro.Domain.Enums;
 
 /// <summary>
-/// Defines the lifecycle states of a Battleship game.
+/// Enum que representa el estado de un juego de Battleship entre dos usuarios.
 /// </summary>
 public enum GameStatus
 {

@@ -1,7 +1,8 @@
 namespace LinkUpPro.Domain.Settings;
 
 /// <summary>
-/// SMTP settings used by the email infrastructure service.
+/// Configuración relacionada con el envío de correos electrónicos,
+/// como notificaciones de registro y restablecimiento de contraseña.
 /// </summary>
 public sealed class MailSettings
 {
@@ -22,9 +23,9 @@ public sealed class MailSettings
     public bool UseSsl { get; init; } = true;
 
     public bool IsConfigured() =>
-        !string.IsNullOrWhiteSpace(EmailFrom) &&
-        !string.IsNullOrWhiteSpace(SmtpHost) &&
-        SmtpPort > 0 &&
-        !string.IsNullOrWhiteSpace(SmtpUser) &&
-        !string.IsNullOrWhiteSpace(SmtpPass);
+        !string.IsNullOrWhiteSpace(EmailFrom)
+        && !string.IsNullOrWhiteSpace(SmtpHost)
+        && SmtpPort > 0
+        && !string.IsNullOrWhiteSpace(SmtpUser)
+        && !string.IsNullOrWhiteSpace(SmtpPass);
 }

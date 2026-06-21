@@ -1,7 +1,8 @@
 namespace LinkUpPro.Domain.Enums;
 
 /// <summary>
-/// Defines the allowed Battleship ship sizes from the required fleet.
+/// Enum que representa los tamaños de los barcos que un
+/// jugador puede colocar en el juego de Battleship.
 /// </summary>
 public enum ShipSize
 {

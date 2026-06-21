@@ -5,9 +5,7 @@ namespace LinkUpPro.Domain.Entities.Social;
 
 public sealed class Post : AuditableBaseEntity<long>
 {
-    private Post()
-    {
-    }
+    private Post() { }
 
     public string AuthorId { get; private set; } = null!;
 
@@ -30,7 +28,8 @@ public sealed class Post : AuditableBaseEntity<long>
         string mediaPath,
         PrivacyLevel privacy = PrivacyLevel.FriendsOnly,
         bool allowComments = true,
-        DateTimeOffset? createdAt = null)
+        DateTimeOffset? createdAt = null
+    )
     {
         var errors = Validate(authorId, content, contentType, mediaPath, privacy);
 
@@ -39,17 +38,19 @@ public sealed class Post : AuditableBaseEntity<long>
             return Result<Post>.Failure(errors);
         }
 
-        return Result<Post>.Success(new Post
-        {
-            AuthorId = authorId.Trim(),
-            Content = content.Trim(),
-            ContentType = contentType,
-            MediaPath = mediaPath.Trim(),
-            Privacy = privacy,
-            AllowComments = allowComments,
-            IsEdited = false,
-            CreatedAt = createdAt ?? DateTimeOffset.UtcNow,
-        });
+        return Result<Post>.Success(
+            new Post
+            {
+                AuthorId = authorId.Trim(),
+                Content = content.Trim(),
+                ContentType = contentType,
+                MediaPath = mediaPath.Trim(),
+                Privacy = privacy,
+                AllowComments = allowComments,
+                IsEdited = false,
+                CreatedAt = createdAt ?? DateTimeOffset.UtcNow,
+            }
+        );
     }
 
     public Result Edit(
@@ -58,7 +59,8 @@ public sealed class Post : AuditableBaseEntity<long>
         string mediaPath,
         PrivacyLevel privacy,
         bool allowComments,
-        DateTimeOffset? updatedAt = null)
+        DateTimeOffset? updatedAt = null
+    )
     {
         var errors = Validate(AuthorId, content, contentType, mediaPath, privacy);
 
@@ -95,44 +97,70 @@ public sealed class Post : AuditableBaseEntity<long>
 
     public bool CanBeEditedBy(string userId) => !IsDeleted && AuthorId == userId;
 
-    public bool CanComment(string userId, bool isFriend) => AllowComments && CanBeViewedBy(userId, isFriend);
+    public bool CanComment(string userId, bool isFriend) =>
+        AllowComments && CanBeViewedBy(userId, isFriend);
 
     private static List<DomainError> Validate(
         string authorId,
         string content,
         PostContentType contentType,
         string mediaPath,
-        PrivacyLevel privacy)
+        PrivacyLevel privacy
+    )
     {
         var errors = new List<DomainError>();
 
         if (string.IsNullOrWhiteSpace(authorId))
         {
-            errors.Add(new DomainError("Post.AuthorRequired", "El autor de la publicacion es requerido."));
+            errors.Add(
+                new DomainError("Post.AuthorRequired", "El autor de la publicacion es requerido.")
+            );
         }
 
         if (string.IsNullOrWhiteSpace(content))
         {
-            errors.Add(new DomainError("Post.ContentRequired", "Debe ingresar el contenido de la publicacion."));
+            errors.Add(
+                new DomainError(
+                    "Post.ContentRequired",
+                    "Debe ingresar el contenido de la publicacion."
+                )
+            );
         }
         else if (content.Trim().Length > DomainConstants.MaxPostContentLength)
         {
-            errors.Add(new DomainError("Post.ContentTooLong", "El contenido no puede superar los 1,000 caracteres."));
+            errors.Add(
+                new DomainError(
+                    "Post.ContentTooLong",
+                    "El contenido no puede superar los 1,000 caracteres."
+                )
+            );
         }
 
         if (!Enum.IsDefined(contentType))
         {
-            errors.Add(new DomainError("Post.InvalidContentType", "El tipo de contenido seleccionado no es valido."));
+            errors.Add(
+                new DomainError(
+                    "Post.InvalidContentType",
+                    "El tipo de contenido seleccionado no es valido."
+                )
+            );
         }
 
         if (string.IsNullOrWhiteSpace(mediaPath))
         {
-            errors.Add(new DomainError("Post.MediaRequired", "Debe seleccionar una imagen o ingresar un enlace valido de YouTube."));
+            errors.Add(
+                new DomainError(
+                    "Post.MediaRequired",
+                    "Debe seleccionar una imagen o ingresar un enlace valido de YouTube."
+                )
+            );
         }
 
         if (!Enum.IsDefined(privacy))
         {
-            errors.Add(new DomainError("Post.InvalidPrivacy", "La privacidad seleccionada no es valida."));
+            errors.Add(
+                new DomainError("Post.InvalidPrivacy", "La privacidad seleccionada no es valida.")
+            );
         }
 
         return errors;

@@ -1,7 +1,7 @@
 namespace LinkUpPro.Domain.Common;
 
 /// <summary>
-/// Aggregated Battleship statistics for a player.
+/// Estadísticas calculadas de Battleship para un jugador.
 /// </summary>
 public sealed record BattleshipGameStats(int TotalGames, int WonGames, int LostGames)
 {

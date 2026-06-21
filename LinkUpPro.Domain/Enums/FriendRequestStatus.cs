@@ -1,7 +1,7 @@
 namespace LinkUpPro.Domain.Enums;
 
 /// <summary>
-/// Defines the lifecycle states of a friend request.
+/// Enum que representa el estado de una solicitud de amistad entre dos usuarios.
 /// </summary>
 public enum FriendRequestStatus
 {

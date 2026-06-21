@@ -9,14 +9,16 @@ public interface IPostRepository : IGenericRepository<Post, long>
     Task<IReadOnlyCollection<Post>> GetByAuthorAsync(
         string authorId,
         QueryOptions<Post>? options = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 
     Task<Post?> GetByIdWithDetailsAsync(long postId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyCollection<Post>> GetVisibleFriendsPostsAsync(
         string userId,
         QueryOptions<Post>? options = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 
     Task<IReadOnlyCollection<Post>> SearchAuthorPostsAsync(
         string authorId,
@@ -26,7 +28,8 @@ public interface IPostRepository : IGenericRepository<Post, long>
         DateTimeOffset? toDate,
         bool? editedOnly,
         QueryOptions<Post>? options = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 
     Task<IReadOnlyCollection<Post>> SearchFriendsPostsAsync(
         string userId,
@@ -37,5 +40,6 @@ public interface IPostRepository : IGenericRepository<Post, long>
         DateTimeOffset? toDate,
         bool? editedOnly,
         QueryOptions<Post>? options = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 }

@@ -4,13 +4,15 @@ using LinkUpPro.Domain.Exceptions;
 namespace LinkUpPro.Domain.ValueObjects;
 
 /// <summary>
-/// Normalized email value object used by user registration and lookup rules.
+/// Representa un correo electrónico con validación integrada
+/// para asegurar que el formato sea correcto.
 /// </summary>
 public sealed record Email
 {
     private static readonly Regex EmailRegex = new(
         @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase
+    );
 
     private Email(string value)
     {
@@ -23,9 +25,7 @@ public sealed record Email
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            throw new DomainException(
-                "El correo electronico es requerido.",
-                "User.EmailRequired");
+            throw new DomainException("El correo electronico es requerido.", "User.EmailRequired");
         }
 
         var normalized = value.Trim().ToLowerInvariant();
@@ -34,7 +34,8 @@ public sealed record Email
         {
             throw new DomainException(
                 "Formato de correo electronico invalido.",
-                "User.InvalidEmailFormat");
+                "User.InvalidEmailFormat"
+            );
         }
 
         return new Email(normalized);

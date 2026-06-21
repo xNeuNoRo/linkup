@@ -8,31 +8,40 @@ public interface IFriendshipRepository : IGenericRepository<DomainFriendship, lo
     Task<bool> AreFriendsAsync(
         string firstUserId,
         string secondUserId,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 
     Task<DomainFriendship?> GetFriendshipBetweenAsync(
         string firstUserId,
         string secondUserId,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 
     Task<IReadOnlyCollection<DomainFriendship>> GetActiveFriendshipsForUserAsync(
         string userId,
         QueryOptions<DomainFriendship>? options = null,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 
     Task<IReadOnlyCollection<string>> GetActiveFriendIdsAsync(
         string userId,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 
-    Task<int> GetActiveFriendsCountAsync(string userId, CancellationToken cancellationToken = default);
+    Task<int> GetActiveFriendsCountAsync(
+        string userId,
+        CancellationToken cancellationToken = default
+    );
 
     Task<int> GetCommonFriendsCountAsync(
         string firstUserId,
         string secondUserId,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 
     Task<IReadOnlyCollection<string>> GetCommonFriendIdsAsync(
         string firstUserId,
         string secondUserId,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default
+    );
 }

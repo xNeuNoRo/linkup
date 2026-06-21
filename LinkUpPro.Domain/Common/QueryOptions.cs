@@ -3,9 +3,10 @@ using System.Linq.Expressions;
 namespace LinkUpPro.Domain.Common;
 
 /// <summary>
-/// Encapsulates repository query options without coupling the Domain layer to persistence details.
+/// Encapsula las opciones de consulta para repositorios, incluyendo filtros,
+/// ordenamiento, paginación e inclusión de relaciones.
 /// </summary>
-/// <typeparam name="T">Entity type being queried.</typeparam>
+/// <typeparam name="T">El tipo de la entidad siendo consultada.</typeparam>
 public sealed class QueryOptions<T>
 {
     public Expression<Func<T, bool>>? Filter { get; set; }

@@ -3,12 +3,14 @@ using System.Text.RegularExpressions;
 namespace LinkUpPro.Domain.ValueObjects;
 
 /// <summary>
-/// Represents the password strength criteria defined by the functional document.
+/// Representa la fortaleza de una contraseña, calculada a partir de criterios como longitud,
+/// uso de mayúsculas, minúsculas, dígitos y caracteres especiales.
 /// </summary>
 public sealed record PasswordStrength(
     int Score,
     PasswordStrengthLevel Level,
-    PasswordStrengthCriteria CriteriaMet)
+    PasswordStrengthCriteria CriteriaMet
+)
 {
     public bool IsStrong => Level == PasswordStrengthLevel.Strong;
 

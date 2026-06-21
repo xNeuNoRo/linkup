@@ -1,7 +1,7 @@
 namespace LinkUpPro.Domain.Common;
 
 /// <summary>
-/// Defines the audit contract shared by all persisted domain entities.
+/// Interfaz que define las propiedades de auditoría para las entidades.
 /// </summary>
 public interface IAuditableEntity
 {

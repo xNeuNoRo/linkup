@@ -1,10 +1,10 @@
 namespace LinkUpPro.Domain.Common;
 
 /// <summary>
-/// Represents a domain error with a stable code and a user-safe message.
+/// Representa un error de dominio con un código y un mensaje para el usuario.
 /// </summary>
-/// <param name="Code">Stable error code.</param>
-/// <param name="Message">User-safe error message.</param>
+/// <param name="Code">Código de error</param>
+/// <param name="Message">Mensaje de error para el usuario</param>
 public sealed record DomainError(string Code, string Message)
 {
     public static readonly DomainError None = new(string.Empty, string.Empty);

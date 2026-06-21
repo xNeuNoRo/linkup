@@ -4,13 +4,12 @@ using LinkUpPro.Domain.ValueObjects;
 namespace LinkUpPro.Domain.Entities.Identity;
 
 /// <summary>
-/// Domain representation of the application user. Infrastructure.Identity maps this model to IdentityUser.
+/// Representa un usuario del sistema con propiedades 
+/// y comportamientos relacionados con la identidad y autenticación.
 /// </summary>
 public sealed class User : AuditableBaseEntity<string>
 {
-    private User()
-    {
-    }
+    private User() { }
 
     public string UserName { get; private set; } = null!;
 
@@ -52,7 +51,8 @@ public sealed class User : AuditableBaseEntity<string>
         string lastName,
         PhoneNumber phoneNumber,
         string profilePicturePath,
-        DateTimeOffset? createdAt = null)
+        DateTimeOffset? createdAt = null
+    )
     {
         ArgumentNullException.ThrowIfNull(email);
         ArgumentNullException.ThrowIfNull(phoneNumber);
@@ -62,7 +62,8 @@ public sealed class User : AuditableBaseEntity<string>
             passwordHash,
             firstName,
             lastName,
-            profilePicturePath);
+            profilePicturePath
+        );
 
         if (errors.Count > 0)
         {
@@ -72,27 +73,29 @@ public sealed class User : AuditableBaseEntity<string>
         var trimmedUserName = userName.Trim();
         var normalizedEmail = email.Value.ToUpperInvariant();
 
-        return Result<User>.Success(new User
-        {
-            Id = Guid.NewGuid().ToString("N"),
-            UserName = trimmedUserName,
-            NormalizedUserName = trimmedUserName.ToUpperInvariant(),
-            Email = email.Value,
-            NormalizedEmail = normalizedEmail,
-            EmailConfirmed = false,
-            PasswordHash = passwordHash,
-            PhoneNumber = phoneNumber,
-            PhoneNumberConfirmed = false,
-            LockoutEnabled = true,
-            LockoutEnd = null,
-            AccessFailedCount = 0,
-            FirstName = firstName.Trim(),
-            LastName = lastName.Trim(),
-            ProfilePicturePath = profilePicturePath.Trim(),
-            IsActive = false,
-            LastActivityAt = null,
-            CreatedAt = createdAt ?? DateTimeOffset.UtcNow,
-        });
+        return Result<User>.Success(
+            new User
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                UserName = trimmedUserName,
+                NormalizedUserName = trimmedUserName.ToUpperInvariant(),
+                Email = email.Value,
+                NormalizedEmail = normalizedEmail,
+                EmailConfirmed = false,
+                PasswordHash = passwordHash,
+                PhoneNumber = phoneNumber,
+                PhoneNumberConfirmed = false,
+                LockoutEnabled = true,
+                LockoutEnd = null,
+                AccessFailedCount = 0,
+                FirstName = firstName.Trim(),
+                LastName = lastName.Trim(),
+                ProfilePicturePath = profilePicturePath.Trim(),
+                IsActive = false,
+                LastActivityAt = null,
+                CreatedAt = createdAt ?? DateTimeOffset.UtcNow,
+            }
+        );
     }
 
     public Result UpdateProfile(
@@ -100,13 +103,26 @@ public sealed class User : AuditableBaseEntity<string>
         string lastName,
         PhoneNumber phoneNumber,
         string? newProfilePicturePath = null,
-        DateTimeOffset? updatedAt = null)
+        DateTimeOffset? updatedAt = null
+    )
     {
         ArgumentNullException.ThrowIfNull(phoneNumber);
 
         var errors = new List<DomainError>();
-        AddNameErrors(errors, firstName, nameof(FirstName), "User.FirstNameRequired", "Debe ingresar su nombre.");
-        AddNameErrors(errors, lastName, nameof(LastName), "User.LastNameRequired", "Debe ingresar su apellido.");
+        AddNameErrors(
+            errors,
+            firstName,
+            nameof(FirstName),
+            "User.FirstNameRequired",
+            "Debe ingresar su nombre."
+        );
+        AddNameErrors(
+            errors,
+            lastName,
+            nameof(LastName),
+            "User.LastNameRequired",
+            "Debe ingresar su apellido."
+        );
 
         if (newProfilePicturePath is not null)
         {
@@ -135,27 +151,34 @@ public sealed class User : AuditableBaseEntity<string>
     public Result ChangePassword(
         string currentPasswordHash,
         string newPasswordHash,
-        DateTimeOffset? updatedAt = null)
+        DateTimeOffset? updatedAt = null
+    )
     {
         if (string.IsNullOrWhiteSpace(currentPasswordHash) || currentPasswordHash != PasswordHash)
         {
-            return Result.Failure(new DomainError(
-                "User.CurrentPasswordInvalid",
-                "La contrasena actual es incorrecta."));
+            return Result.Failure(
+                new DomainError(
+                    "User.CurrentPasswordInvalid",
+                    "La contrasena actual es incorrecta."
+                )
+            );
         }
 
         if (string.IsNullOrWhiteSpace(newPasswordHash))
         {
-            return Result.Failure(new DomainError(
-                "User.NewPasswordRequired",
-                "La nueva contrasena es requerida."));
+            return Result.Failure(
+                new DomainError("User.NewPasswordRequired", "La nueva contrasena es requerida.")
+            );
         }
 
         if (newPasswordHash == PasswordHash)
         {
-            return Result.Failure(new DomainError(
-                "User.NewPasswordMustBeDifferent",
-                "La nueva contrasena debe ser diferente de la contrasena actual."));
+            return Result.Failure(
+                new DomainError(
+                    "User.NewPasswordMustBeDifferent",
+                    "La nueva contrasena debe ser diferente de la contrasena actual."
+                )
+            );
         }
 
         PasswordHash = newPasswordHash;
@@ -193,7 +216,8 @@ public sealed class User : AuditableBaseEntity<string>
         IsActive && EmailConfirmed && !IsLockedOut(now);
 
     public bool IsSessionInactive(DateTimeOffset now) =>
-        LastActivityAt.HasValue && now - LastActivityAt.Value >= DomainConstants.SessionInactivityTimeout;
+        LastActivityAt.HasValue
+        && now - LastActivityAt.Value >= DomainConstants.SessionInactivityTimeout;
 
     public void RecordFailedLogin(DateTimeOffset? failedAt = null)
     {
@@ -233,7 +257,8 @@ public sealed class User : AuditableBaseEntity<string>
             {
                 span[0] = char.ToUpperInvariant(initials.firstInitial);
                 span[1] = char.ToUpperInvariant(initials.lastInitial);
-            });
+            }
+        );
     }
 
     private static List<DomainError> ValidateRegistrationData(
@@ -241,14 +266,27 @@ public sealed class User : AuditableBaseEntity<string>
         string passwordHash,
         string firstName,
         string lastName,
-        string profilePicturePath)
+        string profilePicturePath
+    )
     {
         var errors = new List<DomainError>();
 
         AddUserNameErrors(errors, userName);
         AddPasswordHashErrors(errors, passwordHash);
-        AddNameErrors(errors, firstName, nameof(FirstName), "User.FirstNameRequired", "Debe ingresar su nombre.");
-        AddNameErrors(errors, lastName, nameof(LastName), "User.LastNameRequired", "Debe ingresar su apellido.");
+        AddNameErrors(
+            errors,
+            firstName,
+            nameof(FirstName),
+            "User.FirstNameRequired",
+            "Debe ingresar su nombre."
+        );
+        AddNameErrors(
+            errors,
+            lastName,
+            nameof(LastName),
+            "User.LastNameRequired",
+            "Debe ingresar su apellido."
+        );
         AddProfilePicturePathErrors(errors, profilePicturePath);
 
         return errors;
@@ -258,13 +296,20 @@ public sealed class User : AuditableBaseEntity<string>
     {
         if (string.IsNullOrWhiteSpace(userName))
         {
-            errors.Add(new DomainError("User.UserNameRequired", "El nombre de usuario es requerido."));
+            errors.Add(
+                new DomainError("User.UserNameRequired", "El nombre de usuario es requerido.")
+            );
             return;
         }
 
         if (userName.Trim().Length > DomainConstants.MaxUserNameLength)
         {
-            errors.Add(new DomainError("User.UserNameTooLong", "El nombre de usuario excede la longitud permitida."));
+            errors.Add(
+                new DomainError(
+                    "User.UserNameTooLong",
+                    "El nombre de usuario excede la longitud permitida."
+                )
+            );
         }
     }
 
@@ -281,7 +326,8 @@ public sealed class User : AuditableBaseEntity<string>
         string value,
         string propertyName,
         string requiredCode,
-        string requiredMessage)
+        string requiredMessage
+    )
     {
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -289,31 +335,43 @@ public sealed class User : AuditableBaseEntity<string>
             return;
         }
 
-        var maxLength = propertyName == nameof(FirstName)
-            ? DomainConstants.MaxUserFirstNameLength
-            : DomainConstants.MaxUserLastNameLength;
+        var maxLength =
+            propertyName == nameof(FirstName)
+                ? DomainConstants.MaxUserFirstNameLength
+                : DomainConstants.MaxUserLastNameLength;
 
         if (value.Trim().Length > maxLength)
         {
-            errors.Add(new DomainError(
-                $"User.{propertyName}TooLong",
-                $"{propertyName} excede la longitud permitida."));
+            errors.Add(
+                new DomainError(
+                    $"User.{propertyName}TooLong",
+                    $"{propertyName} excede la longitud permitida."
+                )
+            );
         }
     }
 
-    private static void AddProfilePicturePathErrors(List<DomainError> errors, string profilePicturePath)
+    private static void AddProfilePicturePathErrors(
+        List<DomainError> errors,
+        string profilePicturePath
+    )
     {
         if (string.IsNullOrWhiteSpace(profilePicturePath))
         {
-            errors.Add(new DomainError("User.ProfilePictureRequired", "La foto de perfil es requerida."));
+            errors.Add(
+                new DomainError("User.ProfilePictureRequired", "La foto de perfil es requerida.")
+            );
             return;
         }
 
         if (profilePicturePath.Trim().Length > DomainConstants.MaxProfilePicturePathLength)
         {
-            errors.Add(new DomainError(
-                "User.ProfilePicturePathTooLong",
-                "La ruta de la foto de perfil excede la longitud permitida."));
+            errors.Add(
+                new DomainError(
+                    "User.ProfilePicturePathTooLong",
+                    "La ruta de la foto de perfil excede la longitud permitida."
+                )
+            );
         }
     }
 }

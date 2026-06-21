@@ -1,7 +1,8 @@
 namespace LinkUpPro.Domain.ValueObjects;
 
 /// <summary>
-/// Read model value object used to represent a single Battleship board cell state.
+/// Representa el estado de una celda en el tablero de Battleship,
+/// incluyendo sus coordenadas y si contiene un barco, un impacto o un fallo.
 /// </summary>
 public sealed record BoardCell(Coordinates Coordinates, BoardCellState State)
 {

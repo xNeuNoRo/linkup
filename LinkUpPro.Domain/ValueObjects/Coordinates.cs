@@ -5,8 +5,11 @@ using LinkUpPro.Domain.Exceptions;
 namespace LinkUpPro.Domain.ValueObjects;
 
 /// <summary>
-/// Immutable Battleship board coordinate. Valid values are from 0 to 11 on each axis.
+/// Representa las coordenadas de una celda en el tablero de Battleship, con validación integrada
+/// y métodos para obtener celdas adyacentes en una dirección dada, así como calcular la distancia a otra coordenada.
 /// </summary>
+/// <param name="X">La coordenada X en el tablero.</param>
+/// <param name="Y">La coordenada Y en el tablero.</param>
 public readonly record struct Coordinates(byte X, byte Y)
 {
     public static Coordinates Create(int x, int y)
@@ -16,19 +19,15 @@ public readonly record struct Coordinates(byte X, byte Y)
             throw new GameRuleException(
                 "La coordenada seleccionada esta fuera del tablero.",
                 "Battleship.CoordinatesOutOfBounds",
-                new Dictionary<string, object?>
-                {
-                    ["X"] = x,
-                    ["Y"] = y,
-                });
+                new Dictionary<string, object?> { ["X"] = x, ["Y"] = y }
+            );
         }
 
         return new Coordinates((byte)x, (byte)y);
     }
 
     public static bool IsValid(int x, int y) =>
-        x >= 0 && x < DomainConstants.BoardSize &&
-        y >= 0 && y < DomainConstants.BoardSize;
+        x >= 0 && x < DomainConstants.BoardSize && y >= 0 && y < DomainConstants.BoardSize;
 
     public IReadOnlyList<Coordinates> GetCellsTowards(ShipDirection direction, int size)
     {
@@ -36,7 +35,8 @@ public readonly record struct Coordinates(byte X, byte Y)
         {
             throw new GameRuleException(
                 "El tamano del barco debe ser mayor que cero.",
-                "Battleship.InvalidShipSize");
+                "Battleship.InvalidShipSize"
+            );
         }
 
         var cells = new List<Coordinates>(size);
@@ -51,7 +51,8 @@ public readonly record struct Coordinates(byte X, byte Y)
                 ShipDirection.Right => ((int)X + offset, (int)Y),
                 _ => throw new GameRuleException(
                     "La direccion seleccionada no es valida.",
-                    "Battleship.InvalidShipDirection"),
+                    "Battleship.InvalidShipDirection"
+                ),
             };
 
             cells.Add(Create(x, y));

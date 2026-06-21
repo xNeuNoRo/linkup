@@ -1,9 +1,9 @@
 namespace LinkUpPro.Domain.Common;
 
 /// <summary>
-/// Base class for entities that support logical deletion through DeletedAt.
+/// Clase base para entidades que requieren seguimiento de auditoría.
 /// </summary>
-/// <typeparam name="TId">Entity identifier type.</typeparam>
+/// <typeparam name="TId">El tipo de identificador de la entidad.</typeparam>
 public abstract class AuditableBaseEntity<TId> : BaseEntity<TId>
 {
     public DateTimeOffset? DeletedAt { get; protected set; }
@@ -34,6 +34,6 @@ public abstract class AuditableBaseEntity<TId> : BaseEntity<TId>
 }
 
 /// <summary>
-/// Base class for soft-deletable entities with long identifiers.
+/// Clase base para entidades con identificadores de tipo long que requieren seguimiento de auditoría.
 /// </summary>
 public abstract class AuditableBaseEntity : AuditableBaseEntity<long>;

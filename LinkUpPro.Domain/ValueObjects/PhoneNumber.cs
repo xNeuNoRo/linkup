@@ -4,13 +4,16 @@ using LinkUpPro.Domain.Exceptions;
 namespace LinkUpPro.Domain.ValueObjects;
 
 /// <summary>
-/// Dominican Republic phone number in the required 809/829/849-XXX-XXXX format.
+/// Representa un número de teléfono con validación integrada para asegurar que el formato
+/// sea válido para números de República Dominicana, con el formato "809-XXX-XXXX",
+/// "829-XXX-XXXX" o "849-XXX-XXXX".
 /// </summary>
 public sealed record PhoneNumber
 {
     private static readonly Regex PhoneRegex = new(
         @"^(809|829|849)-\d{3}-\d{4}$",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        RegexOptions.Compiled | RegexOptions.CultureInvariant
+    );
 
     private PhoneNumber(string value)
     {
@@ -27,7 +30,8 @@ public sealed record PhoneNumber
         {
             throw new DomainException(
                 "Debe ingresar un numero telefonico valido de Republica Dominicana.",
-                "User.PhoneNumberRequired");
+                "User.PhoneNumberRequired"
+            );
         }
 
         var normalized = value.Trim();
@@ -36,7 +40,8 @@ public sealed record PhoneNumber
         {
             throw new DomainException(
                 "Debe ingresar un numero telefonico valido de Republica Dominicana.",
-                "User.InvalidPhoneNumber");
+                "User.InvalidPhoneNumber"
+            );
         }
 
         return new PhoneNumber(normalized);

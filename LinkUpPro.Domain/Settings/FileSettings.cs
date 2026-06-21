@@ -3,7 +3,7 @@ using LinkUpPro.Domain.Common;
 namespace LinkUpPro.Domain.Settings;
 
 /// <summary>
-/// File upload settings used by shared infrastructure services.
+/// Configuración relacionada con la gestión de archivos, como imágenes de perfil y publicaciones.
 /// </summary>
 public sealed class FileSettings
 {
@@ -11,7 +11,8 @@ public sealed class FileSettings
 
     public long MaxImageFileSizeBytes { get; init; } = DomainConstants.MaxImageFileSizeBytes;
 
-    public IReadOnlySet<string> AllowedImageExtensions { get; init; } = DomainConstants.AllowedImageExtensions;
+    public IReadOnlySet<string> AllowedImageExtensions { get; init; } =
+        DomainConstants.AllowedImageExtensions;
 
     public string UploadRootPath { get; init; } = "uploads";
 
