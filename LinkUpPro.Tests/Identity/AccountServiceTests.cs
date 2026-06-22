@@ -1,3 +1,4 @@
+using LinkUpPro.Application.DTOs.Profile.Requests;
 using LinkUpPro.Application.DTOs.User.Requests;
 using LinkUpPro.Application.Interfaces;
 using LinkUpPro.Application.Models.Emails;

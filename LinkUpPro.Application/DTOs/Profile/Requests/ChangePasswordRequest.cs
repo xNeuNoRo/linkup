@@ -1,4 +1,4 @@
-namespace LinkUpPro.Application.DTOs.User.Requests;
+namespace LinkUpPro.Application.DTOs.Profile.Requests;
 
 public record ChangePasswordRequest(
     string CurrentPassword,

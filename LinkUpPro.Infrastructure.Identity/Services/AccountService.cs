@@ -1,4 +1,6 @@
 using System.Text;
+using LinkUpPro.Application.DTOs.Profile.Requests;
+using LinkUpPro.Application.DTOs.Profile.Responses;
 using LinkUpPro.Application.DTOs.User.Requests;
 using LinkUpPro.Application.DTOs.User.Responses;
 using LinkUpPro.Application.Interfaces;
@@ -269,22 +271,22 @@ public class AccountService : IAccountService
     {
         var user = await _userManager.FindByIdAsync(userId);
         if (user is null)
-            return new UserProfileResponseDto();
+            return new UserProfileResponseDto(string.Empty, string.Empty, string.Empty,
+                string.Empty, string.Empty, string.Empty, null, false, false, default, null);
 
-        return new UserProfileResponseDto
-        {
-            Id = user.Id,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            PhoneNumber = user.PhoneNumber ?? string.Empty,
-            Email = user.Email ?? string.Empty,
-            UserName = user.UserName ?? string.Empty,
-            ProfilePicturePath = user.ProfilePicturePath,
-            IsActive = user.IsActive,
-            IsVerified = user.EmailConfirmed,
-            CreatedAt = user.CreatedAt,
-            LastActivityAt = user.LastActivityAt?.UtcDateTime,
-        };
+        return new UserProfileResponseDto(
+            user.Id,
+            user.FirstName,
+            user.LastName,
+            user.PhoneNumber ?? string.Empty,
+            user.Email ?? string.Empty,
+            user.UserName ?? string.Empty,
+            user.ProfilePicturePath,
+            user.IsActive,
+            user.EmailConfirmed,
+            user.CreatedAt,
+            user.LastActivityAt?.UtcDateTime
+        );
     }
 
     public async Task<EditProfileResponseDto> UpdateProfileAsync(
@@ -294,7 +296,8 @@ public class AccountService : IAccountService
     {
         var user = await _userManager.FindByIdAsync(userId);
         if (user is null)
-            return EditProfileResponseDto.CreateError(["Usuario no encontrado."]);
+            return new EditProfileResponseDto(string.Empty, string.Empty, string.Empty,
+                string.Empty, string.Empty, false, true, ["Usuario no encontrado."], false);
 
         string? oldPhotoPath = user.ProfilePicturePath;
 
@@ -307,9 +310,9 @@ public class AccountService : IAccountService
 
         var result = await _userManager.UpdateAsync(user);
         if (!result.Succeeded)
-            return EditProfileResponseDto.CreateError(
-                result.Errors.Select(e => e.Description).ToList()
-            );
+            return new EditProfileResponseDto(string.Empty, string.Empty, string.Empty,
+                string.Empty, string.Empty, false, true,
+                result.Errors.Select(e => e.Description).ToList(), false);
 
         if (
             request.ProfilePicturePath is not null
@@ -318,13 +321,16 @@ public class AccountService : IAccountService
         )
             _fileService.DeleteFile(oldPhotoPath);
 
-        return EditProfileResponseDto.CreateSuccess(
+        return new EditProfileResponseDto(
             user.Id,
             user.FirstName,
             user.LastName,
             user.Email ?? string.Empty,
             user.UserName ?? string.Empty,
-            user.EmailConfirmed
+            user.EmailConfirmed,
+            false,
+            [],
+            false
         );
     }
 
@@ -335,16 +341,19 @@ public class AccountService : IAccountService
     {
         var user = await _userManager.FindByIdAsync(userId);
         if (user is null)
-            return EditProfileResponseDto.CreateError(["Usuario no encontrado."]);
+            return new EditProfileResponseDto(string.Empty, string.Empty, string.Empty,
+                string.Empty, string.Empty, false, true, ["Usuario no encontrado."], false);
 
         var passwordCheck = await _userManager.CheckPasswordAsync(user, request.CurrentPassword);
         if (!passwordCheck)
-            return EditProfileResponseDto.CreateError(["La contrasena actual es incorrecta."]);
+            return new EditProfileResponseDto(string.Empty, string.Empty, string.Empty,
+                string.Empty, string.Empty, false, true,
+                ["La contrasena actual es incorrecta."], false);
 
         if (request.CurrentPassword == request.NewPassword)
-            return EditProfileResponseDto.CreateError([
-                "La nueva contrasena debe ser diferente de la contrasena actual.",
-            ]);
+            return new EditProfileResponseDto(string.Empty, string.Empty, string.Empty,
+                string.Empty, string.Empty, false, true,
+                ["La nueva contrasena debe ser diferente de la contrasena actual."], false);
 
         var changeResult = await _userManager.ChangePasswordAsync(
             user,
@@ -352,20 +361,23 @@ public class AccountService : IAccountService
             request.NewPassword
         );
         if (!changeResult.Succeeded)
-            return EditProfileResponseDto.CreateError(
-                changeResult.Errors.Select(e => e.Description).ToList()
-            );
+            return new EditProfileResponseDto(string.Empty, string.Empty, string.Empty,
+                string.Empty, string.Empty, false, true,
+                changeResult.Errors.Select(e => e.Description).ToList(), false);
 
         await _userManager.UpdateSecurityStampAsync(user);
         await _signInManager.SignOutAsync();
 
-        return EditProfileResponseDto.CreateSuccessWithReLogin(
+        return new EditProfileResponseDto(
             user.Id,
             user.FirstName,
             user.LastName,
             user.Email ?? string.Empty,
             user.UserName ?? string.Empty,
-            user.EmailConfirmed
+            user.EmailConfirmed,
+            false,
+            [],
+            true
         );
     }
 
