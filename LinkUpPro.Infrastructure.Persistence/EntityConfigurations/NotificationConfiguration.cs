@@ -1,4 +1,3 @@
-using LinkUpPro.Domain.Entities.Identity;
 using LinkUpPro.Domain.Entities.Social;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -31,18 +30,6 @@ public sealed class NotificationConfiguration : IEntityTypeConfiguration<Notific
             .HasDatabaseName("IX_Notifications_Recipient_Unread");
 
         // Relaciones
-        builder
-            .HasOne<User>()
-            .WithMany()
-            .HasForeignKey(x => x.RecipientId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder
-            .HasOne<User>()
-            .WithMany()
-            .HasForeignKey(x => x.ActorId)
-            .OnDelete(DeleteBehavior.Restrict);
-
         builder
             .HasOne<Post>()
             .WithMany()

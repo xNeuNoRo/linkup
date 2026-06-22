@@ -1,4 +1,3 @@
-using LinkUpPro.Domain.Entities.Identity;
 using LinkUpPro.Domain.Entities.Social;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -34,12 +33,6 @@ public sealed class CommentConfiguration : IEntityTypeConfiguration<Comment>
             .HasOne<Post>()
             .WithMany()
             .HasForeignKey(x => x.PostId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder
-            .HasOne<User>()
-            .WithMany()
-            .HasForeignKey(x => x.AuthorId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder

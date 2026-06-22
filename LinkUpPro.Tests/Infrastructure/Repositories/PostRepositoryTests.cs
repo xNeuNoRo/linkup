@@ -12,11 +12,11 @@ public sealed class PostRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new PostRepository(context);
-        var author = await SeedUserAsync(context, "author");
+        var authorId = CreateUserId("author");
 
-        var post1 = Post.Create(author.Id, "Post 1", PostContentType.Image, "/img1.jpg").Value;
+        var post1 = Post.Create(authorId, "Post 1", PostContentType.Image, "/img1.jpg").Value;
         var post2 = Post.Create(
-            author.Id,
+            authorId,
             "Post 2",
             PostContentType.YouTubeVideo,
             "https://youtu.be/abc"
@@ -24,7 +24,7 @@ public sealed class PostRepositoryTests : PersistenceTestBase
         context.Posts.AddRange(post1, post2);
         await context.SaveChangesAsync();
 
-        var result = await repo.GetByAuthorAsync(author.Id);
+        var result = await repo.GetByAuthorAsync(authorId);
 
         result.Should().HaveCount(2);
     }
@@ -34,9 +34,9 @@ public sealed class PostRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new PostRepository(context);
-        var author = await SeedUserAsync(context);
+        var authorId = CreateUserId("author");
 
-        var post = Post.Create(author.Id, "Test content", PostContentType.Image, "/img.jpg").Value;
+        var post = Post.Create(authorId, "Test content", PostContentType.Image, "/img.jpg").Value;
         context.Posts.Add(post);
         await context.SaveChangesAsync();
 
@@ -52,14 +52,14 @@ public sealed class PostRepositoryTests : PersistenceTestBase
         var context = CreateContext();
         var repo = new PostRepository(context);
 
-        var userA = await SeedUserAsync(context, "userA", "a@t.com");
-        var userB = await SeedUserAsync(context, "userB", "b@t.com");
+        var userAId = CreateUserId("userA");
+        var userBId = CreateUserId("userB");
 
-        var friendship = Friendship.Create(userA.Id, userB.Id).Value;
+        var friendship = Friendship.Create(userAId, userBId).Value;
         context.Friendships.Add(friendship);
 
         var post = Post.Create(
-            userB.Id,
+            userBId,
             "Friend post",
             PostContentType.Image,
             "/img.jpg",
@@ -68,7 +68,7 @@ public sealed class PostRepositoryTests : PersistenceTestBase
         context.Posts.Add(post);
         await context.SaveChangesAsync();
 
-        var result = await repo.GetVisibleFriendsPostsAsync(userA.Id);
+        var result = await repo.GetVisibleFriendsPostsAsync(userAId);
 
         result.Should().HaveCount(1);
         result.First().Content.Should().Be("Friend post");
@@ -80,14 +80,14 @@ public sealed class PostRepositoryTests : PersistenceTestBase
         var context = CreateContext();
         var repo = new PostRepository(context);
 
-        var userA = await SeedUserAsync(context, "userA", "a@t.com");
-        var userB = await SeedUserAsync(context, "userB", "b@t.com");
+        var userAId = CreateUserId("userA");
+        var userBId = CreateUserId("userB");
 
-        var friendship = Friendship.Create(userA.Id, userB.Id).Value;
+        var friendship = Friendship.Create(userAId, userBId).Value;
         context.Friendships.Add(friendship);
 
         var post = Post.Create(
-            userB.Id,
+            userBId,
             "Private post",
             PostContentType.Image,
             "/img.jpg",
@@ -96,7 +96,7 @@ public sealed class PostRepositoryTests : PersistenceTestBase
         context.Posts.Add(post);
         await context.SaveChangesAsync();
 
-        var result = await repo.GetVisibleFriendsPostsAsync(userA.Id);
+        var result = await repo.GetVisibleFriendsPostsAsync(userAId);
 
         result.Should().BeEmpty();
     }
@@ -106,11 +106,11 @@ public sealed class PostRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new PostRepository(context);
-        var author = await SeedUserAsync(context, "author");
+        var authorId = CreateUserId("author");
 
-        var post1 = Post.Create(author.Id, "Hello World", PostContentType.Image, "/img1.jpg").Value;
+        var post1 = Post.Create(authorId, "Hello World", PostContentType.Image, "/img1.jpg").Value;
         var post2 = Post.Create(
-            author.Id,
+            authorId,
             "Goodbye World",
             PostContentType.Image,
             "/img2.jpg"
@@ -119,7 +119,7 @@ public sealed class PostRepositoryTests : PersistenceTestBase
         await context.SaveChangesAsync();
 
         var result = await repo.SearchAuthorPostsAsync(
-            authorId: author.Id,
+            authorId: authorId,
             searchText: "Hello",
             contentType: null,
             fromDate: null,
@@ -136,12 +136,12 @@ public sealed class PostRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new PostRepository(context);
-        var author = await SeedUserAsync(context);
+        var authorId = CreateUserId("author");
 
         context.Posts.AddRange(
-            Post.Create(author.Id, "Image post", PostContentType.Image, "/img.jpg").Value,
+            Post.Create(authorId, "Image post", PostContentType.Image, "/img.jpg").Value,
             Post.Create(
-                author.Id,
+                authorId,
                 "Video post",
                 PostContentType.YouTubeVideo,
                 "https://youtu.be/abc"
@@ -150,7 +150,7 @@ public sealed class PostRepositoryTests : PersistenceTestBase
         await context.SaveChangesAsync();
 
         var result = await repo.SearchAuthorPostsAsync(
-            authorId: author.Id,
+            authorId: authorId,
             searchText: null,
             contentType: PostContentType.YouTubeVideo,
             fromDate: null,
@@ -167,10 +167,10 @@ public sealed class PostRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new PostRepository(context);
-        var author = await SeedUserAsync(context);
+        var authorId = CreateUserId("author");
 
         context.Posts.Add(
-            Post.Create(author.Id, "Old post", PostContentType.Image, "/img.jpg").Value
+            Post.Create(authorId, "Old post", PostContentType.Image, "/img.jpg").Value
         );
         await context.SaveChangesAsync();
 
@@ -178,7 +178,7 @@ public sealed class PostRepositoryTests : PersistenceTestBase
         var toDate = TestDateTimeProvider.FixedUtcNow.AddDays(-1);
 
         var result = await repo.SearchAuthorPostsAsync(
-            authorId: author.Id,
+            authorId: authorId,
             searchText: null,
             contentType: null,
             fromDate: fromDate,
@@ -194,16 +194,16 @@ public sealed class PostRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new PostRepository(context);
-        var author = await SeedUserAsync(context);
+        var authorId = CreateUserId("author");
 
-        var post = Post.Create(author.Id, "To delete", PostContentType.Image, "/img.jpg").Value;
+        var post = Post.Create(authorId, "To delete", PostContentType.Image, "/img.jpg").Value;
         context.Posts.Add(post);
         await context.SaveChangesAsync();
 
         post.MarkAsDeleted();
         await context.SaveChangesAsync();
 
-        var result = await repo.GetByAuthorAsync(author.Id);
+        var result = await repo.GetByAuthorAsync(authorId);
 
         result.Should().BeEmpty();
     }
@@ -214,23 +214,23 @@ public sealed class PostRepositoryTests : PersistenceTestBase
         var context = CreateContext();
         var repo = new PostRepository(context);
 
-        var userA = await SeedUserAsync(context, "userA", "a@t.com");
-        var userB = await SeedUserAsync(context, "userB", "b@t.com");
-        var userC = await SeedUserAsync(context, "userC", "c@t.com");
+        var userAId = CreateUserId("userA");
+        var userBId = CreateUserId("userB");
+        var userCId = CreateUserId("userC");
 
-        context.Friendships.Add(Friendship.Create(userA.Id, userB.Id).Value);
-        context.Friendships.Add(Friendship.Create(userA.Id, userC.Id).Value);
+        context.Friendships.Add(Friendship.Create(userAId, userBId).Value);
+        context.Friendships.Add(Friendship.Create(userAId, userCId).Value);
 
         context.Posts.AddRange(
             Post.Create(
-                userB.Id,
+                userBId,
                 "B's post",
                 PostContentType.Image,
                 "/b.jpg",
                 PrivacyLevel.FriendsOnly
             ).Value,
             Post.Create(
-                userC.Id,
+                userCId,
                 "C's post",
                 PostContentType.Image,
                 "/c.jpg",
@@ -240,9 +240,9 @@ public sealed class PostRepositoryTests : PersistenceTestBase
         await context.SaveChangesAsync();
 
         var result = await repo.SearchFriendsPostsAsync(
-            userId: userA.Id,
+            userId: userAId,
             searchText: null,
-            friendId: userB.Id,
+            friendId: userBId,
             contentType: null,
             fromDate: null,
             toDate: null,

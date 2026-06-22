@@ -1,0 +1,49 @@
+@model LinkUpPro.Application.Models.Emails.WelcomeModel
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <style>
+        body { font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; background-color: #F1F5F9; padding: 20px; color: #334155; margin: 0; }
+        .inner { background: #fff; max-width: 500px; margin: 0 auto; border-radius: 24px; overflow: hidden; box-shadow: 0 30px 60px -12px rgba(0,0,100,0.1); border: 1px solid rgba(0,0,0,0.05); }
+        .branding { padding: 30px 40px 10px; font-weight: 800; font-size: 20px; color: #002D62; letter-spacing: -0.5px; }
+        .branding span { color: #CE1126; }
+        .header { padding: 45px 40px; background: linear-gradient(135deg, #002D62 0%, #004A8F 100%); color: #fff; position: relative; }
+        .dr-flag { position: absolute; bottom: 0; left: 0; width: 100%; height: 6px; display: flex; }
+        .flag-blue { flex: 1; background: #002D62; } .flag-red { flex: 1; background: #CE1126; } .flag-white { width: 10px; background: #fff; }
+        .h-title { font-size: 26px; font-weight: 800; margin: 0; line-height: 1.2; }
+        .h-subtitle { font-size: 13px; font-weight: 600; opacity: 0.9; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1.5px; display: block; }
+        .content { padding: 45px 40px; }
+        .greeting { font-size: 18px; font-weight: 700; color: #002D62; margin-bottom: 18px; }
+        .features { display: flex; gap: 12px; margin: 30px 0; flex-wrap: wrap; }
+        .feature-card { flex: 1; min-width: 120px; background: #F8FAFC; border-radius: 12px; padding: 20px 16px; text-align: center; border: 1px solid #E2E8F0; }
+        .feature-icon { font-size: 28px; margin-bottom: 8px; }
+        .feature-label { font-size: 12px; font-weight: 700; color: #002D62; text-transform: uppercase; letter-spacing: 0.5px; }
+        .action-button { display: inline-block; padding: 18px 36px; border-radius: 14px; font-weight: 700; text-decoration: none; font-size: 15px; background-color: #002D62; color: #fff !important; box-shadow: 0 10px 15px -3px rgba(0,45,98,0.3); }
+        .footer { padding: 35px 40px; background: #F8FAFC; text-align: center; border-top: 1px solid #F1F5F9; font-size: 12px; color: #94A3B8; line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <div class="inner">
+        <div class="branding">LinkUp<span>.</span>Pro</div>
+        <div class="header">
+            <span class="h-subtitle">Red Social & Battleship</span>
+            <div class="h-title">Bienvenido a Bordo</div>
+            <div class="dr-flag"><div class="flag-blue"></div><div class="flag-white"></div><div class="flag-red"></div></div>
+        </div>
+        <div class="content">
+            <div class="greeting">Hola, @Model.UserName</div>
+            <p style="font-size: 15px; line-height: 1.8; color: #475569; margin-bottom: 25px;">Tu cuenta ha sido activada. Bienvenido a LinkUp Pro, la red social donde puedes conectar con amigos y desafiarles en Battleship.</p>
+            <div class="features">
+                <div class="feature-card"><div class="feature-icon">📝</div><div class="feature-label">Publicaciones</div></div>
+                <div class="feature-card"><div class="feature-icon">🤝</div><div class="feature-label">Amigos</div></div>
+                <div class="feature-card"><div class="feature-icon">⚓</div><div class="feature-label">Battleship</div></div>
+            </div>
+            <div style="text-align: center;">
+                <a href="@Model.LoginUrl" class="action-button">Ir a LinkUp Pro</a>
+            </div>
+        </div>
+        <div class="footer">¡Preparate para la batalla naval!<br>&copy; @DateTime.UtcNow.Year LinkUp Pro &bull; Republica Dominicana</div>
+    </div>
+</body>
+</html>

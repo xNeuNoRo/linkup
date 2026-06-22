@@ -5,7 +5,6 @@ using LinkUpPro.Infrastructure.Persistence.Contexts;
 using LinkUpPro.Infrastructure.Persistence.Persistence;
 using LinkUpPro.Infrastructure.Persistence.Providers;
 using LinkUpPro.Infrastructure.Persistence.Repositories;
-using LinkUpPro.Infrastructure.Persistence.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,7 +29,6 @@ public static class ServicesRegistration
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         services.AddScoped(typeof(IGenericRepository<,>), typeof(GenericRepository<,>));
-        services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPostRepository, PostRepository>();
         services.AddScoped<ICommentRepository, CommentRepository>();
         services.AddScoped<IReactionRepository, ReactionRepository>();
@@ -38,8 +36,6 @@ public static class ServicesRegistration
         services.AddScoped<IFriendshipRepository, FriendshipRepository>();
         services.AddScoped<IFriendRequestRepository, FriendRequestRepository>();
         services.AddScoped<IBattleshipRepository, BattleshipRepository>();
-
-        services.AddHostedService<DatabaseInitializerHostedService>();
 
         return services;
     }

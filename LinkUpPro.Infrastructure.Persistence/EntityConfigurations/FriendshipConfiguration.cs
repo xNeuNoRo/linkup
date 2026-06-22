@@ -1,5 +1,4 @@
 using LinkUpPro.Domain.Entities.Friendship;
-using LinkUpPro.Domain.Entities.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -30,19 +29,6 @@ public sealed class FriendshipConfiguration : IEntityTypeConfiguration<Friendshi
 
         builder.HasIndex(x => x.User1Id);
         builder.HasIndex(x => x.User2Id);
-
-        // Relaciones
-        builder
-            .HasOne<User>()
-            .WithMany()
-            .HasForeignKey(x => x.User1Id)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder
-            .HasOne<User>()
-            .WithMany()
-            .HasForeignKey(x => x.User2Id)
-            .OnDelete(DeleteBehavior.Restrict);
 
         // QueryFilter para evitar incluir amistades eliminadas en consultas normales
         builder.HasQueryFilter(x => x.DeletedAt == null);

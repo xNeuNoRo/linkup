@@ -61,8 +61,6 @@ namespace LinkUpPro.Infrastructure.Persistence.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AttackerId");
-
                     b.HasIndex("GameId");
 
                     b.HasIndex("TargetShipId");
@@ -128,14 +126,10 @@ namespace LinkUpPro.Infrastructure.Persistence.Persistence.Migrations
 
                     b.HasIndex("CreatorId");
 
-                    b.HasIndex("CurrentTurnUserId");
-
                     b.HasIndex("OpponentId");
 
                     b.HasIndex("Status")
                         .HasDatabaseName("IX_BattleshipGames_Status");
-
-                    b.HasIndex("WinnerId");
 
                     b.ToTable("BattleshipGames", (string)null);
                 });
@@ -182,8 +176,6 @@ namespace LinkUpPro.Infrastructure.Persistence.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("GameId");
-
-                    b.HasIndex("PlayerId");
 
                     b.HasIndex("GameId", "PlayerId")
                         .HasDatabaseName("IX_BattleshipShips_Game_Player");
@@ -285,107 +277,6 @@ namespace LinkUpPro.Infrastructure.Persistence.Persistence.Migrations
                     b.ToTable("Friendships", (string)null);
                 });
 
-            modelBuilder.Entity("LinkUpPro.Domain.Entities.Identity.User", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<int>("AccessFailedCount")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0);
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<DateTimeOffset?>("DeletedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<bool>("EmailConfirmed")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
-                    b.Property<string>("FirstName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
-                    b.Property<DateTimeOffset?>("LastActivityAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<bool>("LockoutEnabled")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
-                    b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("NormalizedEmail")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("NormalizedUserName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("PasswordHash")
-                        .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
-
-                    b.Property<bool>("PhoneNumberConfirmed")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
-                    b.Property<string>("ProfilePicturePath")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTimeOffset?>("UpdatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("UserName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IsActive");
-
-                    b.HasIndex("NormalizedEmail")
-                        .IsUnique()
-                        .HasFilter("[DeletedAt] IS NULL");
-
-                    b.HasIndex("NormalizedUserName")
-                        .IsUnique()
-                        .HasFilter("[DeletedAt] IS NULL");
-
-                    b.ToTable("Users", (string)null);
-                });
-
             modelBuilder.Entity("LinkUpPro.Domain.Entities.Social.Comment", b =>
                 {
                     b.Property<long>("Id")
@@ -478,8 +369,6 @@ namespace LinkUpPro.Infrastructure.Persistence.Persistence.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ActorId");
 
                     b.HasIndex("RecipientId");
 
@@ -591,12 +480,6 @@ namespace LinkUpPro.Infrastructure.Persistence.Persistence.Migrations
 
             modelBuilder.Entity("LinkUpPro.Domain.Entities.Battleship.BattleshipAttack", b =>
                 {
-                    b.HasOne("LinkUpPro.Domain.Entities.Identity.User", null)
-                        .WithMany()
-                        .HasForeignKey("AttackerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("LinkUpPro.Domain.Entities.Battleship.BattleshipGame", null)
                         .WithMany()
                         .HasForeignKey("GameId")
@@ -609,31 +492,6 @@ namespace LinkUpPro.Infrastructure.Persistence.Persistence.Migrations
                         .OnDelete(DeleteBehavior.NoAction);
                 });
 
-            modelBuilder.Entity("LinkUpPro.Domain.Entities.Battleship.BattleshipGame", b =>
-                {
-                    b.HasOne("LinkUpPro.Domain.Entities.Identity.User", null)
-                        .WithMany()
-                        .HasForeignKey("CreatorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("LinkUpPro.Domain.Entities.Identity.User", null)
-                        .WithMany()
-                        .HasForeignKey("CurrentTurnUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("LinkUpPro.Domain.Entities.Identity.User", null)
-                        .WithMany()
-                        .HasForeignKey("OpponentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("LinkUpPro.Domain.Entities.Identity.User", null)
-                        .WithMany()
-                        .HasForeignKey("WinnerId")
-                        .OnDelete(DeleteBehavior.Restrict);
-                });
-
             modelBuilder.Entity("LinkUpPro.Domain.Entities.Battleship.BattleshipShip", b =>
                 {
                     b.HasOne("LinkUpPro.Domain.Entities.Battleship.BattleshipGame", null)
@@ -641,77 +499,10 @@ namespace LinkUpPro.Infrastructure.Persistence.Persistence.Migrations
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("LinkUpPro.Domain.Entities.Identity.User", null)
-                        .WithMany()
-                        .HasForeignKey("PlayerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("LinkUpPro.Domain.Entities.Friendship.FriendRequest", b =>
-                {
-                    b.HasOne("LinkUpPro.Domain.Entities.Identity.User", null)
-                        .WithMany()
-                        .HasForeignKey("ReceiverId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("LinkUpPro.Domain.Entities.Identity.User", null)
-                        .WithMany()
-                        .HasForeignKey("SenderId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("LinkUpPro.Domain.Entities.Friendship.Friendship", b =>
-                {
-                    b.HasOne("LinkUpPro.Domain.Entities.Identity.User", null)
-                        .WithMany()
-                        .HasForeignKey("User1Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("LinkUpPro.Domain.Entities.Identity.User", null)
-                        .WithMany()
-                        .HasForeignKey("User2Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("LinkUpPro.Domain.Entities.Identity.User", b =>
-                {
-                    b.OwnsOne("LinkUpPro.Domain.ValueObjects.PhoneNumber", "PhoneNumber", b1 =>
-                        {
-                            b1.Property<string>("UserId")
-                                .HasColumnType("nvarchar(32)");
-
-                            b1.Property<string>("Value")
-                                .IsRequired()
-                                .HasMaxLength(20)
-                                .HasColumnType("nvarchar(20)")
-                                .HasColumnName("PhoneNumber");
-
-                            b1.HasKey("UserId");
-
-                            b1.ToTable("Users");
-
-                            b1.WithOwner()
-                                .HasForeignKey("UserId");
-                        });
-
-                    b.Navigation("PhoneNumber")
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("LinkUpPro.Domain.Entities.Social.Comment", b =>
                 {
-                    b.HasOne("LinkUpPro.Domain.Entities.Identity.User", null)
-                        .WithMany()
-                        .HasForeignKey("AuthorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("LinkUpPro.Domain.Entities.Social.Comment", null)
                         .WithMany()
                         .HasForeignKey("ParentCommentId")
@@ -726,31 +517,10 @@ namespace LinkUpPro.Infrastructure.Persistence.Persistence.Migrations
 
             modelBuilder.Entity("LinkUpPro.Domain.Entities.Social.Notification", b =>
                 {
-                    b.HasOne("LinkUpPro.Domain.Entities.Identity.User", null)
-                        .WithMany()
-                        .HasForeignKey("ActorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("LinkUpPro.Domain.Entities.Identity.User", null)
-                        .WithMany()
-                        .HasForeignKey("RecipientId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("LinkUpPro.Domain.Entities.Social.Post", null)
                         .WithMany()
                         .HasForeignKey("RelatedPostId")
                         .OnDelete(DeleteBehavior.SetNull);
-                });
-
-            modelBuilder.Entity("LinkUpPro.Domain.Entities.Social.Post", b =>
-                {
-                    b.HasOne("LinkUpPro.Domain.Entities.Identity.User", null)
-                        .WithMany()
-                        .HasForeignKey("AuthorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("LinkUpPro.Domain.Entities.Social.Reaction", b =>
@@ -758,12 +528,6 @@ namespace LinkUpPro.Infrastructure.Persistence.Persistence.Migrations
                     b.HasOne("LinkUpPro.Domain.Entities.Social.Post", null)
                         .WithMany()
                         .HasForeignKey("PostId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("LinkUpPro.Domain.Entities.Identity.User", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

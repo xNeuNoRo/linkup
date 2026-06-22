@@ -11,14 +11,14 @@ public sealed class CommentRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new CommentRepository(context);
-        var author = await SeedUserAsync(context);
+        var authorId = CreateUserId("author");
 
-        var post = Post.Create(author.Id, "Post", PostContentType.Image, "/img.jpg").Value;
+        var post = Post.Create(authorId, "Post", PostContentType.Image, "/img.jpg").Value;
         context.Posts.Add(post);
         await context.SaveChangesAsync();
 
-        var comment1 = Comment.Create(post.Id, author.Id, "Comment 1").Value;
-        var comment2 = Comment.Create(post.Id, author.Id, "Comment 2").Value;
+        var comment1 = Comment.Create(post.Id, authorId, "Comment 1").Value;
+        var comment2 = Comment.Create(post.Id, authorId, "Comment 2").Value;
         context.Comments.AddRange(comment1, comment2);
         await context.SaveChangesAsync();
 
@@ -32,17 +32,17 @@ public sealed class CommentRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new CommentRepository(context);
-        var author = await SeedUserAsync(context);
+        var authorId = CreateUserId("author");
 
-        var post = Post.Create(author.Id, "Post", PostContentType.Image, "/img.jpg").Value;
+        var post = Post.Create(authorId, "Post", PostContentType.Image, "/img.jpg").Value;
         context.Posts.Add(post);
         await context.SaveChangesAsync();
 
-        var root = Comment.Create(post.Id, author.Id, "Root").Value;
+        var root = Comment.Create(post.Id, authorId, "Root").Value;
         context.Comments.Add(root);
         await context.SaveChangesAsync();
 
-        var reply = Comment.Create(post.Id, author.Id, "Reply", parentCommentId: root.Id).Value;
+        var reply = Comment.Create(post.Id, authorId, "Reply", parentCommentId: root.Id).Value;
         context.Comments.Add(reply);
         await context.SaveChangesAsync();
 
@@ -57,22 +57,22 @@ public sealed class CommentRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new CommentRepository(context);
-        var author = await SeedUserAsync(context);
+        var authorId = CreateUserId("author");
 
-        var post = Post.Create(author.Id, "Post", PostContentType.Image, "/img.jpg").Value;
+        var post = Post.Create(authorId, "Post", PostContentType.Image, "/img.jpg").Value;
         context.Posts.Add(post);
         await context.SaveChangesAsync();
 
-        var root = Comment.Create(post.Id, author.Id, "Root").Value;
+        var root = Comment.Create(post.Id, authorId, "Root").Value;
         context.Comments.Add(root);
         await context.SaveChangesAsync();
 
-        var reply1 = Comment.Create(post.Id, author.Id, "Reply 1", parentCommentId: root.Id).Value;
+        var reply1 = Comment.Create(post.Id, authorId, "Reply 1", parentCommentId: root.Id).Value;
         context.Comments.Add(reply1);
         await context.SaveChangesAsync();
 
         var reply2 = Comment
-            .Create(post.Id, author.Id, "Reply 2", parentCommentId: reply1.Id)
+            .Create(post.Id, authorId, "Reply 2", parentCommentId: reply1.Id)
             .Value;
         context.Comments.Add(reply2);
         await context.SaveChangesAsync();
@@ -87,16 +87,16 @@ public sealed class CommentRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new CommentRepository(context);
-        var author = await SeedUserAsync(context);
+        var authorId = CreateUserId("author");
 
-        var post = Post.Create(author.Id, "Post", PostContentType.Image, "/img.jpg").Value;
+        var post = Post.Create(authorId, "Post", PostContentType.Image, "/img.jpg").Value;
         context.Posts.Add(post);
         await context.SaveChangesAsync();
 
         context.Comments.AddRange(
-            Comment.Create(post.Id, author.Id, "C1").Value,
-            Comment.Create(post.Id, author.Id, "C2").Value,
-            Comment.Create(post.Id, author.Id, "C3").Value
+            Comment.Create(post.Id, authorId, "C1").Value,
+            Comment.Create(post.Id, authorId, "C2").Value,
+            Comment.Create(post.Id, authorId, "C3").Value
         );
         await context.SaveChangesAsync();
 
@@ -110,18 +110,18 @@ public sealed class CommentRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new CommentRepository(context);
-        var author = await SeedUserAsync(context);
+        var authorId = CreateUserId("author");
 
-        var post = Post.Create(author.Id, "Post", PostContentType.Image, "/img.jpg").Value;
+        var post = Post.Create(authorId, "Post", PostContentType.Image, "/img.jpg").Value;
         context.Posts.Add(post);
         await context.SaveChangesAsync();
 
-        var root = Comment.Create(post.Id, author.Id, "Root").Value;
+        var root = Comment.Create(post.Id, authorId, "Root").Value;
         context.Comments.Add(root);
         await context.SaveChangesAsync();
 
         context.Comments.Add(
-            Comment.Create(post.Id, author.Id, "Reply", parentCommentId: root.Id).Value
+            Comment.Create(post.Id, authorId, "Reply", parentCommentId: root.Id).Value
         );
         await context.SaveChangesAsync();
 
@@ -135,13 +135,13 @@ public sealed class CommentRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new CommentRepository(context);
-        var author = await SeedUserAsync(context);
+        var authorId = CreateUserId("author");
 
-        var post = Post.Create(author.Id, "Post", PostContentType.Image, "/img.jpg").Value;
+        var post = Post.Create(authorId, "Post", PostContentType.Image, "/img.jpg").Value;
         context.Posts.Add(post);
         await context.SaveChangesAsync();
 
-        var root = Comment.Create(post.Id, author.Id, "Root").Value;
+        var root = Comment.Create(post.Id, authorId, "Root").Value;
         context.Comments.Add(root);
         await context.SaveChangesAsync();
 
@@ -155,13 +155,13 @@ public sealed class CommentRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new CommentRepository(context);
-        var author = await SeedUserAsync(context);
+        var authorId = CreateUserId("author");
 
-        var post = Post.Create(author.Id, "Post", PostContentType.Image, "/img.jpg").Value;
+        var post = Post.Create(authorId, "Post", PostContentType.Image, "/img.jpg").Value;
         context.Posts.Add(post);
         await context.SaveChangesAsync();
 
-        var comment = Comment.Create(post.Id, author.Id, "To delete").Value;
+        var comment = Comment.Create(post.Id, authorId, "To delete").Value;
         context.Comments.Add(comment);
         await context.SaveChangesAsync();
 

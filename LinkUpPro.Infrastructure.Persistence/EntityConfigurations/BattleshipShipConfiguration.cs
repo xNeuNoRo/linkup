@@ -1,5 +1,4 @@
 using LinkUpPro.Domain.Entities.Battleship;
-using LinkUpPro.Domain.Entities.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -37,11 +36,5 @@ public sealed class BattleshipShipConfiguration : IEntityTypeConfiguration<Battl
             .WithMany()
             .HasForeignKey(x => x.GameId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        builder
-            .HasOne<User>()
-            .WithMany()
-            .HasForeignKey(x => x.PlayerId)
-            .OnDelete(DeleteBehavior.Restrict);
     }
 }

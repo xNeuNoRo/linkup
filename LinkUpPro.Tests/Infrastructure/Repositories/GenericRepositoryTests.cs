@@ -1,6 +1,6 @@
 using LinkUpPro.Domain.Common;
-using LinkUpPro.Domain.Entities.Identity;
-using LinkUpPro.Domain.ValueObjects;
+using LinkUpPro.Domain.Entities.Social;
+using LinkUpPro.Domain.Enums;
 using LinkUpPro.Infrastructure.Persistence.Repositories;
 
 namespace LinkUpPro.Tests.Infrastructure.Repositories;
@@ -11,11 +11,11 @@ public sealed class GenericRepositoryTests : PersistenceTestBase
     public async Task GetAllAsync_NoOptions_ReturnsAllEntities()
     {
         var context = CreateContext();
-        var repo = new UserRepository(context);
+        var repo = new PostRepository(context);
 
-        var user1 = CreateTestUser("user1", "user1@test.com");
-        var user2 = CreateTestUser("user2", "user2@test.com");
-        context.Users.AddRange(user1, user2);
+        var post1 = Post.Create("author1", "Content 1", PostContentType.Image, "/img1.jpg");
+        var post2 = Post.Create("author2", "Content 2", PostContentType.Image, "/img2.jpg");
+        context.Posts.AddRange(post1.Value, post2.Value);
         await context.SaveChangesAsync();
 
         var result = await repo.GetAllAsync();
@@ -27,25 +27,25 @@ public sealed class GenericRepositoryTests : PersistenceTestBase
     public async Task GetByIdAsync_ExistingId_ReturnsEntity()
     {
         var context = CreateContext();
-        var repo = new UserRepository(context);
+        var repo = new PostRepository(context);
 
-        var user = CreateTestUser();
-        context.Users.Add(user);
+        var post = Post.Create("author1", "Content", PostContentType.Image, "/img.jpg").Value;
+        context.Posts.Add(post);
         await context.SaveChangesAsync();
 
-        var result = await repo.GetByIdAsync(user.Id);
+        var result = await repo.GetByIdAsync(post.Id);
 
         result.Should().NotBeNull();
-        result!.Id.Should().Be(user.Id);
+        result!.Id.Should().Be(post.Id);
     }
 
     [Fact]
     public async Task GetByIdAsync_NonExistingId_ReturnsNull()
     {
         var context = CreateContext();
-        var repo = new UserRepository(context);
+        var repo = new PostRepository(context);
 
-        var result = await repo.GetByIdAsync("nonexistent");
+        var result = await repo.GetByIdAsync(999L);
 
         result.Should().BeNull();
     }
@@ -54,31 +54,31 @@ public sealed class GenericRepositoryTests : PersistenceTestBase
     public async Task AddAsync_ValidEntity_PersistsAndCanBeRetrieved()
     {
         var context = CreateContext();
-        var repo = new UserRepository(context);
+        var repo = new PostRepository(context);
 
-        var user = CreateTestUser();
-        await repo.AddAsync(user);
+        var post = Post.Create("author1", "Content", PostContentType.Image, "/img.jpg").Value;
+        await repo.AddAsync(post);
         await context.SaveChangesAsync();
 
-        var retrieved = await repo.GetByIdAsync(user.Id);
+        var retrieved = await repo.GetByIdAsync(post.Id);
         retrieved.Should().NotBeNull();
-        retrieved!.UserName.Should().Be("testuser");
+        retrieved!.Content.Should().Be("Content");
     }
 
     [Fact]
     public async Task AddRangeAsync_MultipleEntities_AllPersisted()
     {
         var context = CreateContext();
-        var repo = new UserRepository(context);
+        var repo = new PostRepository(context);
 
-        var users = new[]
+        var posts = new[]
         {
-            CreateTestUser("user1", "user1@test.com"),
-            CreateTestUser("user2", "user2@test.com"),
-            CreateTestUser("user3", "user3@test.com"),
+            Post.Create("a1", "C1", PostContentType.Image, "/img1.jpg").Value,
+            Post.Create("a2", "C2", PostContentType.Image, "/img2.jpg").Value,
+            Post.Create("a3", "C3", PostContentType.Image, "/img3.jpg").Value,
         };
 
-        await repo.AddRangeAsync(users);
+        await repo.AddRangeAsync(posts);
         await context.SaveChangesAsync();
 
         var all = await repo.GetAllAsync();
@@ -89,31 +89,32 @@ public sealed class GenericRepositoryTests : PersistenceTestBase
     public async Task Update_ExistingEntity_UpdatesProperties()
     {
         var context = CreateContext();
-        var repo = new UserRepository(context);
+        var repo = new PostRepository(context);
 
-        var user = CreateTestUser();
-        context.Users.Add(user);
+        var post = Post.Create("author1", "Original", PostContentType.Image, "/img.jpg").Value;
+        context.Posts.Add(post);
         await context.SaveChangesAsync();
 
-        var result = user.UpdateProfile("Updated", "Name", PhoneNumber.Create("809-555-5678"));
-        repo.Update(user);
+        var editResult = post.Edit("Updated", PostContentType.Image, "/img.jpg", PrivacyLevel.FriendsOnly, true);
+        repo.Update(post);
         await context.SaveChangesAsync();
 
-        var retrieved = await repo.GetByIdAsync(user.Id);
-        retrieved!.FirstName.Should().Be("Updated");
+        var retrieved = await repo.GetByIdAsync(post.Id);
+        retrieved!.Content.Should().Be("Updated");
+        retrieved.IsEdited.Should().BeTrue();
     }
 
     [Fact]
     public async Task ExistsAsync_ExistingEntity_ReturnsTrue()
     {
         var context = CreateContext();
-        var repo = new UserRepository(context);
+        var repo = new PostRepository(context);
 
-        var user = CreateTestUser();
-        context.Users.Add(user);
+        var post = Post.Create("author1", "Content", PostContentType.Image, "/img.jpg").Value;
+        context.Posts.Add(post);
         await context.SaveChangesAsync();
 
-        var exists = await repo.ExistsAsync(u => u.Id == user.Id);
+        var exists = await repo.ExistsAsync(p => p.Id == post.Id);
 
         exists.Should().BeTrue();
     }
@@ -122,9 +123,9 @@ public sealed class GenericRepositoryTests : PersistenceTestBase
     public async Task ExistsAsync_NonExisting_ReturnsFalse()
     {
         var context = CreateContext();
-        var repo = new UserRepository(context);
+        var repo = new PostRepository(context);
 
-        var exists = await repo.ExistsAsync(u => u.Id == "nonexistent");
+        var exists = await repo.ExistsAsync(p => p.Id == 999L);
 
         exists.Should().BeFalse();
     }
@@ -133,9 +134,11 @@ public sealed class GenericRepositoryTests : PersistenceTestBase
     public async Task CountAsync_NoPredicate_ReturnsTotalCount()
     {
         var context = CreateContext();
-        var repo = new UserRepository(context);
+        var repo = new PostRepository(context);
 
-        context.Users.AddRange(CreateTestUser("u1", "u1@t.com"), CreateTestUser("u2", "u2@t.com"));
+        context.Posts.AddRange(
+            Post.Create("a1", "C1", PostContentType.Image, "/img1.jpg").Value,
+            Post.Create("a2", "C2", PostContentType.Image, "/img2.jpg").Value);
         await context.SaveChangesAsync();
 
         var count = await repo.CountAsync();
@@ -147,37 +150,35 @@ public sealed class GenericRepositoryTests : PersistenceTestBase
     public async Task GetAllAsync_WithQueryOptions_FilterWorks()
     {
         var context = CreateContext();
-        var repo = new UserRepository(context);
+        var repo = new PostRepository(context);
 
-        context.Users.AddRange(
-            CreateTestUser("alpha", "a@t.com"),
-            CreateTestUser("beta", "b@t.com")
-        );
+        context.Posts.AddRange(
+            Post.Create("auth1", "Alpha", PostContentType.Image, "/img1.jpg").Value,
+            Post.Create("auth2", "Beta", PostContentType.Image, "/img2.jpg").Value);
         await context.SaveChangesAsync();
 
-        var options = new QueryOptions<User> { Filter = u => u.UserName == "alpha" };
+        var options = new QueryOptions<Post> { Filter = p => p.Content == "Alpha" };
         var result = await repo.GetAllAsync(options);
 
         result.Should().HaveCount(1);
-        result.First().UserName.Should().Be("alpha");
+        result.First().Content.Should().Be("Alpha");
     }
 
     [Fact]
     public async Task GetAllAsync_WithQueryOptions_SkipTakeWorks()
     {
         var context = CreateContext();
-        var repo = new UserRepository(context);
+        var repo = new PostRepository(context);
 
-        context.Users.AddRange(
-            CreateTestUser("user1", "u1@t.com"),
-            CreateTestUser("user2", "u2@t.com"),
-            CreateTestUser("user3", "u3@t.com")
-        );
+        context.Posts.AddRange(
+            Post.Create("a1", "C1", PostContentType.Image, "/img1.jpg").Value,
+            Post.Create("a2", "C2", PostContentType.Image, "/img2.jpg").Value,
+            Post.Create("a3", "C3", PostContentType.Image, "/img3.jpg").Value);
         await context.SaveChangesAsync();
 
-        var options = new QueryOptions<User>
+        var options = new QueryOptions<Post>
         {
-            OrderBy = q => q.OrderBy(u => u.UserName),
+            OrderBy = q => q.OrderBy(p => p.Content),
             Skip = 1,
             Take = 1,
         };
@@ -185,6 +186,6 @@ public sealed class GenericRepositoryTests : PersistenceTestBase
         var result = await repo.GetAllAsync(options);
 
         result.Should().HaveCount(1);
-        result.First().UserName.Should().Be("user2");
+        result.First().Content.Should().Be("C2");
     }
 }

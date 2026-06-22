@@ -1,5 +1,4 @@
 using LinkUpPro.Domain.Entities.Friendship;
-using LinkUpPro.Domain.Entities.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -39,17 +38,5 @@ public sealed class FriendRequestConfiguration : IEntityTypeConfiguration<Friend
             })
             .HasDatabaseName("IX_FriendRequests_Sender_Status_Visible");
 
-        // Relaciones
-        builder
-            .HasOne<User>()
-            .WithMany()
-            .HasForeignKey(x => x.SenderId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder
-            .HasOne<User>()
-            .WithMany()
-            .HasForeignKey(x => x.ReceiverId)
-            .OnDelete(DeleteBehavior.Restrict);
     }
 }

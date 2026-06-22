@@ -11,16 +11,16 @@ public sealed class FriendRequestRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new FriendRequestRepository(context);
-        var sender = await SeedUserAsync(context, "sender", "s@t.com");
-        var receiver = await SeedUserAsync(context, "receiver", "r@t.com");
+        var senderId = CreateUserId("sender");
+        var receiverId = CreateUserId("receiver");
 
-        context.FriendRequests.Add(FriendRequest.Create(sender.Id, receiver.Id).Value);
+        context.FriendRequests.Add(FriendRequest.Create(senderId, receiverId).Value);
         await context.SaveChangesAsync();
 
-        var result = await repo.GetPendingReceivedAsync(receiver.Id);
+        var result = await repo.GetPendingReceivedAsync(receiverId);
 
         result.Should().HaveCount(1);
-        result.First().SenderId.Should().Be(sender.Id);
+        result.First().SenderId.Should().Be(senderId);
     }
 
     [Fact]
@@ -28,13 +28,13 @@ public sealed class FriendRequestRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new FriendRequestRepository(context);
-        var sender = await SeedUserAsync(context, "sender", "s@t.com");
-        var receiver = await SeedUserAsync(context, "receiver", "r@t.com");
+        var senderId = CreateUserId("sender");
+        var receiverId = CreateUserId("receiver");
 
-        context.FriendRequests.Add(FriendRequest.Create(sender.Id, receiver.Id).Value);
+        context.FriendRequests.Add(FriendRequest.Create(senderId, receiverId).Value);
         await context.SaveChangesAsync();
 
-        var result = await repo.GetPendingSentAsync(sender.Id);
+        var result = await repo.GetPendingSentAsync(senderId);
 
         result.Should().HaveCount(1);
     }
@@ -44,17 +44,17 @@ public sealed class FriendRequestRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new FriendRequestRepository(context);
-        var sender = await SeedUserAsync(context, "sender", "s@t.com");
-        var receiver = await SeedUserAsync(context, "receiver", "r@t.com");
+        var senderId = CreateUserId("sender");
+        var receiverId = CreateUserId("receiver");
 
-        var pending = FriendRequest.Create(sender.Id, receiver.Id).Value;
+        var pending = FriendRequest.Create(senderId, receiverId).Value;
         context.FriendRequests.Add(pending);
         await context.SaveChangesAsync();
 
-        pending.Accept(receiver.Id);
+        pending.Accept(receiverId);
         await context.SaveChangesAsync();
 
-        var result = await repo.GetVisibleSentHistoryAsync(sender.Id);
+        var result = await repo.GetVisibleSentHistoryAsync(senderId);
 
         result.Should().HaveCount(1);
         result.First().Status.Should().Be(FriendRequestStatus.Accepted);
@@ -65,14 +65,14 @@ public sealed class FriendRequestRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new FriendRequestRepository(context);
-        var userA = await SeedUserAsync(context, "userA", "a@t.com");
-        var userB = await SeedUserAsync(context, "userB", "b@t.com");
+        var userAId = CreateUserId("userA");
+        var userBId = CreateUserId("userB");
 
-        context.FriendRequests.Add(FriendRequest.Create(userA.Id, userB.Id).Value);
+        context.FriendRequests.Add(FriendRequest.Create(userAId, userBId).Value);
         await context.SaveChangesAsync();
 
-        var existsAB = await repo.ExistsPendingBetweenAsync(userA.Id, userB.Id);
-        var existsBA = await repo.ExistsPendingBetweenAsync(userB.Id, userA.Id);
+        var existsAB = await repo.ExistsPendingBetweenAsync(userAId, userBId);
+        var existsBA = await repo.ExistsPendingBetweenAsync(userBId, userAId);
 
         existsAB.Should().BeTrue();
         existsBA.Should().BeTrue();
@@ -83,18 +83,18 @@ public sealed class FriendRequestRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new FriendRequestRepository(context);
-        var userA = await SeedUserAsync(context, "userA", "a@t.com");
-        var userB = await SeedUserAsync(context, "userB", "b@t.com");
+        var userAId = CreateUserId("userA");
+        var userBId = CreateUserId("userB");
 
-        var fr = FriendRequest.Create(userA.Id, userB.Id).Value;
+        var fr = FriendRequest.Create(userAId, userBId).Value;
         context.FriendRequests.Add(fr);
         await context.SaveChangesAsync();
 
-        var result = await repo.GetPendingBetweenAsync(userA.Id, userB.Id);
+        var result = await repo.GetPendingBetweenAsync(userAId, userBId);
 
         result.Should().NotBeNull();
-        result!.SenderId.Should().Be(userA.Id);
-        result.ReceiverId.Should().Be(userB.Id);
+        result!.SenderId.Should().Be(userAId);
+        result.ReceiverId.Should().Be(userBId);
     }
 
     [Fact]
@@ -102,16 +102,16 @@ public sealed class FriendRequestRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new FriendRequestRepository(context);
-        var sender = await SeedUserAsync(context, "sender", "s@t.com");
-        var receiver = await SeedUserAsync(context, "receiver", "r@t.com");
-        var other = await SeedUserAsync(context, "other", "o@t.com");
+        var senderId = CreateUserId("sender");
+        var receiverId = CreateUserId("receiver");
+        var otherId = CreateUserId("other");
 
-        var fr = FriendRequest.Create(sender.Id, receiver.Id).Value;
+        var fr = FriendRequest.Create(senderId, receiverId).Value;
         context.FriendRequests.Add(fr);
         await context.SaveChangesAsync();
 
-        var forSender = await repo.GetByIdForSenderAsync(fr.Id, sender.Id);
-        var forOther = await repo.GetByIdForSenderAsync(fr.Id, other.Id);
+        var forSender = await repo.GetByIdForSenderAsync(fr.Id, senderId);
+        var forOther = await repo.GetByIdForSenderAsync(fr.Id, otherId);
 
         forSender.Should().NotBeNull();
         forOther.Should().BeNull();
@@ -122,14 +122,14 @@ public sealed class FriendRequestRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new FriendRequestRepository(context);
-        var sender = await SeedUserAsync(context, "sender", "s@t.com");
-        var receiver = await SeedUserAsync(context, "receiver", "r@t.com");
+        var senderId = CreateUserId("sender");
+        var receiverId = CreateUserId("receiver");
 
-        var fr = FriendRequest.Create(sender.Id, receiver.Id).Value;
+        var fr = FriendRequest.Create(senderId, receiverId).Value;
         context.FriendRequests.Add(fr);
         await context.SaveChangesAsync();
 
-        var forReceiver = await repo.GetByIdForReceiverAsync(fr.Id, receiver.Id);
+        var forReceiver = await repo.GetByIdForReceiverAsync(fr.Id, receiverId);
 
         forReceiver.Should().NotBeNull();
     }
@@ -139,17 +139,17 @@ public sealed class FriendRequestRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new FriendRequestRepository(context);
-        var userA = await SeedUserAsync(context, "userA", "a@t.com");
-        var userB = await SeedUserAsync(context, "userB", "b@t.com");
+        var userAId = CreateUserId("userA");
+        var userBId = CreateUserId("userB");
 
-        var fr = FriendRequest.Create(userA.Id, userB.Id).Value;
+        var fr = FriendRequest.Create(userAId, userBId).Value;
         context.FriendRequests.Add(fr);
         await context.SaveChangesAsync();
 
-        fr.Reject(userB.Id);
+        fr.Reject(userBId);
         await context.SaveChangesAsync();
 
-        var exists = await repo.ExistsPendingBetweenAsync(userA.Id, userB.Id);
+        var exists = await repo.ExistsPendingBetweenAsync(userAId, userBId);
 
         exists.Should().BeFalse();
     }

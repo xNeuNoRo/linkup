@@ -11,18 +11,18 @@ public sealed class NotificationRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new NotificationRepository(context);
-        var actor = await SeedUserAsync(context, "actor", "actor@t.com");
-        var recipient = await SeedUserAsync(context, "recipient", "recip@t.com");
+        var actorId = CreateUserId("actor");
+        var recipientId = CreateUserId("recipient");
 
-        var post = Post.Create(recipient.Id, "Post", PostContentType.Image, "/img.jpg").Value;
+        var post = Post.Create(recipientId, "Post", PostContentType.Image, "/img.jpg").Value;
         context.Posts.Add(post);
         await context.SaveChangesAsync();
 
-        var notif = Notification.CreateComment(recipient.Id, actor.Id, post.Id, "actor").Value;
+        var notif = Notification.CreateComment(recipientId, actorId, post.Id, "actor").Value;
         context.Notifications.Add(notif);
         await context.SaveChangesAsync();
 
-        var result = await repo.GetByRecipientAsync(recipient.Id);
+        var result = await repo.GetByRecipientAsync(recipientId);
 
         result.Should().HaveCount(1);
         result.First().Message.Should().Contain("actor");
@@ -33,22 +33,22 @@ public sealed class NotificationRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new NotificationRepository(context);
-        var actor = await SeedUserAsync(context, "actor");
-        var recipient = await SeedUserAsync(context, "recip");
+        var actorId = CreateUserId("actor");
+        var recipientId = CreateUserId("recip");
 
-        var post = Post.Create(recipient.Id, "P", PostContentType.Image, "/i.jpg").Value;
+        var post = Post.Create(recipientId, "P", PostContentType.Image, "/i.jpg").Value;
         context.Posts.Add(post);
         await context.SaveChangesAsync();
 
         for (int i = 0; i < 5; i++)
         {
             context.Notifications.Add(
-                Notification.CreateComment(recipient.Id, actor.Id, post.Id, "actor").Value
+                Notification.CreateComment(recipientId, actorId, post.Id, "actor").Value
             );
         }
         await context.SaveChangesAsync();
 
-        var result = await repo.GetRecentAsync(recipient.Id, 3);
+        var result = await repo.GetRecentAsync(recipientId, 3);
 
         result.Should().HaveCount(3);
     }
@@ -58,21 +58,21 @@ public sealed class NotificationRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new NotificationRepository(context);
-        var actor = await SeedUserAsync(context, "actor");
-        var recipient = await SeedUserAsync(context, "recip");
+        var actorId = CreateUserId("actor");
+        var recipientId = CreateUserId("recip");
 
-        var post = Post.Create(recipient.Id, "P", PostContentType.Image, "/i.jpg").Value;
+        var post = Post.Create(recipientId, "P", PostContentType.Image, "/i.jpg").Value;
         context.Posts.Add(post);
         await context.SaveChangesAsync();
 
-        var n1 = Notification.CreateComment(recipient.Id, actor.Id, post.Id, "actor").Value;
-        var n2 = Notification.CreateComment(recipient.Id, actor.Id, post.Id, "actor").Value;
+        var n1 = Notification.CreateComment(recipientId, actorId, post.Id, "actor").Value;
+        var n2 = Notification.CreateComment(recipientId, actorId, post.Id, "actor").Value;
         context.Notifications.AddRange(n1, n2);
         await context.SaveChangesAsync();
         n1.MarkAsRead();
         await context.SaveChangesAsync();
 
-        var unread = await repo.GetUnreadCountAsync(recipient.Id);
+        var unread = await repo.GetUnreadCountAsync(recipientId);
 
         unread.Should().Be(1);
     }
@@ -82,21 +82,21 @@ public sealed class NotificationRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new NotificationRepository(context);
-        var actor = await SeedUserAsync(context, "actor");
-        var recipient = await SeedUserAsync(context, "recip");
+        var actorId = CreateUserId("actor");
+        var recipientId = CreateUserId("recip");
 
-        var post = Post.Create(recipient.Id, "P", PostContentType.Image, "/i.jpg").Value;
+        var post = Post.Create(recipientId, "P", PostContentType.Image, "/i.jpg").Value;
         context.Posts.Add(post);
         await context.SaveChangesAsync();
 
-        var notif = Notification.CreateComment(recipient.Id, actor.Id, post.Id, "actor").Value;
+        var notif = Notification.CreateComment(recipientId, actorId, post.Id, "actor").Value;
         context.Notifications.Add(notif);
         await context.SaveChangesAsync();
 
-        await repo.MarkAsReadAsync(notif.Id, recipient.Id);
+        await repo.MarkAsReadAsync(notif.Id, recipientId);
         await context.SaveChangesAsync();
 
-        var retrieved = await repo.GetForRecipientAsync(notif.Id, recipient.Id);
+        var retrieved = await repo.GetForRecipientAsync(notif.Id, recipientId);
         retrieved!.IsRead.Should().BeTrue();
     }
 
@@ -105,25 +105,25 @@ public sealed class NotificationRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new NotificationRepository(context);
-        var actor = await SeedUserAsync(context, "actor");
-        var recipient = await SeedUserAsync(context, "recip");
+        var actorId = CreateUserId("actor");
+        var recipientId = CreateUserId("recip");
 
-        var post = Post.Create(recipient.Id, "P", PostContentType.Image, "/i.jpg").Value;
+        var post = Post.Create(recipientId, "P", PostContentType.Image, "/i.jpg").Value;
         context.Posts.Add(post);
         await context.SaveChangesAsync();
 
         for (int i = 0; i < 3; i++)
         {
             context.Notifications.Add(
-                Notification.CreateComment(recipient.Id, actor.Id, post.Id, "actor").Value
+                Notification.CreateComment(recipientId, actorId, post.Id, "actor").Value
             );
         }
         await context.SaveChangesAsync();
 
-        await repo.MarkAllAsReadAsync(recipient.Id);
+        await repo.MarkAllAsReadAsync(recipientId);
         await context.SaveChangesAsync();
 
-        var unread = await repo.GetUnreadCountAsync(recipient.Id);
+        var unread = await repo.GetUnreadCountAsync(recipientId);
         unread.Should().Be(0);
     }
 
@@ -132,19 +132,19 @@ public sealed class NotificationRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new NotificationRepository(context);
-        var actor = await SeedUserAsync(context, "actor");
-        var recipient = await SeedUserAsync(context, "recip");
-        var other = await SeedUserAsync(context, "other", "other@t.com");
+        var actorId = CreateUserId("actor");
+        var recipientId = CreateUserId("recip");
+        var otherId = CreateUserId("other");
 
-        var post = Post.Create(recipient.Id, "P", PostContentType.Image, "/i.jpg").Value;
+        var post = Post.Create(recipientId, "P", PostContentType.Image, "/i.jpg").Value;
         context.Posts.Add(post);
         await context.SaveChangesAsync();
 
-        var notif = Notification.CreateComment(recipient.Id, actor.Id, post.Id, "actor").Value;
+        var notif = Notification.CreateComment(recipientId, actorId, post.Id, "actor").Value;
         context.Notifications.Add(notif);
         await context.SaveChangesAsync();
 
-        var result = await repo.GetForRecipientAsync(notif.Id, other.Id);
+        var result = await repo.GetForRecipientAsync(notif.Id, otherId);
 
         result.Should().BeNull();
     }

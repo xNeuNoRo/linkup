@@ -10,13 +10,13 @@ public sealed class FriendshipRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new FriendshipRepository(context);
-        var userA = await SeedUserAsync(context, "userA", "a@t.com");
-        var userB = await SeedUserAsync(context, "userB", "b@t.com");
+        var userAId = CreateUserId("userA");
+        var userBId = CreateUserId("userB");
 
-        context.Friendships.Add(Friendship.Create(userA.Id, userB.Id).Value);
+        context.Friendships.Add(Friendship.Create(userAId, userBId).Value);
         await context.SaveChangesAsync();
 
-        var areFriends = await repo.AreFriendsAsync(userA.Id, userB.Id);
+        var areFriends = await repo.AreFriendsAsync(userAId, userBId);
 
         areFriends.Should().BeTrue();
     }
@@ -26,10 +26,10 @@ public sealed class FriendshipRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new FriendshipRepository(context);
-        var userA = await SeedUserAsync(context, "userA", "a@t.com");
-        var userB = await SeedUserAsync(context, "userB", "b@t.com");
+        var userAId = CreateUserId("userA");
+        var userBId = CreateUserId("userB");
 
-        var areFriends = await repo.AreFriendsAsync(userA.Id, userB.Id);
+        var areFriends = await repo.AreFriendsAsync(userAId, userBId);
 
         areFriends.Should().BeFalse();
     }
@@ -39,16 +39,16 @@ public sealed class FriendshipRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new FriendshipRepository(context);
-        var userA = await SeedUserAsync(context, "userA", "a@t.com");
-        var userB = await SeedUserAsync(context, "userB", "b@t.com");
+        var userAId = CreateUserId("userA");
+        var userBId = CreateUserId("userB");
 
-        var friendship = Friendship.Create(userA.Id, userB.Id).Value;
+        var friendship = Friendship.Create(userAId, userBId).Value;
         context.Friendships.Add(friendship);
         await context.SaveChangesAsync();
         friendship.MarkAsDeleted();
         await context.SaveChangesAsync();
 
-        var areFriends = await repo.AreFriendsAsync(userA.Id, userB.Id);
+        var areFriends = await repo.AreFriendsAsync(userAId, userBId);
 
         areFriends.Should().BeFalse();
     }
@@ -58,16 +58,16 @@ public sealed class FriendshipRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new FriendshipRepository(context);
-        var userA = await SeedUserAsync(context, "userA", "a@t.com");
-        var userB = await SeedUserAsync(context, "userB", "b@t.com");
+        var userAId = CreateUserId("userA");
+        var userBId = CreateUserId("userB");
 
-        var friendship = Friendship.Create(userA.Id, userB.Id).Value;
+        var friendship = Friendship.Create(userAId, userBId).Value;
         context.Friendships.Add(friendship);
         await context.SaveChangesAsync();
         friendship.MarkAsDeleted();
         await context.SaveChangesAsync();
 
-        var result = await repo.GetFriendshipBetweenAsync(userA.Id, userB.Id);
+        var result = await repo.GetFriendshipBetweenAsync(userAId, userBId);
 
         result.Should().NotBeNull();
         result!.IsDeleted.Should().BeTrue();
@@ -78,21 +78,21 @@ public sealed class FriendshipRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new FriendshipRepository(context);
-        var userA = await SeedUserAsync(context, "userA", "a@t.com");
-        var userB = await SeedUserAsync(context, "userB", "b@t.com");
-        var userC = await SeedUserAsync(context, "userC", "c@t.com");
+        var userAId = CreateUserId("userA");
+        var userBId = CreateUserId("userB");
+        var userCId = CreateUserId("userC");
 
         context.Friendships.AddRange(
-            Friendship.Create(userA.Id, userB.Id).Value,
-            Friendship.Create(userA.Id, userC.Id).Value
+            Friendship.Create(userAId, userBId).Value,
+            Friendship.Create(userAId, userCId).Value
         );
         await context.SaveChangesAsync();
 
-        var friendIds = await repo.GetActiveFriendIdsAsync(userA.Id);
+        var friendIds = await repo.GetActiveFriendIdsAsync(userAId);
 
         friendIds.Should().HaveCount(2);
-        friendIds.Should().Contain(userB.Id);
-        friendIds.Should().Contain(userC.Id);
+        friendIds.Should().Contain(userBId);
+        friendIds.Should().Contain(userCId);
     }
 
     [Fact]
@@ -100,13 +100,13 @@ public sealed class FriendshipRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new FriendshipRepository(context);
-        var userA = await SeedUserAsync(context, "userA", "a@t.com");
-        var userB = await SeedUserAsync(context, "userB", "b@t.com");
+        var userAId = CreateUserId("userA");
+        var userBId = CreateUserId("userB");
 
-        context.Friendships.Add(Friendship.Create(userA.Id, userB.Id).Value);
+        context.Friendships.Add(Friendship.Create(userAId, userBId).Value);
         await context.SaveChangesAsync();
 
-        var count = await repo.GetActiveFriendsCountAsync(userA.Id);
+        var count = await repo.GetActiveFriendsCountAsync(userAId);
 
         count.Should().Be(1);
     }
@@ -116,17 +116,17 @@ public sealed class FriendshipRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new FriendshipRepository(context);
-        var userA = await SeedUserAsync(context, "userA", "a@t.com");
-        var userB = await SeedUserAsync(context, "userB", "b@t.com");
-        var common = await SeedUserAsync(context, "common", "common@t.com");
+        var userAId = CreateUserId("userA");
+        var userBId = CreateUserId("userB");
+        var commonId = CreateUserId("common");
 
         context.Friendships.AddRange(
-            Friendship.Create(userA.Id, common.Id).Value,
-            Friendship.Create(userB.Id, common.Id).Value
+            Friendship.Create(userAId, commonId).Value,
+            Friendship.Create(userBId, commonId).Value
         );
         await context.SaveChangesAsync();
 
-        var count = await repo.GetCommonFriendsCountAsync(userA.Id, userB.Id);
+        var count = await repo.GetCommonFriendsCountAsync(userAId, userBId);
 
         count.Should().Be(1);
     }
@@ -136,14 +136,14 @@ public sealed class FriendshipRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new FriendshipRepository(context);
-        var userA = await SeedUserAsync(context, "userA", "a@t.com");
-        var userB = await SeedUserAsync(context, "userB", "b@t.com");
+        var userAId = CreateUserId("userA");
+        var userBId = CreateUserId("userB");
 
-        var f = Friendship.Create(userA.Id, userB.Id).Value;
+        var f = Friendship.Create(userAId, userBId).Value;
         context.Friendships.Add(f);
         await context.SaveChangesAsync();
 
-        var result = await repo.GetActiveFriendshipsForUserAsync(userA.Id);
+        var result = await repo.GetActiveFriendshipsForUserAsync(userAId);
 
         result.Should().HaveCount(1);
     }

@@ -12,14 +12,14 @@ public sealed class BattleshipRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new BattleshipRepository(context);
-        var creator = await SeedUserAsync(context, "creator", "c@t.com");
-        var opponent = await SeedUserAsync(context, "opponent", "o@t.com");
+        var creatorId = CreateUserId("creator");
+        var opponentId = CreateUserId("opponent");
 
-        var game = BattleshipGame.Create(creator.Id, opponent.Id).Value;
+        var game = BattleshipGame.Create(creatorId, opponentId).Value;
         context.BattleshipGames.Add(game);
         await context.SaveChangesAsync();
 
-        var result = await repo.GetActiveGamesForUserAsync(creator.Id);
+        var result = await repo.GetActiveGamesForUserAsync(creatorId);
 
         result.Should().HaveCount(1);
         result.First().Status.Should().Be(GameStatus.Configuring_P1);
@@ -30,41 +30,41 @@ public sealed class BattleshipRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new BattleshipRepository(context);
-        var creator = await SeedUserAsync(context, "creator", "c@t.com");
-        var opponent = await SeedUserAsync(context, "opponent", "o@t.com");
+        var creatorId = CreateUserId("creator");
+        var opponentId = CreateUserId("opponent");
 
-        var game = BattleshipGame.Create(creator.Id, opponent.Id).Value;
+        var game = BattleshipGame.Create(creatorId, opponentId).Value;
         context.BattleshipGames.Add(game);
         await context.SaveChangesAsync();
 
         game.CompletePlayerPlacement(
-            creator.Id,
+            creatorId,
             new List<BattleshipShip>
             {
-                CreateShip(game.Id, creator.Id, ShipSize.Size5),
-                CreateShip(game.Id, creator.Id, ShipSize.Size4),
-                CreateShip(game.Id, creator.Id, ShipSize.Size3),
-                CreateShip(game.Id, creator.Id, ShipSize.Size3),
-                CreateShip(game.Id, creator.Id, ShipSize.Size2),
+                CreateShip(game.Id, creatorId, ShipSize.Size5),
+                CreateShip(game.Id, creatorId, ShipSize.Size4),
+                CreateShip(game.Id, creatorId, ShipSize.Size3),
+                CreateShip(game.Id, creatorId, ShipSize.Size3),
+                CreateShip(game.Id, creatorId, ShipSize.Size2),
             }
         );
 
         game.CompletePlayerPlacement(
-            opponent.Id,
+            opponentId,
             new List<BattleshipShip>
             {
-                CreateShip(game.Id, opponent.Id, ShipSize.Size5),
-                CreateShip(game.Id, opponent.Id, ShipSize.Size4),
-                CreateShip(game.Id, opponent.Id, ShipSize.Size3),
-                CreateShip(game.Id, opponent.Id, ShipSize.Size3),
-                CreateShip(game.Id, opponent.Id, ShipSize.Size2),
+                CreateShip(game.Id, opponentId, ShipSize.Size5),
+                CreateShip(game.Id, opponentId, ShipSize.Size4),
+                CreateShip(game.Id, opponentId, ShipSize.Size3),
+                CreateShip(game.Id, opponentId, ShipSize.Size3),
+                CreateShip(game.Id, opponentId, ShipSize.Size2),
             }
         );
 
-        game.Surrender(opponent.Id);
+        game.Surrender(opponentId);
         await context.SaveChangesAsync();
 
-        var result = await repo.GetFinishedGamesForUserAsync(creator.Id);
+        var result = await repo.GetFinishedGamesForUserAsync(creatorId);
 
         result.Should().HaveCount(1);
         result.First().Status.Should().Be(GameStatus.Finished_Winner);
@@ -75,13 +75,13 @@ public sealed class BattleshipRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new BattleshipRepository(context);
-        var creator = await SeedUserAsync(context, "creator", "c@t.com");
-        var opponent = await SeedUserAsync(context, "opponent", "o@t.com");
+        var creatorId = CreateUserId("creator");
+        var opponentId = CreateUserId("opponent");
 
-        context.BattleshipGames.Add(BattleshipGame.Create(creator.Id, opponent.Id).Value);
+        context.BattleshipGames.Add(BattleshipGame.Create(creatorId, opponentId).Value);
         await context.SaveChangesAsync();
 
-        var result = await repo.HasActiveGameBetweenAsync(creator.Id, opponent.Id);
+        var result = await repo.HasActiveGameBetweenAsync(creatorId, opponentId);
 
         result.Should().BeTrue();
     }
@@ -91,17 +91,17 @@ public sealed class BattleshipRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new BattleshipRepository(context);
-        var creator = await SeedUserAsync(context, "creator", "c@t.com");
-        var opponent = await SeedUserAsync(context, "opponent", "o@t.com");
+        var creatorId = CreateUserId("creator");
+        var opponentId = CreateUserId("opponent");
 
-        var game = BattleshipGame.Create(creator.Id, opponent.Id).Value;
+        var game = BattleshipGame.Create(creatorId, opponentId).Value;
         context.BattleshipGames.Add(game);
         await context.SaveChangesAsync();
 
-        game.Surrender(opponent.Id);
+        game.Surrender(opponentId);
         await context.SaveChangesAsync();
 
-        var stats = await repo.GetStatsForUserAsync(creator.Id);
+        var stats = await repo.GetStatsForUserAsync(creatorId);
 
         stats.TotalGames.Should().Be(1);
         stats.WonGames.Should().Be(1);
@@ -113,18 +113,18 @@ public sealed class BattleshipRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new BattleshipRepository(context);
-        var creator = await SeedUserAsync(context, "creator", "c@t.com");
-        var opponent = await SeedUserAsync(context, "opponent", "o@t.com");
+        var creatorId = CreateUserId("creator");
+        var opponentId = CreateUserId("opponent");
 
-        var game = BattleshipGame.Create(creator.Id, opponent.Id).Value;
+        var game = BattleshipGame.Create(creatorId, opponentId).Value;
         context.BattleshipGames.Add(game);
         await context.SaveChangesAsync();
 
-        var ship = CreateShip(game.Id, creator.Id, ShipSize.Size5);
+        var ship = CreateShip(game.Id, creatorId, ShipSize.Size5);
         context.BattleshipShips.Add(ship);
         await context.SaveChangesAsync();
 
-        var result = await repo.GetShipsByGameAndPlayerAsync(game.Id, creator.Id);
+        var result = await repo.GetShipsByGameAndPlayerAsync(game.Id, creatorId);
 
         result.Should().HaveCount(1);
         result.First().Size.Should().Be(ShipSize.Size5);
@@ -135,15 +135,15 @@ public sealed class BattleshipRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new BattleshipRepository(context);
-        var creator = await SeedUserAsync(context, "creator", "c@t.com");
-        var opponent = await SeedUserAsync(context, "opponent", "o@t.com");
+        var creatorId = CreateUserId("creator");
+        var opponentId = CreateUserId("opponent");
 
-        var game = BattleshipGame.Create(creator.Id, opponent.Id).Value;
+        var game = BattleshipGame.Create(creatorId, opponentId).Value;
         context.BattleshipGames.Add(game);
         await context.SaveChangesAsync();
 
         var attack = BattleshipAttack
-            .Record(game.Id, creator.Id, Coordinates.Create(0, 0), isHit: false)
+            .Record(game.Id, creatorId, Coordinates.Create(0, 0), isHit: false)
             .Value;
         context.BattleshipAttacks.Add(attack);
         await context.SaveChangesAsync();
@@ -158,16 +158,16 @@ public sealed class BattleshipRepositoryTests : PersistenceTestBase
     {
         var context = CreateContext();
         var repo = new BattleshipRepository(context);
-        var creator = await SeedUserAsync(context, "creator", "c@t.com");
-        var opponent = await SeedUserAsync(context, "opponent", "o@t.com");
+        var creatorId = CreateUserId("creator");
+        var opponentId = CreateUserId("opponent");
 
-        var game = BattleshipGame.Create(creator.Id, opponent.Id).Value;
+        var game = BattleshipGame.Create(creatorId, opponentId).Value;
         context.BattleshipGames.Add(game);
         await context.SaveChangesAsync();
 
-        context.BattleshipShips.Add(CreateShip(game.Id, creator.Id, ShipSize.Size5));
+        context.BattleshipShips.Add(CreateShip(game.Id, creatorId, ShipSize.Size5));
         context.BattleshipAttacks.Add(
-            BattleshipAttack.Record(game.Id, creator.Id, Coordinates.Create(0, 0), false).Value
+            BattleshipAttack.Record(game.Id, creatorId, Coordinates.Create(0, 0), false).Value
         );
         await context.SaveChangesAsync();
 

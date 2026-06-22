@@ -1,4 +1,3 @@
-using LinkUpPro.Domain.Entities.Identity;
 using LinkUpPro.Domain.Entities.Social;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -32,13 +31,6 @@ public sealed class PostConfiguration : IEntityTypeConfiguration<Post>
         builder
             .HasIndex(x => new { x.AuthorId, x.DeletedAt })
             .HasDatabaseName("IX_Posts_Author_Active");
-
-        // Relaciones
-        builder
-            .HasOne<User>()
-            .WithMany()
-            .HasForeignKey(x => x.AuthorId)
-            .OnDelete(DeleteBehavior.Restrict);
 
         // QueryFilter para excluir posts eliminados de consultas normales
         builder.HasQueryFilter(x => x.DeletedAt == null);

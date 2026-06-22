@@ -1,7 +1,6 @@
 using LinkUpPro.Domain.Common;
 using LinkUpPro.Domain.Entities.Battleship;
 using LinkUpPro.Domain.Entities.Friendship;
-using LinkUpPro.Domain.Entities.Identity;
 using LinkUpPro.Domain.Entities.Social;
 using LinkUpPro.Infrastructure.Persistence.Providers;
 using Microsoft.EntityFrameworkCore;
@@ -32,8 +31,7 @@ public sealed class AppDbContext : DbContext
         _dateTimeProvider = dateTimeProvider;
     }
 
-    // Identity / Social
-    public DbSet<User> Users => Set<User>();
+    // Social
     public DbSet<Post> Posts => Set<Post>();
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<Reaction> Reactions => Set<Reaction>();

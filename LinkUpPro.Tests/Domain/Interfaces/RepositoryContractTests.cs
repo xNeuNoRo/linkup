@@ -1,7 +1,6 @@
 using System.Reflection;
 using LinkUpPro.Domain.Entities.Battleship;
 using LinkUpPro.Domain.Entities.Friendship;
-using LinkUpPro.Domain.Entities.Identity;
 using LinkUpPro.Domain.Entities.Social;
 using LinkUpPro.Domain.Interfaces.Persistence;
 using LinkUpPro.Domain.Interfaces.Repositories;
@@ -12,7 +11,6 @@ namespace LinkUpPro.Tests.Domain.Interfaces;
 public class RepositoryContractTests
 {
     [Theory]
-    [InlineData(typeof(IUserRepository), typeof(User), typeof(string))]
     [InlineData(typeof(IPostRepository), typeof(Post), typeof(long))]
     [InlineData(typeof(ICommentRepository), typeof(Comment), typeof(long))]
     [InlineData(typeof(IReactionRepository), typeof(Reaction), typeof(long))]
@@ -23,36 +21,32 @@ public class RepositoryContractTests
     public void SpecificRepository_ExtendsExpectedGenericRepository(
         Type repositoryType,
         Type entityType,
-        Type idType)
+        Type idType
+    )
     {
-        // Arrange
         var expectedInterface = typeof(IGenericRepository<,>).MakeGenericType(entityType, idType);
 
-        // Act
-        var implementsExpectedInterface = repositoryType.GetInterfaces().Contains(expectedInterface);
+        var implementsExpectedInterface = repositoryType
+            .GetInterfaces()
+            .Contains(expectedInterface);
 
-        // Assert
         Assert.True(implementsExpectedInterface);
     }
 
     [Fact]
     public void GenericRepository_DoesNotExposePhysicalDeleteContract()
     {
-        // Arrange & Act
         var deleteMethod = typeof(IGenericRepository<,>).GetMethod("Delete");
 
-        // Assert
         Assert.Null(deleteMethod);
     }
 
     [Fact]
     public void RepositoryAsyncMethods_ExposeCancellationToken()
     {
-        // Arrange
         var repositoryInterfaces = new[]
         {
             typeof(IGenericRepository<,>),
-            typeof(IUserRepository),
             typeof(IPostRepository),
             typeof(ICommentRepository),
             typeof(IReactionRepository),
@@ -62,37 +56,40 @@ public class RepositoryContractTests
             typeof(IBattleshipRepository),
         };
 
-        // Act
         var asyncMethodsWithoutCancellationToken = repositoryInterfaces
             .SelectMany(type => type.GetMethods())
             .Where(method => method.ReturnType == typeof(Task) || IsGenericTask(method.ReturnType))
-            .Where(method => method.GetParameters().All(parameter => parameter.ParameterType != typeof(CancellationToken)))
+            .Where(method =>
+                method
+                    .GetParameters()
+                    .All(parameter => parameter.ParameterType != typeof(CancellationToken))
+            )
             .Select(method => $"{method.DeclaringType?.Name}.{method.Name}")
             .ToArray();
 
-        // Assert
         Assert.Empty(asyncMethodsWithoutCancellationToken);
     }
 
     [Fact]
     public void UnitOfWorkAsyncMethods_ExposeCancellationToken()
     {
-        // Arrange & Act
         var asyncMethodsWithoutCancellationToken = typeof(IUnitOfWork)
             .GetMethods()
             .Where(method => method.ReturnType == typeof(Task) || IsGenericTask(method.ReturnType))
-            .Where(method => method.GetParameters().All(parameter => parameter.ParameterType != typeof(CancellationToken)))
+            .Where(method =>
+                method
+                    .GetParameters()
+                    .All(parameter => parameter.ParameterType != typeof(CancellationToken))
+            )
             .Select(method => method.Name)
             .ToArray();
 
-        // Assert
         Assert.Empty(asyncMethodsWithoutCancellationToken);
     }
 
     [Fact]
     public void UnitOfWork_RequiresTransactionAndSaveContracts()
     {
-        // Arrange & Act & Assert
         Assert.NotNull(typeof(IUnitOfWork).GetMethod(nameof(IUnitOfWork.BeginTransactionAsync)));
         Assert.NotNull(typeof(IUnitOfWork).GetMethod(nameof(IUnitOfWork.CommitAsync)));
         Assert.NotNull(typeof(IUnitOfWork).GetMethod(nameof(IUnitOfWork.RollbackAsync)));

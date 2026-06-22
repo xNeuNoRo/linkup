@@ -1,5 +1,4 @@
 using LinkUpPro.Domain.Entities.Battleship;
-using LinkUpPro.Domain.Entities.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -31,33 +30,6 @@ public sealed class BattleshipGameConfiguration : IEntityTypeConfiguration<Battl
         builder.HasIndex(x => x.CreatorId);
         builder.HasIndex(x => x.OpponentId);
         builder.HasIndex(x => x.Status).HasDatabaseName("IX_BattleshipGames_Status");
-
-        // Relaciones
-        builder
-            .HasOne<User>()
-            .WithMany()
-            .HasForeignKey(x => x.CreatorId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder
-            .HasOne<User>()
-            .WithMany()
-            .HasForeignKey(x => x.OpponentId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder
-            .HasOne<User>()
-            .WithMany()
-            .HasForeignKey(x => x.CurrentTurnUserId)
-            .OnDelete(DeleteBehavior.Restrict)
-            .IsRequired(false);
-
-        builder
-            .HasOne<User>()
-            .WithMany()
-            .HasForeignKey(x => x.WinnerId)
-            .OnDelete(DeleteBehavior.Restrict)
-            .IsRequired(false);
 
         // QueryFilter para evitar incluir partidas eliminadas en consultas normales
         builder.HasQueryFilter(x => x.DeletedAt == null);
