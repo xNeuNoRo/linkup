@@ -6,10 +6,11 @@ using LinkUpPro.Application.DTOs.User.Responses;
 using LinkUpPro.Application.Interfaces;
 using LinkUpPro.Application.Models.Emails;
 using LinkUpPro.Domain.Common;
+using LinkUpPro.Domain.Exceptions;
 using LinkUpPro.Infrastructure.Identity.Entities;
+using Mapster;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Configuration;
 
 namespace LinkUpPro.Infrastructure.Identity.Services;
 
@@ -19,35 +20,36 @@ public class AccountService : IAccountService
     private readonly SignInManager<AppUser> _signInManager;
     private readonly IEmailService _emailService;
     private readonly IFileService _fileService;
-    private readonly IConfiguration _configuration;
 
     public AccountService(
         UserManager<AppUser> userManager,
         SignInManager<AppUser> signInManager,
         IEmailService emailService,
-        IFileService fileService,
-        IConfiguration configuration
+        IFileService fileService
     )
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _emailService = emailService;
         _fileService = fileService;
-        _configuration = configuration;
     }
 
     public async Task<AuthResponseDto> LoginAsync(LoginRequest request, bool rememberMe)
     {
         var user = await _userManager.FindByNameAsync(request.UserName);
         if (user is null)
-            return AuthResponseDto.CreateError([
+            throw new DomainValidationException(
+                "UserName",
                 "El nombre de usuario o la contrasena son incorrectos.",
-            ]);
+                "Auth.LoginFailed"
+            );
 
         if (!user.IsActive || !user.EmailConfirmed)
-            return AuthResponseDto.CreateError([
+            throw new DomainValidationException(
+                "Account",
                 "Su cuenta se encuentra inactiva. Debe activarla mediante el enlace enviado a su correo electronico.",
-            ]);
+                "Auth.AccountInactive"
+            );
 
         var result = await _signInManager.PasswordSignInAsync(
             user.UserName!,
@@ -57,45 +59,43 @@ public class AccountService : IAccountService
         );
 
         if (result.IsLockedOut)
-            return AuthResponseDto.CreateError([
+            throw new DomainValidationException(
+                "Account",
                 "La cuenta se encuentra bloqueada temporalmente debido a varios intentos fallidos. Intentelo nuevamente en 15 minutos o restablezca su contrasena.",
-            ]);
+                "Auth.AccountLocked"
+            );
 
         if (!result.Succeeded)
-            return AuthResponseDto.CreateError([
+            throw new DomainValidationException(
+                "UserName",
                 "El nombre de usuario o la contrasena son incorrectos.",
-            ]);
+                "Auth.LoginFailed"
+            );
 
         user.LastActivityAt = DateTimeOffset.UtcNow;
         await _userManager.UpdateAsync(user);
 
         var roles = await _userManager.GetRolesAsync(user);
-
-        return AuthResponseDto.CreateSuccess(
-            user.Id,
-            user.UserName ?? string.Empty,
-            user.Email ?? string.Empty,
-            user.FirstName,
-            user.LastName,
-            user.ProfilePicturePath,
-            user.EmailConfirmed,
-            roles.ToList()
-        );
+        return user.Adapt<AuthResponseDto>() with { Roles = [.. roles] };
     }
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterRequest request, string origin)
     {
         var existingUser = await _userManager.FindByNameAsync(request.UserName);
         if (existingUser is not null)
-            return AuthResponseDto.CreateError([
+            throw new DomainValidationException(
+                "UserName",
                 "Este nombre de usuario ya se encuentra registrado.",
-            ]);
+                "Auth.UserNameTaken"
+            );
 
         var existingEmail = await _userManager.FindByEmailAsync(request.Email);
         if (existingEmail is not null)
-            return AuthResponseDto.CreateError([
+            throw new DomainValidationException(
+                "Email",
                 "Este correo electronico ya se encuentra registrado.",
-            ]);
+                "Auth.EmailTaken"
+            );
 
         var user = new AppUser
         {
@@ -111,8 +111,11 @@ public class AccountService : IAccountService
 
         var createResult = await _userManager.CreateAsync(user, request.Password);
         if (!createResult.Succeeded)
-            return AuthResponseDto.CreateError(
-                createResult.Errors.Select(e => e.Description).ToList()
+            throw new DomainValidationException(
+                "Registration",
+                createResult.Errors.FirstOrDefault()?.Description
+                    ?? "Error al registrar el usuario.",
+                "Auth.RegistrationFailed"
             );
 
         await _userManager.AddToRoleAsync(user, "User");
@@ -125,45 +128,33 @@ public class AccountService : IAccountService
             new ActivationEmailModel(user.UserName!, verificationUri)
         );
 
-        return AuthResponseDto.CreateSuccess(
-            user.Id,
-            user.UserName ?? string.Empty,
-            user.Email ?? string.Empty,
-            user.FirstName,
-            user.LastName,
-            user.ProfilePicturePath,
-            false
-        );
+        return user.Adapt<AuthResponseDto>();
     }
 
     public async Task<AuthResponseDto> ConfirmAccountAsync(string userId, string token)
     {
         var user = await _userManager.FindByIdAsync(userId);
         if (user is null)
-            return AuthResponseDto.CreateError([
+            throw new DomainValidationException(
+                "Token",
                 "El enlace de activacion no es valido o ya fue utilizado.",
-            ]);
+                "Auth.InvalidToken"
+            );
 
         var decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(token));
         var result = await _userManager.ConfirmEmailAsync(user, decodedToken);
 
         if (!result.Succeeded)
-            return AuthResponseDto.CreateError([
+            throw new DomainValidationException(
+                "Token",
                 "El enlace de activacion no es valido o ya fue utilizado.",
-            ]);
+                "Auth.InvalidToken"
+            );
 
         user.IsActive = true;
         await _userManager.UpdateAsync(user);
 
-        return AuthResponseDto.CreateSuccess(
-            user.Id,
-            user.UserName ?? string.Empty,
-            user.Email ?? string.Empty,
-            user.FirstName,
-            user.LastName,
-            user.ProfilePicturePath,
-            true
-        );
+        return user.Adapt<AuthResponseDto>();
     }
 
     public async Task<AuthResponseDto> ResendActivationAsync(ResendActivationRequest request)
@@ -171,7 +162,7 @@ public class AccountService : IAccountService
         var user = await _userManager.FindByNameAsync(request.UserName);
 
         if (user is null || user.IsActive || user.EmailConfirmed)
-            return AuthResponseDto.CreateSuccess(
+            return new AuthResponseDto(
                 string.Empty,
                 string.Empty,
                 string.Empty,
@@ -186,9 +177,11 @@ public class AccountService : IAccountService
             && user.LastActivationEmailSentAt.Value.Add(DomainConstants.ActivationResendCooldown)
                 > DateTime.UtcNow
         )
-            return AuthResponseDto.CreateError([
+            throw new DomainValidationException(
+                "Resend",
                 "Debe esperar 5 minutos antes de solicitar un nuevo enlace de activacion.",
-            ]);
+                "Auth.ResendCooldown"
+            );
 
         var verificationUri = await GenerateActivationUri(user, request.Origin);
         await _emailService.SendEmailAsync(
@@ -201,15 +194,7 @@ public class AccountService : IAccountService
         user.LastActivationEmailSentAt = DateTime.UtcNow;
         await _userManager.UpdateAsync(user);
 
-        return AuthResponseDto.CreateSuccess(
-            string.Empty,
-            string.Empty,
-            string.Empty,
-            string.Empty,
-            string.Empty,
-            null,
-            false
-        );
+        return user.Adapt<AuthResponseDto>();
     }
 
     public async Task<AuthResponseDto> ForgotPasswordAsync(ForgotPasswordRequest request)
@@ -227,7 +212,7 @@ public class AccountService : IAccountService
             );
         }
 
-        return AuthResponseDto.CreateSuccess(
+        return new AuthResponseDto(
             string.Empty,
             string.Empty,
             string.Empty,
@@ -242,51 +227,38 @@ public class AccountService : IAccountService
     {
         var user = await _userManager.FindByIdAsync(request.Id);
         if (user is null)
-            return AuthResponseDto.CreateError([
+            throw new DomainValidationException(
+                "Token",
                 "El enlace para restablecer la contrasena no es valido o ya fue utilizado.",
-            ]);
+                "Auth.InvalidToken"
+            );
 
         var decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(request.Token));
         var result = await _userManager.ResetPasswordAsync(user, decodedToken, request.Password);
 
         if (!result.Succeeded)
-            return AuthResponseDto.CreateError([
+            throw new DomainValidationException(
+                "Token",
                 "El enlace para restablecer la contrasena no es valido o ya fue utilizado.",
-            ]);
+                "Auth.InvalidToken"
+            );
 
         await _userManager.UpdateSecurityStampAsync(user);
 
-        return AuthResponseDto.CreateSuccess(
-            user.Id,
-            user.UserName ?? string.Empty,
-            user.Email ?? string.Empty,
-            user.FirstName,
-            user.LastName,
-            user.ProfilePicturePath,
-            true
-        );
+        return user.Adapt<AuthResponseDto>();
     }
 
     public async Task<UserProfileResponseDto> GetProfileAsync(string userId)
     {
         var user = await _userManager.FindByIdAsync(userId);
         if (user is null)
-            return new UserProfileResponseDto(string.Empty, string.Empty, string.Empty,
-                string.Empty, string.Empty, string.Empty, null, false, false, default, null);
+            throw new DomainValidationException(
+                "UserId",
+                "Usuario no encontrado.",
+                "Profile.NotFound"
+            );
 
-        return new UserProfileResponseDto(
-            user.Id,
-            user.FirstName,
-            user.LastName,
-            user.PhoneNumber ?? string.Empty,
-            user.Email ?? string.Empty,
-            user.UserName ?? string.Empty,
-            user.ProfilePicturePath,
-            user.IsActive,
-            user.EmailConfirmed,
-            user.CreatedAt,
-            user.LastActivityAt?.UtcDateTime
-        );
+        return user.Adapt<UserProfileResponseDto>();
     }
 
     public async Task<EditProfileResponseDto> UpdateProfileAsync(
@@ -296,8 +268,11 @@ public class AccountService : IAccountService
     {
         var user = await _userManager.FindByIdAsync(userId);
         if (user is null)
-            return new EditProfileResponseDto(string.Empty, string.Empty, string.Empty,
-                string.Empty, string.Empty, false, true, ["Usuario no encontrado."], false);
+            throw new DomainValidationException(
+                "UserId",
+                "Usuario no encontrado.",
+                "Profile.NotFound"
+            );
 
         string? oldPhotoPath = user.ProfilePicturePath;
 
@@ -310,9 +285,11 @@ public class AccountService : IAccountService
 
         var result = await _userManager.UpdateAsync(user);
         if (!result.Succeeded)
-            return new EditProfileResponseDto(string.Empty, string.Empty, string.Empty,
-                string.Empty, string.Empty, false, true,
-                result.Errors.Select(e => e.Description).ToList(), false);
+            throw new DomainValidationException(
+                "Profile",
+                result.Errors.FirstOrDefault()?.Description ?? "Error al actualizar el perfil.",
+                "Profile.UpdateFailed"
+            );
 
         if (
             request.ProfilePicturePath is not null
@@ -321,17 +298,7 @@ public class AccountService : IAccountService
         )
             _fileService.DeleteFile(oldPhotoPath);
 
-        return new EditProfileResponseDto(
-            user.Id,
-            user.FirstName,
-            user.LastName,
-            user.Email ?? string.Empty,
-            user.UserName ?? string.Empty,
-            user.EmailConfirmed,
-            false,
-            [],
-            false
-        );
+        return user.Adapt<EditProfileResponseDto>();
     }
 
     public async Task<EditProfileResponseDto> ChangePasswordAsync(
@@ -341,19 +308,26 @@ public class AccountService : IAccountService
     {
         var user = await _userManager.FindByIdAsync(userId);
         if (user is null)
-            return new EditProfileResponseDto(string.Empty, string.Empty, string.Empty,
-                string.Empty, string.Empty, false, true, ["Usuario no encontrado."], false);
+            throw new DomainValidationException(
+                "UserId",
+                "Usuario no encontrado.",
+                "Profile.NotFound"
+            );
 
         var passwordCheck = await _userManager.CheckPasswordAsync(user, request.CurrentPassword);
         if (!passwordCheck)
-            return new EditProfileResponseDto(string.Empty, string.Empty, string.Empty,
-                string.Empty, string.Empty, false, true,
-                ["La contrasena actual es incorrecta."], false);
+            throw new DomainValidationException(
+                "CurrentPassword",
+                "La contrasena actual es incorrecta.",
+                "Profile.IncorrectPassword"
+            );
 
         if (request.CurrentPassword == request.NewPassword)
-            return new EditProfileResponseDto(string.Empty, string.Empty, string.Empty,
-                string.Empty, string.Empty, false, true,
-                ["La nueva contrasena debe ser diferente de la contrasena actual."], false);
+            throw new DomainValidationException(
+                "NewPassword",
+                "La nueva contrasena debe ser diferente de la contrasena actual.",
+                "Profile.SamePassword"
+            );
 
         var changeResult = await _userManager.ChangePasswordAsync(
             user,
@@ -361,42 +335,36 @@ public class AccountService : IAccountService
             request.NewPassword
         );
         if (!changeResult.Succeeded)
-            return new EditProfileResponseDto(string.Empty, string.Empty, string.Empty,
-                string.Empty, string.Empty, false, true,
-                changeResult.Errors.Select(e => e.Description).ToList(), false);
+            throw new DomainValidationException(
+                "Password",
+                changeResult.Errors.FirstOrDefault()?.Description
+                    ?? "Error al cambiar la contrasena.",
+                "Profile.PasswordChangeFailed"
+            );
 
         await _userManager.UpdateSecurityStampAsync(user);
         await _signInManager.SignOutAsync();
 
-        return new EditProfileResponseDto(
-            user.Id,
-            user.FirstName,
-            user.LastName,
-            user.Email ?? string.Empty,
-            user.UserName ?? string.Empty,
-            user.EmailConfirmed,
-            false,
-            [],
-            true
-        );
+        var dto = user.Adapt<EditProfileResponseDto>();
+        return dto with { RequiresReLogin = true };
     }
 
     public async Task<UserDto?> GetByIdAsync(string userId)
     {
         var user = await _userManager.FindByIdAsync(userId);
-        return user is null ? null : MapToDto(user);
+        return user?.Adapt<UserDto>();
     }
 
     public async Task<UserDto?> GetByUserNameAsync(string userName)
     {
         var user = await _userManager.FindByNameAsync(userName);
-        return user is null ? null : MapToDto(user);
+        return user?.Adapt<UserDto>();
     }
 
     public async Task<UserDto?> GetByEmailAsync(string email)
     {
         var user = await _userManager.FindByEmailAsync(email);
-        return user is null ? null : MapToDto(user);
+        return user?.Adapt<UserDto>();
     }
 
     public Task SignOutAsync()
@@ -422,21 +390,5 @@ public class AccountService : IAccountService
         var uri = QueryHelpers.AddQueryString(route, "userId", user.Id);
         uri = QueryHelpers.AddQueryString(uri, "token", encodedToken);
         return uri;
-    }
-
-    private static UserDto MapToDto(AppUser user)
-    {
-        return new UserDto
-        {
-            Id = user.Id,
-            UserName = user.UserName ?? string.Empty,
-            Email = user.Email ?? string.Empty,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            PhoneNumber = user.PhoneNumber,
-            ProfilePicturePath = user.ProfilePicturePath,
-            IsActive = user.IsActive,
-            EmailConfirmed = user.EmailConfirmed,
-        };
     }
 }

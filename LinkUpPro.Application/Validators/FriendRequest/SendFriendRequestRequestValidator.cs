@@ -7,7 +7,6 @@ public class SendFriendRequestRequestValidator : AbstractValidator<SendFriendReq
 {
     public SendFriendRequestRequestValidator()
     {
-        RuleFor(x => x.ReceiverId)
-            .NotEmpty().WithMessage("El usuario receptor es requerido.");
+        RuleFor(x => x.ReceiverId).NotEmpty().WithMessage("El usuario receptor es requerido.");
     }
 }

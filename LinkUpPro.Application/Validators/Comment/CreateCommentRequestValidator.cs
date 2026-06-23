@@ -8,7 +8,9 @@ public class CreateCommentRequestValidator : AbstractValidator<CreateCommentRequ
     public CreateCommentRequestValidator()
     {
         RuleFor(x => x.Content)
-            .NotEmpty().WithMessage("El contenido es requerido.")
-            .MaximumLength(500).WithMessage("El contenido no puede exceder 500 caracteres.");
+            .NotEmpty()
+            .WithMessage("El contenido es requerido.")
+            .MaximumLength(500)
+            .WithMessage("El contenido no puede exceder 500 caracteres.");
     }
 }

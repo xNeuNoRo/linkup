@@ -2,7 +2,9 @@ using LinkUpPro.Application.DTOs.Profile.Requests;
 using LinkUpPro.Application.DTOs.User.Requests;
 using LinkUpPro.Application.Interfaces;
 using LinkUpPro.Application.Models.Emails;
+using LinkUpPro.Domain.Exceptions;
 using LinkUpPro.Infrastructure.Identity.Entities;
+using LinkUpPro.Infrastructure.Identity.Mappings;
 using LinkUpPro.Infrastructure.Identity.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -19,6 +21,11 @@ public class AccountServiceTests
     private readonly Mock<IFileService> _fileServiceMock;
     private readonly AccountService _sut;
 
+    static AccountServiceTests()
+    {
+        IdentityMappingConfig.RegisterMappings();
+    }
+
     public AccountServiceTests()
     {
         _userManagerMock = MockUserManager();
@@ -33,8 +40,7 @@ public class AccountServiceTests
             _userManagerMock.Object,
             _signInManagerMock.Object,
             _emailServiceMock.Object,
-            _fileServiceMock.Object,
-            configMock.Object
+            _fileServiceMock.Object
         );
     }
 
@@ -52,26 +58,23 @@ public class AccountServiceTests
 
         var result = await _sut.LoginAsync(new LoginRequest("testuser", "Pass123!"), true);
 
-        result.HasError.Should().BeFalse();
         result.UserName.Should().Be("testuser");
         result.IsVerified.Should().BeTrue();
+        result.Roles.Should().Contain("User");
     }
 
     [Fact]
-    public async Task LoginAsync_InvalidCredentials_ReturnsGenericError()
+    public async Task LoginAsync_InvalidCredentials_ThrowsDomainValidationException()
     {
         _userManagerMock.Setup(m => m.FindByNameAsync("testuser")).ReturnsAsync((AppUser?)null);
 
-        var result = await _sut.LoginAsync(new LoginRequest("testuser", "wrong"), false);
+        Func<Task> act = () => _sut.LoginAsync(new LoginRequest("testuser", "wrong"), false);
 
-        result.HasError.Should().BeTrue();
-        result
-            .Errors.Should()
-            .Contain(e => e.Contains("nombre de usuario o la contrasena son incorrectos"));
+        await act.Should().ThrowAsync<DomainValidationException>();
     }
 
     [Fact]
-    public async Task LoginAsync_LockedOut_ReturnsLockoutMessage()
+    public async Task LoginAsync_LockedOut_ThrowsDomainValidationException()
     {
         var user = CreateActiveUser();
         _userManagerMock.Setup(m => m.FindByNameAsync("testuser")).ReturnsAsync(user);
@@ -79,22 +82,20 @@ public class AccountServiceTests
             .Setup(m => m.PasswordSignInAsync("testuser", "Pass123!", false, true))
             .ReturnsAsync(SignInResult.LockedOut);
 
-        var result = await _sut.LoginAsync(new LoginRequest("testuser", "Pass123!"), false);
+        Func<Task> act = () => _sut.LoginAsync(new LoginRequest("testuser", "Pass123!"), false);
 
-        result.HasError.Should().BeTrue();
-        result.Errors.Should().Contain(e => e.Contains("bloqueada temporalmente"));
+        await act.Should().ThrowAsync<DomainValidationException>();
     }
 
     [Fact]
-    public async Task LoginAsync_InactiveAccount_ReturnsInactiveMessage()
+    public async Task LoginAsync_InactiveAccount_ThrowsDomainValidationException()
     {
         var user = CreateInactiveUser();
         _userManagerMock.Setup(m => m.FindByNameAsync("testuser")).ReturnsAsync(user);
 
-        var result = await _sut.LoginAsync(new LoginRequest("testuser", "Pass123!"), false);
+        Func<Task> act = () => _sut.LoginAsync(new LoginRequest("testuser", "Pass123!"), false);
 
-        result.HasError.Should().BeTrue();
-        result.Errors.Should().Contain(e => e.Contains("cuenta se encuentra inactiva"));
+        await act.Should().ThrowAsync<DomainValidationException>();
     }
 
     // ==================== REGISTER TESTS ====================
@@ -142,7 +143,6 @@ public class AccountServiceTests
 
         var result = await _sut.RegisterAsync(request, "http://localhost");
 
-        result.HasError.Should().BeFalse();
         result.UserName.Should().Be("newuser");
         result.IsVerified.Should().BeFalse();
         _emailServiceMock.Verify(
@@ -159,7 +159,7 @@ public class AccountServiceTests
     }
 
     [Fact]
-    public async Task RegisterAsync_DuplicateUsername_ReturnsError()
+    public async Task RegisterAsync_DuplicateUsername_ThrowsDomainValidationException()
     {
         _userManagerMock.Setup(m => m.FindByNameAsync("existing")).ReturnsAsync(new AppUser());
 
@@ -174,12 +174,9 @@ public class AccountServiceTests
             "/images/avatar.jpg"
         );
 
-        var result = await _sut.RegisterAsync(request, "http://localhost");
+        Func<Task> act = () => _sut.RegisterAsync(request, "http://localhost");
 
-        result.HasError.Should().BeTrue();
-        result
-            .Errors.Should()
-            .Contain(e => e.Contains("nombre de usuario ya se encuentra registrado"));
+        await act.Should().ThrowAsync<DomainValidationException>();
     }
 
     // ==================== ACTIVATION TESTS ====================
@@ -195,32 +192,32 @@ public class AccountServiceTests
         _userManagerMock.Setup(m => m.FindByIdAsync("user1")).ReturnsAsync(user);
         _userManagerMock
             .Setup(m => m.ConfirmEmailAsync(user, rawToken))
-            .ReturnsAsync(IdentityResult.Success);
+            .ReturnsAsync(IdentityResult.Success)
+            .Callback<AppUser, string>((u, _) => u.EmailConfirmed = true);
 
         var result = await _sut.ConfirmAccountAsync("user1", encodedToken);
 
-        result.HasError.Should().BeFalse();
         result.IsVerified.Should().BeTrue();
         user.IsActive.Should().BeTrue();
     }
 
     [Fact]
-    public async Task ConfirmAccountAsync_InvalidToken_ReturnsError()
+    public async Task ConfirmAccountAsync_InvalidToken_ThrowsDomainValidationException()
     {
         var encodedToken = Microsoft.AspNetCore.WebUtilities.WebEncoders.Base64UrlEncode(
             System.Text.Encoding.UTF8.GetBytes("some-token")
         );
         _userManagerMock.Setup(m => m.FindByIdAsync("user1")).ReturnsAsync((AppUser?)null);
 
-        var result = await _sut.ConfirmAccountAsync("user1", encodedToken);
+        Func<Task> act = () => _sut.ConfirmAccountAsync("user1", encodedToken);
 
-        result.HasError.Should().BeTrue();
+        await act.Should().ThrowAsync<DomainValidationException>();
     }
 
     // ==================== FORGOT/RESET PASSWORD TESTS ====================
 
     [Fact]
-    public async Task ForgotPasswordAsync_Always_ReturnsGenericSuccess()
+    public async Task ForgotPasswordAsync_Always_ReturnsGenericResponse()
     {
         _userManagerMock.Setup(m => m.FindByNameAsync("testuser")).ReturnsAsync((AppUser?)null);
 
@@ -228,7 +225,7 @@ public class AccountServiceTests
             new ForgotPasswordRequest("testuser", "http://localhost")
         );
 
-        result.HasError.Should().BeFalse();
+        result.IsVerified.Should().BeFalse();
         _emailServiceMock.Verify(
             m =>
                 m.SendEmailAsync(
@@ -255,7 +252,7 @@ public class AccountServiceTests
             new ForgotPasswordRequest("testuser", "http://localhost")
         );
 
-        result.HasError.Should().BeFalse();
+        result.IsVerified.Should().BeFalse();
         _emailServiceMock.Verify(
             m =>
                 m.SendEmailAsync(
@@ -286,7 +283,7 @@ public class AccountServiceTests
             new ResetPasswordRequest("user1", encodedToken, "NewPass123!", "NewPass123!")
         );
 
-        result.HasError.Should().BeFalse();
+        result.IsVerified.Should().BeTrue();
         _userManagerMock.Verify(m => m.UpdateSecurityStampAsync(user), Times.Once);
     }
 
@@ -306,13 +303,13 @@ public class AccountServiceTests
     }
 
     [Fact]
-    public async Task GetProfileAsync_NonexistentUser_ReturnsEmpty()
+    public async Task GetProfileAsync_NonexistentUser_ThrowsDomainValidationException()
     {
         _userManagerMock.Setup(m => m.FindByIdAsync("nobody")).ReturnsAsync((AppUser?)null);
 
-        var result = await _sut.GetProfileAsync("nobody");
+        Func<Task> act = () => _sut.GetProfileAsync("nobody");
 
-        result.UserName.Should().BeEmpty();
+        await act.Should().ThrowAsync<DomainValidationException>();
     }
 
     [Fact]
@@ -328,7 +325,6 @@ public class AccountServiceTests
 
         var result = await _sut.UpdateProfileAsync("user1", request);
 
-        result.HasError.Should().BeFalse();
         result.FirstName.Should().Be("Jane");
         result.LastName.Should().Be("Smith");
         user.FirstName.Should().Be("Jane");
@@ -352,26 +348,25 @@ public class AccountServiceTests
             new ChangePasswordRequest("OldPass1!", "NewPass1!", "NewPass1!")
         );
 
-        result.HasError.Should().BeFalse();
         result.RequiresReLogin.Should().BeTrue();
         _userManagerMock.Verify(m => m.UpdateSecurityStampAsync(user), Times.Once);
         _signInManagerMock.Verify(m => m.SignOutAsync(), Times.Once);
     }
 
     [Fact]
-    public async Task ChangePasswordAsync_WrongCurrent_ReturnsError()
+    public async Task ChangePasswordAsync_WrongCurrent_ThrowsDomainValidationException()
     {
         var user = CreateActiveUser();
         _userManagerMock.Setup(m => m.FindByIdAsync("user1")).ReturnsAsync(user);
         _userManagerMock.Setup(m => m.CheckPasswordAsync(user, "WrongPass1!")).ReturnsAsync(false);
 
-        var result = await _sut.ChangePasswordAsync(
-            "user1",
-            new ChangePasswordRequest("WrongPass1!", "NewPass1!", "NewPass1!")
-        );
+        Func<Task> act = () =>
+            _sut.ChangePasswordAsync(
+                "user1",
+                new ChangePasswordRequest("WrongPass1!", "NewPass1!", "NewPass1!")
+            );
 
-        result.HasError.Should().BeTrue();
-        result.Errors.Should().Contain(e => e.Contains("contrasena actual es incorrecta"));
+        await act.Should().ThrowAsync<DomainValidationException>();
     }
 
     // ==================== LOOKUP TESTS ====================

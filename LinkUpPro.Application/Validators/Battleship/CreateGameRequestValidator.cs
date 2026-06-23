@@ -7,7 +7,6 @@ public class CreateGameRequestValidator : AbstractValidator<CreateGameRequest>
 {
     public CreateGameRequestValidator()
     {
-        RuleFor(x => x.OpponentId)
-            .NotEmpty().WithMessage("El oponente es requerido.");
+        RuleFor(x => x.OpponentId).NotEmpty().WithMessage("El oponente es requerido.");
     }
 }

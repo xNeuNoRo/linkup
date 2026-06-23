@@ -1,7 +1,7 @@
 using FluentValidation;
+using LinkUpPro.Application.Mappings;
 using Mapster;
 using Microsoft.Extensions.DependencyInjection;
-using System.Reflection;
 
 namespace LinkUpPro.Application;
 
@@ -9,8 +9,9 @@ public static class ServicesRegistration
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
+        MappingConfig.RegisterMappings();
+
         var config = TypeAdapterConfig.GlobalSettings;
-        config.Scan(Assembly.GetExecutingAssembly());
         services.AddSingleton(config);
 
         services.AddValidatorsFromAssemblyContaining<ApplicationMarker>();
