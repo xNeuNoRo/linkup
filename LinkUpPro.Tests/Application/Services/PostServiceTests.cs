@@ -1,6 +1,10 @@
 using LinkUpPro.Application.DTOs.Post.Requests;
 using LinkUpPro.Application.DTOs.Post.Responses;
 using LinkUpPro.Application.Interfaces.Services;
+using LinkUpPro.Domain.Interfaces.Persistence;
+using LinkUpPro.Domain.Interfaces.Repositories;
+using LinkUpPro.Infrastructure.Persistence.Contexts;
+using LinkUpPro.Infrastructure.Persistence.Repositories;
 using LinkUpPro.Tests.Base;
 using Moq;
 
@@ -22,9 +26,19 @@ public class PostServiceTests : InMemoryTestBase
         await base.InitializeAsync();
         if (!_hasImplementation) return;
 
+        var postRepo = new PostRepository(DbContext);
+        var friendshipRepo = new FriendshipRepository(DbContext);
+        var reactionRepo = new ReactionRepository(DbContext);
+        var commentRepo = new CommentRepository(DbContext);
+
+        var unitOfWorkMock = new Mock<IUnitOfWork>();
+        unitOfWorkMock
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
         var implType = ImplementationDiscovery.FindImplementation<IPostService>()!;
         _service = (IPostService)Activator.CreateInstance(implType,
-            null!, null!, null!, null!, null!)!;
+            postRepo, friendshipRepo, reactionRepo, commentRepo, unitOfWorkMock.Object)!;
     }
 
     [ServiceFact(typeof(IPostService))]

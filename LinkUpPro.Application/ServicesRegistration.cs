@@ -1,5 +1,7 @@
 using FluentValidation;
 using LinkUpPro.Application.Mappings;
+using LinkUpPro.Application.Services;
+using LinkUpPro.Application.Interfaces.Services;
 using Mapster;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -15,6 +17,8 @@ public static class ServicesRegistration
         services.AddSingleton(config);
 
         services.AddValidatorsFromAssemblyContaining<ApplicationMarker>();
+
+        services.AddScoped<IPostService, PostService>();
 
         return services;
     }
