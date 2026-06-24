@@ -1,7 +1,12 @@
-using LinkUpPro.Application.DTOs.Friendship.Requests;
+using LinkUpPro.Application.DTOs.Friendship.Responses;
+using LinkUpPro.Application.DTOs.Profile.Responses;
 using LinkUpPro.Application.Interfaces.Services;
+using LinkUpPro.Domain.Interfaces.Persistence;
+using LinkUpPro.Domain.Interfaces.Repositories;
+using LinkUpPro.Infrastructure.Persistence.Repositories;
 using LinkUpPro.Tests.Base;
 using Moq;
+using DomainFriendship = LinkUpPro.Domain.Entities.Friendship.Friendship;
 
 namespace LinkUpPro.Tests.Application.Services;
 
@@ -9,6 +14,8 @@ namespace LinkUpPro.Tests.Application.Services;
 public class FriendshipServiceTests : InMemoryTestBase
 {
     private IFriendshipService? _service;
+    private Mock<IProfileService> _profileServiceMock = null!;
+    private Mock<IUnitOfWork> _unitOfWorkMock = null!;
     private bool _hasImplementation;
 
     public FriendshipServiceTests()
@@ -21,8 +28,16 @@ public class FriendshipServiceTests : InMemoryTestBase
         await base.InitializeAsync();
         if (!_hasImplementation) return;
 
+        var friendshipRepo = new FriendshipRepository(DbContext);
+        _profileServiceMock = new Mock<IProfileService>();
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _unitOfWorkMock
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
         var implType = ImplementationDiscovery.FindImplementation<IFriendshipService>()!;
-        _service = (IFriendshipService)Activator.CreateInstance(implType, null!, null!)!;
+        _service = (IFriendshipService)Activator.CreateInstance(implType,
+            friendshipRepo, _profileServiceMock.Object, _unitOfWorkMock.Object)!;
     }
 
     [ServiceFact(typeof(IFriendshipService))]
@@ -49,6 +64,10 @@ public class FriendshipServiceTests : InMemoryTestBase
     [ServiceFact(typeof(IFriendshipService))]
     public async Task DeleteAsync_Valid_RemovesFriendship()
     {
+        var friendship = DomainFriendship.Create("user1", "user2").Value;
+        DbContext.Add(friendship);
+        await DbContext.SaveChangesAsync();
+
         var result = await _service!.DeleteAsync("user1", "user2");
         result.IsSuccess.Should().BeTrue();
     }
@@ -63,6 +82,10 @@ public class FriendshipServiceTests : InMemoryTestBase
     [ServiceFact(typeof(IFriendshipService))]
     public async Task GetFriendshipAsync_Active_ReturnsFriendship()
     {
+        var friendship = DomainFriendship.Create("user1", "user2").Value;
+        DbContext.Add(friendship);
+        await DbContext.SaveChangesAsync();
+
         var result = await _service!.GetFriendshipAsync("user1", "user2");
         result.IsSuccess.Should().BeTrue();
     }

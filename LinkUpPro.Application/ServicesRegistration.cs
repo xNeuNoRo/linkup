@@ -19,6 +19,7 @@ public static class ServicesRegistration
         services.AddValidatorsFromAssemblyContaining<ApplicationMarker>();
 
         services.AddScoped<IPostService, PostService>();
+        services.AddScoped<IFriendshipService, FriendshipService>();
 
         return services;
     }
