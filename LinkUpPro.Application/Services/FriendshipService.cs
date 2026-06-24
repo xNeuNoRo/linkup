@@ -4,7 +4,6 @@ using LinkUpPro.Domain.Common;
 using LinkUpPro.Domain.Interfaces.Persistence;
 using LinkUpPro.Domain.Interfaces.Repositories;
 using Mapster;
-using DomainFriendship = LinkUpPro.Domain.Entities.Friendship.Friendship;
 
 namespace LinkUpPro.Application.Services;
 
