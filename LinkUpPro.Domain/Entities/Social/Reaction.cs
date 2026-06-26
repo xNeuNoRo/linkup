@@ -3,7 +3,7 @@ using LinkUpPro.Domain.Enums;
 
 namespace LinkUpPro.Domain.Entities.Social;
 
-public sealed class Reaction : BaseEntity<long>
+public sealed class Reaction : AuditableBaseEntity
 {
     private Reaction() { }
 
