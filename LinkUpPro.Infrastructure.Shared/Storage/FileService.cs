@@ -137,7 +137,65 @@ public class FileService : IFileService
             return false;
         }
 
+        if (!HasValidMagicBytes(file, extension))
+        {
+            _logger.LogWarning("Magic bytes invalidos para extension: {Extension}", extension);
+            return false;
+        }
+
         return true;
+    }
+
+    private static bool HasValidMagicBytes(IFormFile file, string extension)
+    {
+        // Magic bytes (firmas de archivo) por tipo de imagen
+        // JPG/JPEG: FF D8 FF
+        // PNG: 89 50 4E 47 0D 0A 1A 0A
+        // WEBP: 52 49 46 46 ?? ?? ?? ?? 57 45 42 50 (RIFF...WEBP)
+        var expected = extension switch
+        {
+            ".jpg" or ".jpeg" => new byte[] { 0xFF, 0xD8, 0xFF },
+            ".png" => new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A },
+            ".webp" => new byte[] { 0x52, 0x49, 0x46, 0x46 }, // "RIFF"
+            _ => null,
+        };
+
+        if (expected is null)
+            return false;
+
+        try
+        {
+            using var stream = file.OpenReadStream();
+            var buffer = new byte[expected.Length];
+            var read = stream.Read(buffer, 0, expected.Length);
+            if (read < expected.Length)
+                return false;
+
+            for (var i = 0; i < expected.Length; i++)
+            {
+                if (buffer[i] != expected[i])
+                    return false;
+            }
+
+            // Validacion adicional para WEBP: bytes 8-11 deben ser "WEBP"
+            if (extension == ".webp")
+            {
+                stream.Seek(8, SeekOrigin.Begin);
+                var webpHeader = new byte[4];
+                var webpRead = stream.Read(webpHeader, 0, 4);
+                return webpRead == 4
+                    && webpHeader[0] == 0x57  // W
+                    && webpHeader[1] == 0x45  // E
+                    && webpHeader[2] == 0x42  // B
+                    && webpHeader[3] == 0x50; // P
+            }
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public void DeleteFile(string filePath)

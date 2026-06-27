@@ -6,347 +6,452 @@ using LinkUpPro.Domain.Common;
 using LinkUpPro.Domain.Entities.Social;
 using LinkUpPro.Domain.Interfaces.Persistence;
 using LinkUpPro.Domain.Interfaces.Repositories;
+using Mapster;
 
 namespace LinkUpPro.Application.Services;
 
 public sealed class CommentService : ICommentService
 {
-    private readonly ICommentRepository? _commentRepository;
-    private readonly IPostRepository? _postRepository;
-    private readonly IFriendshipRepository? _friendshipRepository;
-    private readonly IProfileService? _profileService;
-    private readonly IUnitOfWork? _unitOfWork;
+    private const int DefaultRepliesPageSize = 5;
 
-    private static readonly List<Comment> _inMemoryStore = [];
-    private static long _nextId = 1;
-    private static readonly object _lock = new();
+    private readonly ICommentRepository _commentRepository;
+    private readonly IPostRepository _postRepository;
+    private readonly IFriendshipRepository _friendshipRepository;
+    private readonly IProfileService _profileService;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly INotificationRepository _notificationRepository;
 
     public CommentService(
         ICommentRepository commentRepository,
         IPostRepository postRepository,
         IFriendshipRepository friendshipRepository,
         IProfileService profileService,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        INotificationRepository notificationRepository
+    )
     {
         _commentRepository = commentRepository;
         _postRepository = postRepository;
         _friendshipRepository = friendshipRepository;
         _profileService = profileService;
         _unitOfWork = unitOfWork;
+        _notificationRepository = notificationRepository;
     }
 
-    public CommentService(
-        ICommentRepository commentRepository,
-        IPostRepository postRepository,
-        IFriendshipRepository friendshipRepository)
-        : this(commentRepository, postRepository, friendshipRepository, null!, null!)
+    public async Task<Result<CommentResponseDto>> CreateAsync(
+        string authorId,
+        CreateCommentRequest request
+    )
     {
-    }
+        var post = await _postRepository.GetByIdAsync(request.PostId);
+        if (post is null)
+            return Result<CommentResponseDto>.Failure(
+                new DomainError("Post.NotFound", "La publicacion no fue encontrada.")
+            );
 
-    public async Task<Result<CommentResponseDto>> CreateAsync(string authorId, CreateCommentRequest request)
-    {
+        var isFriend =
+            authorId == post.AuthorId
+            || await _friendshipRepository.AreFriendsAsync(authorId, post.AuthorId);
+
+        if (!post.CanComment(authorId, isFriend))
+            return Result<CommentResponseDto>.Failure(
+                new DomainError(
+                    "Post.CannotComment",
+                    "No tienes permiso para comentar en esta publicacion."
+                )
+            );
+
         var creationResult = Comment.Create(request.PostId, authorId, request.Content);
         if (creationResult.IsFailure)
             return Result<CommentResponseDto>.Failure(creationResult.Errors);
 
-        var comment = creationResult.Value;
+        await _commentRepository.AddAsync(creationResult.Value);
+        await _unitOfWork.SaveChangesAsync();
 
-        if (_commentRepository is not null)
-        {
-            var post = await _postRepository!.GetByIdAsync(request.PostId);
-            if (post is null)
-                return Result<CommentResponseDto>.Failure(new DomainError("Post.NotFound", "La publicacion no fue encontrada."));
+        if (post.AuthorId != authorId)
+            await CreateCommentNotificationAsync(post.AuthorId, authorId, request.PostId);
 
-            var isFriend = authorId == post.AuthorId ||
-                await _friendshipRepository!.AreFriendsAsync(authorId, post.AuthorId);
-
-            if (!post.CanComment(authorId, isFriend))
-                return Result<CommentResponseDto>.Failure(new DomainError("Post.CannotComment", "No tienes permiso para comentar en esta publicacion."));
-
-            await _commentRepository.AddAsync(comment);
-            await _unitOfWork!.SaveChangesAsync();
-            return await MapToResponseDtoAsync(comment);
-        }
-
-        SaveInMemory(comment);
-        return MapToResponseDtoInMemory(comment);
+        return await ToResponseDtoAsync(creationResult.Value);
     }
 
-    public async Task<Result<CommentResponseDto>> CreateReplyAsync(string authorId, CreateReplyRequest request)
+    public async Task<Result<CommentResponseDto>> CreateReplyAsync(
+        string authorId,
+        CreateReplyRequest request
+    )
     {
-        long postId;
+        var parentComment = await _commentRepository.GetByIdAsync(request.ParentCommentId);
+        if (parentComment is null)
+            return Result<CommentResponseDto>.Failure(
+                new DomainError("Comment.ParentNotFound", "El comentario padre no fue encontrado.")
+            );
 
-        if (_commentRepository is not null)
-        {
-            var parentComment = await _commentRepository.GetByIdAsync(request.ParentCommentId);
-            if (parentComment is null)
-                return Result<CommentResponseDto>.Failure(new DomainError("Comment.ParentNotFound", "El comentario padre no fue encontrado."));
+        if (parentComment.IsDeleted)
+            return Result<CommentResponseDto>.Failure(
+                new DomainError(
+                    "Comment.ParentDeleted",
+                    "No puedes responder a un comentario eliminado."
+                )
+            );
 
-            if (parentComment.IsDeleted)
-                return Result<CommentResponseDto>.Failure(new DomainError("Comment.ParentDeleted", "No puedes responder a un comentario eliminado."));
+        var post = await _postRepository.GetByIdAsync(parentComment.PostId);
+        if (post is null)
+            return Result<CommentResponseDto>.Failure(
+                new DomainError("Post.NotFound", "La publicacion no fue encontrada.")
+            );
 
-            var post = await _postRepository!.GetByIdAsync(parentComment.PostId);
-            if (post is null)
-                return Result<CommentResponseDto>.Failure(new DomainError("Post.NotFound", "La publicacion no fue encontrada."));
+        var isFriend =
+            authorId == post.AuthorId
+            || await _friendshipRepository.AreFriendsAsync(authorId, post.AuthorId);
 
-            var isFriend = authorId == post.AuthorId ||
-                await _friendshipRepository!.AreFriendsAsync(authorId, post.AuthorId);
+        if (!post.CanComment(authorId, isFriend))
+            return Result<CommentResponseDto>.Failure(
+                new DomainError(
+                    "Post.CannotComment",
+                    "No tienes permiso para comentar en esta publicacion."
+                )
+            );
 
-            if (!post.CanComment(authorId, isFriend))
-                return Result<CommentResponseDto>.Failure(new DomainError("Post.CannotComment", "No tienes permiso para comentar en esta publicacion."));
-
-            postId = parentComment.PostId;
-        }
-        else
-        {
-        
-            var parentComment = _inMemoryStore.FirstOrDefault(c => c.Id == request.ParentCommentId);
-            postId = parentComment?.PostId ?? 1;
-        }
-
-
-        var creationResult = Comment.Create(postId, authorId, request.Content, request.ParentCommentId);
+        var creationResult = Comment.Create(
+            parentComment.PostId,
+            authorId,
+            request.Content,
+            request.ParentCommentId
+        );
         if (creationResult.IsFailure)
             return Result<CommentResponseDto>.Failure(creationResult.Errors);
 
-        var comment = creationResult.Value;
+        await _commentRepository.AddAsync(creationResult.Value);
+        await _unitOfWork.SaveChangesAsync();
 
-        if (_commentRepository is not null)
-        {
-            await _commentRepository.AddAsync(comment);
-            await _unitOfWork!.SaveChangesAsync();
-            return await MapToResponseDtoAsync(comment);
-        }
+        if (parentComment.AuthorId != authorId)
+            await CreateReplyNotificationAsync(
+                parentComment.AuthorId,
+                authorId,
+                parentComment.PostId
+            );
 
-        SaveInMemory(comment);
-        return MapToResponseDtoInMemory(comment);
+        return await ToResponseDtoAsync(creationResult.Value);
     }
 
-
-
-    public async Task<Result<CommentResponseDto>> UpdateAsync(string authorId, long commentId, UpdateCommentRequest request)
+    public async Task<Result<CommentResponseDto>> UpdateAsync(
+        string authorId,
+        long commentId,
+        UpdateCommentRequest request
+    )
     {
-        if (_commentRepository is not null)
-        {
-            var comment = await _commentRepository.GetByIdAsync(commentId);
-            if (comment is null)
-                return Result<CommentResponseDto>.Failure(new DomainError("Comment.NotFound", "El comentario no fue encontrado."));
+        var comment = await _commentRepository.GetByIdAsync(commentId);
+        if (comment is null)
+            return Result<CommentResponseDto>.Failure(
+                new DomainError("Comment.NotFound", "El comentario no fue encontrado.")
+            );
 
-            if (!comment.CanBeEditedBy(authorId))
-                return Result<CommentResponseDto>.Failure(new DomainError("Comment.NotAuthorized", "No tienes permiso para editar este comentario."));
+        if (!comment.CanBeEditedBy(authorId))
+            return Result<CommentResponseDto>.Failure(
+                new DomainError(
+                    "Comment.NotAuthorized",
+                    "No tienes permiso para editar este comentario."
+                )
+            );
 
-            var editResult = comment.Edit(request.Content);
-            if (editResult.IsFailure)
-                return Result<CommentResponseDto>.Failure(editResult.Errors);
+        var editResult = comment.Edit(request.Content);
+        if (editResult.IsFailure)
+            return Result<CommentResponseDto>.Failure(editResult.Errors);
 
-            _commentRepository.Update(comment);
-            await _unitOfWork!.SaveChangesAsync();
+        _commentRepository.Update(comment);
+        await _unitOfWork.SaveChangesAsync();
 
-            return await MapToResponseDtoAsync(comment);
-        }
-
-        var inMemoryComment = FindInMemory(commentId);
-        if (inMemoryComment is null)
-            return Result<CommentResponseDto>.Failure(new DomainError("Comment.NotFound", "El comentario no fue encontrado."));
-
-        if (!inMemoryComment.CanBeEditedBy(authorId))
-            return Result<CommentResponseDto>.Failure(new DomainError("Comment.NotAuthorized", "No tienes permiso para editar este comentario."));
-
-        var editResultInMem = inMemoryComment.Edit(request.Content);
-        if (editResultInMem.IsFailure)
-            return Result<CommentResponseDto>.Failure(editResultInMem.Errors);
-
-        return MapToResponseDtoInMemory(inMemoryComment);
+        return await ToResponseDtoAsync(comment);
     }
 
     public async Task<Result> DeleteAsync(string authorId, long commentId)
     {
-        if (_commentRepository is not null)
-        {
-            var comment = await _commentRepository.GetByIdAsync(commentId);
-            if (comment is null)
-                return Result.Failure(new DomainError("Comment.NotFound", "El comentario no fue encontrado."));
+        var comment = await _commentRepository.GetByIdAsync(commentId);
+        if (comment is null)
+            return Result.Failure(
+                new DomainError("Comment.NotFound", "El comentario no fue encontrado.")
+            );
 
-            if (comment.AuthorId != authorId)
-                return Result.Failure(new DomainError("Comment.NotAuthorized", "No tienes permiso para eliminar este comentario."));
+        if (comment.AuthorId != authorId)
+            return Result.Failure(
+                new DomainError(
+                    "Comment.NotAuthorized",
+                    "No tienes permiso para eliminar este comentario."
+                )
+            );
 
-            var hasReplies = await _commentRepository.HasRepliesAsync(commentId);
-            comment.MarkAsDeleted(hasReplies);
-            await _unitOfWork!.SaveChangesAsync();
-
-            return Result.Success();
-        }
-
-        var inMemoryComment = FindInMemory(commentId);
-        if (inMemoryComment is null)
-            return Result.Failure(new DomainError("Comment.NotFound", "El comentario no fue encontrado."));
-
-        if (inMemoryComment.AuthorId != authorId)
-            return Result.Failure(new DomainError("Comment.NotAuthorized", "No tienes permiso para eliminar este comentario."));
-
-        var hasRepliesInMem = _inMemoryStore.Any(c =>
-            !c.IsDeleted && c.ParentCommentId == commentId);
-        inMemoryComment.MarkAsDeleted(hasRepliesInMem);
+        var hasReplies = await _commentRepository.HasRepliesAsync(commentId);
+        comment.MarkAsDeleted(hasReplies);
+        await _unitOfWork.SaveChangesAsync();
 
         return Result.Success();
     }
 
-    public async Task<List<CommentTreeDto>> GetPostCommentsAsync(string requesterId, long postId)
+    public async Task<PagedResult<CommentTreeDto>> GetPostCommentsAsync(
+        string requesterId,
+        long postId,
+        int page = 1,
+        int pageSize = 10
+    )
     {
-        if (_commentRepository is not null)
+        var post = await _postRepository.GetByIdAsync(postId);
+        if (post is null)
+            return new PagedResult<CommentTreeDto>([], 0, page, pageSize);
+
+        var isFriend =
+            requesterId == post.AuthorId
+            || await _friendshipRepository.AreFriendsAsync(requesterId, post.AuthorId);
+
+        if (!post.CanBeViewedBy(requesterId, isFriend))
+            return new PagedResult<CommentTreeDto>([], 0, page, pageSize);
+
+        var rootOptions = new QueryOptions<Comment>
         {
-            var post = await _postRepository!.GetByIdAsync(postId);
-            if (post is null)
-                return [];
+            Skip = (page - 1) * pageSize,
+            Take = pageSize,
+            OrderBy = q => q.OrderBy(c => c.CreatedAt),
+            IsTracking = false,
+        };
 
-            var isFriend = requesterId == post.AuthorId ||
-                await _friendshipRepository!.AreFriendsAsync(requesterId, post.AuthorId);
+        var rootComments = await _commentRepository.GetRootCommentsByPostAsync(postId, rootOptions);
+        var totalRoots = await _commentRepository.CountRootCommentsByPostAsync(postId);
 
-            if (!post.CanBeViewedBy(requesterId, isFriend))
-                return [];
+        if (rootComments.Count == 0)
+            return new PagedResult<CommentTreeDto>([], totalRoots, page, pageSize);
 
-            var allComments = await _commentRepository.GetByPostAsync(postId);
-            if (allComments.Count == 0)
-                return [];
+        var userDict = await GetUsersDictionaryAsync(rootComments);
 
-            var userDict = await GetUsersDictionaryAsync(allComments);
-
-            var roots = allComments
-                .Where(c => c.ParentCommentId is null)
-                .OrderBy(c => c.CreatedAt)
-                .ToList();
-
-            return roots.Select(root => BuildCommentTreeDto(root, allComments, userDict)).ToList();
+        var items = new List<CommentTreeDto>(rootComments.Count);
+        foreach (var root in rootComments)
+        {
+            var node = await BuildRootNodeWithRepliesAsync(root, userDict, 1);
+            items.Add(node);
         }
 
-        return [];
+        return new PagedResult<CommentTreeDto>(items, totalRoots, page, pageSize);
     }
 
-    private static long GetParentPostIdInMemory(long parentCommentId)
+    public async Task<PagedResult<CommentTreeDto>> GetCommentRepliesAsync(
+        string requesterId,
+        long parentCommentId,
+        int page = 1,
+        int pageSize = 5
+    )
     {
-        lock (_lock)
+        var parent = await _commentRepository.GetByIdAsync(parentCommentId);
+        if (parent is null)
+            return new PagedResult<CommentTreeDto>([], 0, page, pageSize);
+
+        var post = await _postRepository.GetByIdAsync(parent.PostId);
+        if (post is null)
+            return new PagedResult<CommentTreeDto>([], 0, page, pageSize);
+
+        var isFriend =
+            requesterId == post.AuthorId
+            || await _friendshipRepository.AreFriendsAsync(requesterId, post.AuthorId);
+
+        if (!post.CanBeViewedBy(requesterId, isFriend))
+            return new PagedResult<CommentTreeDto>([], 0, page, pageSize);
+
+        var replyOptions = new QueryOptions<Comment>
         {
-            return _inMemoryStore
-                .Where(c => c.Id == parentCommentId && !c.IsDeleted)
-                .Select(c => c.PostId)
-                .FirstOrDefault();
-        }
-    }
+            Skip = (page - 1) * pageSize,
+            Take = pageSize,
+            OrderBy = q => q.OrderBy(c => c.CreatedAt),
+            IsTracking = false,
+        };
 
-    private static Comment? FindInMemory(long commentId)
-    {
-        lock (_lock)
-        {
-            return _inMemoryStore.FirstOrDefault(c => c.Id == commentId);
-        }
-    }
-
-    private static void SaveInMemory(Comment comment)
-    {
-        lock (_lock)
-        {
-            comment.GetType().GetProperty(nameof(comment.Id))!.SetValue(comment, _nextId++);
-            _inMemoryStore.Add(comment);
-        }
-    }
-
-    private static Result<CommentResponseDto> MapToResponseDtoInMemory(Comment comment)
-    {
-        var repliesCount = _inMemoryStore.Count(c =>
-            !c.IsDeleted && c.ParentCommentId == comment.Id);
-
-        return Result<CommentResponseDto>.Success(new CommentResponseDto(
-            comment.Id,
-            comment.PostId,
-            comment.AuthorId,
-            string.Empty,
-            null,
-            comment.Content,
-            comment.IsEdited,
-            comment.CreatedAt,
-            comment.UpdatedAt,
-            comment.ParentCommentId,
-            repliesCount
-        ));
-    }
-
-    private async Task<Result<CommentResponseDto>> MapToResponseDtoAsync(Comment comment)
-    {
-        var user = await _profileService!.GetByIdAsync(comment.AuthorId);
-        var repliesCount = await _commentRepository!.CountAsync(c => c.ParentCommentId == comment.Id);
-
-        var dto = new CommentResponseDto(
-            comment.Id,
-            comment.PostId,
-            comment.AuthorId,
-            user is not null ? $"{user.FirstName} {user.LastName}" : string.Empty,
-            user?.ProfilePicturePath,
-            comment.Content,
-            comment.IsEdited,
-            comment.CreatedAt,
-            comment.UpdatedAt,
-            comment.ParentCommentId,
-            repliesCount
+        var replies = await _commentRepository.GetRepliesByParentAsync(
+            parentCommentId,
+            replyOptions
         );
+        var totalReplies = await _commentRepository.CountRepliesByParentAsync(parentCommentId);
+
+        if (replies.Count == 0)
+            return new PagedResult<CommentTreeDto>([], totalReplies, page, pageSize);
+
+        var userDict = await GetUsersDictionaryAsync(replies);
+
+        var items = new List<CommentTreeDto>(replies.Count);
+        foreach (var reply in replies)
+        {
+            var node = await BuildReplyNodeAsync(reply, userDict, page, pageSize, totalReplies);
+            items.Add(node);
+        }
+
+        return new PagedResult<CommentTreeDto>(items, totalReplies, page, pageSize);
+    }
+
+    private async Task<Result<CommentResponseDto>> ToResponseDtoAsync(Comment comment)
+    {
+        var dto = comment.Adapt<CommentResponseDto>();
+
+        var user = await _profileService.GetByIdAsync(comment.AuthorId);
+        if (user is not null)
+            dto = dto with
+            {
+                AuthorName = $"{user.FirstName} {user.LastName}".Trim(),
+                AuthorProfilePicture = user.ProfilePicturePath,
+            };
+
+        var repliesCount = await _commentRepository.CountAsync(c =>
+            c.ParentCommentId == comment.Id
+        );
+        dto = dto with { RepliesCount = repliesCount };
 
         return Result<CommentResponseDto>.Success(dto);
     }
 
-    private async Task<Dictionary<string, UserResponseDto>> GetUsersDictionaryAsync(IReadOnlyCollection<Comment> comments)
+    private async Task<Dictionary<string, UserResponseDto>> GetUsersDictionaryAsync(
+        IReadOnlyCollection<Comment> comments
+    )
     {
         var authorIds = comments.Select(c => c.AuthorId).Distinct().ToList();
-        var userTasks = authorIds.Select(id => _profileService!.GetByIdAsync(id));
-        var users = await Task.WhenAll(userTasks);
-
-        return users
-            .Where(u => u is not null)
-            .ToDictionary(u => u!.Id)!;
+        var users = await _profileService.GetByIdsAsync(authorIds);
+        return users.ToDictionary(u => u.Key, u => u.Value);
     }
 
-    private static CommentTreeDto BuildCommentTreeDto(
-        Comment comment,
-        IReadOnlyCollection<Comment> allComments,
-        Dictionary<string, UserResponseDto> userDict)
+    private async Task<CommentTreeDto> BuildRootNodeWithRepliesAsync(
+        Comment root,
+        Dictionary<string, UserResponseDto> userDict,
+        int repliesPage
+    )
     {
-        var dto = MapToFlatDto(comment, allComments, userDict);
-        var replies = allComments
-            .Where(c => c.ParentCommentId == comment.Id)
-            .OrderBy(c => c.CreatedAt)
-            .Select(reply => BuildCommentTreeDto(reply, allComments, userDict))
-            .ToList();
+        var dto = BuildCommentDto(root, userDict);
 
-        return new CommentTreeDto(dto, replies);
-    }
-
-    private static CommentResponseDto MapToFlatDto(
-        Comment comment,
-        IReadOnlyCollection<Comment> allComments,
-        Dictionary<string, UserResponseDto> userDict)
-    {
-        var repliesCount = allComments.Count(c => c.ParentCommentId == comment.Id);
-        var dto = new CommentResponseDto(
-            comment.Id,
-            comment.PostId,
-            comment.AuthorId,
-            string.Empty,
-            null,
-            comment.Content,
-            comment.IsEdited,
-            comment.CreatedAt,
-            comment.UpdatedAt,
-            comment.ParentCommentId,
-            repliesCount
-        );
-
-        if (userDict.TryGetValue(comment.AuthorId, out var user))
+        var replyOptions = new QueryOptions<Comment>
         {
-            dto = dto with
-            {
-                AuthorName = $"{user.FirstName} {user.LastName}",
-                AuthorProfilePicture = user.ProfilePicturePath
-            };
+            Skip = (repliesPage - 1) * DefaultRepliesPageSize,
+            Take = DefaultRepliesPageSize,
+            OrderBy = q => q.OrderBy(c => c.CreatedAt),
+            IsTracking = false,
+        };
+
+        var replies = await _commentRepository.GetRepliesByParentAsync(root.Id, replyOptions);
+        var totalReplies = await _commentRepository.CountRepliesByParentAsync(root.Id);
+
+        var replyDtos = new List<CommentTreeDto>(replies.Count);
+        foreach (var reply in replies)
+        {
+            var replyNode = await BuildReplyNodeAsync(
+                reply,
+                userDict,
+                repliesPage,
+                DefaultRepliesPageSize,
+                totalReplies
+            );
+            replyDtos.Add(replyNode);
         }
 
+        return new CommentTreeDto(
+            dto,
+            replyDtos,
+            totalReplies,
+            HasMoreReplies: totalReplies > DefaultRepliesPageSize,
+            CurrentRepliesPage: repliesPage,
+            RepliesPageSize: DefaultRepliesPageSize
+        );
+    }
+
+    private async Task<CommentTreeDto> BuildReplyNodeAsync(
+        Comment reply,
+        Dictionary<string, UserResponseDto> userDict,
+        int repliesPage,
+        int repliesPageSize,
+        int totalReplies
+    )
+    {
+        var dto = BuildCommentDto(reply, userDict);
+
+        var grandChildrenOptions = new QueryOptions<Comment>
+        {
+            Skip = 0,
+            Take = repliesPageSize,
+            OrderBy = q => q.OrderBy(c => c.CreatedAt),
+            IsTracking = false,
+        };
+
+        var grandChildren = await _commentRepository.GetRepliesByParentAsync(
+            reply.Id,
+            grandChildrenOptions
+        );
+        var totalGrandChildren = await _commentRepository.CountRepliesByParentAsync(reply.Id);
+
+        var grandChildDtos = new List<CommentTreeDto>(grandChildren.Count);
+        foreach (var gc in grandChildren)
+        {
+            var gcNode = new CommentTreeDto(
+                BuildCommentDto(gc, userDict),
+                new List<CommentTreeDto>(),
+                TotalRepliesCount: 0,
+                HasMoreReplies: false,
+                CurrentRepliesPage: 1,
+                RepliesPageSize: repliesPageSize
+            );
+            grandChildDtos.Add(gcNode);
+        }
+
+        return new CommentTreeDto(
+            dto,
+            grandChildDtos,
+            TotalRepliesCount: totalGrandChildren,
+            HasMoreReplies: totalGrandChildren > repliesPageSize,
+            CurrentRepliesPage: 1,
+            RepliesPageSize: repliesPageSize
+        );
+    }
+
+    private static CommentResponseDto BuildCommentDto(
+        Comment comment,
+        Dictionary<string, UserResponseDto> userDict
+    )
+    {
+        var dto = comment.Adapt<CommentResponseDto>();
+        if (userDict.TryGetValue(comment.AuthorId, out var user))
+            dto = dto with
+            {
+                AuthorName = $"{user.FirstName} {user.LastName}".Trim(),
+                AuthorProfilePicture = user.ProfilePicturePath,
+            };
         return dto;
+    }
+
+    private async Task CreateCommentNotificationAsync(
+        string postAuthorId,
+        string commentAuthorId,
+        long postId
+    )
+    {
+        var actor = await _profileService.GetByIdAsync(commentAuthorId);
+        var actorName = actor is null ? "Alguien" : $"{actor.FirstName} {actor.LastName}".Trim();
+
+        var notifResult = Notification.CreateComment(
+            recipientId: postAuthorId,
+            actorId: commentAuthorId,
+            postId: postId,
+            actorUserName: actorName
+        );
+
+        if (notifResult.IsSuccess)
+            await _notificationRepository.AddAsync(notifResult.Value);
+    }
+
+    private async Task CreateReplyNotificationAsync(
+        string parentAuthorId,
+        string replyAuthorId,
+        long postId
+    )
+    {
+        var actor = await _profileService.GetByIdAsync(replyAuthorId);
+        var actorName = actor is null ? "Alguien" : $"{actor.FirstName} {actor.LastName}".Trim();
+
+        var notifResult = Notification.CreateReply(
+            recipientId: parentAuthorId,
+            actorId: replyAuthorId,
+            postId: postId,
+            actorUserName: actorName
+        );
+
+        if (notifResult.IsSuccess)
+            await _notificationRepository.AddAsync(notifResult.Value);
     }
 }

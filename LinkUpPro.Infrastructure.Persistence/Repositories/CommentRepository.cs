@@ -71,12 +71,70 @@ public sealed class CommentRepository : GenericRepository<Comment, long>, IComme
         return await _dbSet.CountAsync(c => c.PostId == postId, cancellationToken);
     }
 
+    public async Task<IReadOnlyDictionary<long, int>> GetCountsForPostsAsync(
+        IEnumerable<long> postIds,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var ids = postIds.Distinct().ToList();
+        if (ids.Count == 0)
+            return new Dictionary<long, int>();
+
+        return await _dbSet
+            .Where(c => ids.Contains(c.PostId))
+            .GroupBy(c => c.PostId)
+            .Select(g => new { PostId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.PostId, x => x.Count, cancellationToken);
+    }
+
     public async Task<bool> HasRepliesAsync(
         long commentId,
         CancellationToken cancellationToken = default
     )
     {
         return await _dbSet.AnyAsync(c => c.ParentCommentId == commentId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyCollection<Comment>> GetRootCommentsByPostAsync(
+        long postId,
+        QueryOptions<Comment> options,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var query = _dbSet.Where(c => c.PostId == postId && c.ParentCommentId == null);
+        return await ApplyOptionsToQuery(query, options).ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyCollection<Comment>> GetRepliesByParentAsync(
+        long parentCommentId,
+        QueryOptions<Comment> options,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var query = _dbSet.Where(c => c.ParentCommentId == parentCommentId);
+        return await ApplyOptionsToQuery(query, options).ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> CountRootCommentsByPostAsync(
+        long postId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _dbSet.CountAsync(
+            c => c.PostId == postId && c.ParentCommentId == null,
+            cancellationToken
+        );
+    }
+
+    public async Task<int> CountRepliesByParentAsync(
+        long parentCommentId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _dbSet.CountAsync(
+            c => c.ParentCommentId == parentCommentId,
+            cancellationToken
+        );
     }
 
     private static HashSet<long> CollectDescendantIds(

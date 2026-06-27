@@ -1,9 +1,11 @@
 using LinkUpPro.Application.DTOs.Profile.Requests;
 using LinkUpPro.Application.Interfaces;
 using LinkUpPro.Application.Interfaces.Services;
-using LinkUpPro.Domain.Exceptions;
+using LinkUpPro.Domain.Interfaces.Persistence;
 using LinkUpPro.Infrastructure.Identity.Entities;
+using LinkUpPro.Infrastructure.Identity.Services;
 using LinkUpPro.Tests.Base;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Moq;
 
@@ -13,104 +15,88 @@ namespace LinkUpPro.Tests.Application.Services;
 public class ProfileServiceTests : InMemoryTestBase
 {
     private IProfileService? _service;
-    private Mock<IEmailService> _emailServiceMock = null!;
+    private Mock<UserManager<AppUser>> _userManagerMock = null!;
     private Mock<IFileService> _fileServiceMock = null!;
-    private UserManager<AppUser> _userManager = null!;
-    private bool _hasImplementation;
+    private Mock<IUnitOfWork> _unitOfWorkMock = null!;
 
-    public ProfileServiceTests()
-    {
-        _hasImplementation = ImplementationDiscovery.HasImplementation<IProfileService>();
-    }
+    public ProfileServiceTests() { }
 
     public override async Task InitializeAsync()
     {
         await base.InitializeAsync();
 
-        if (!_hasImplementation)
-            return;
-
-        _emailServiceMock = new Mock<IEmailService>();
         _fileServiceMock = new Mock<IFileService>();
+        _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _unitOfWorkMock
+            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
 
-        var store = new Mock<IUserStore<AppUser>>().Object;
-        _userManager = new UserManager<AppUser>(
-            store,
-            null!,
-            null!,
-            null!,
-            null!,
-            null!,
-            null!,
-            null!,
-            null!
+        _service = new ProfileService(
+            CreateUserManager().Object,
+            CreateSignInManager().Object,
+            _fileServiceMock.Object,
+            _unitOfWorkMock.Object
         );
-
-        var implType = ImplementationDiscovery.FindImplementation<IProfileService>()!;
-        _service = (IProfileService)
-            Activator.CreateInstance(
-                implType,
-                _userManager,
-                null!, // SignInManager - dev will handle
-                _emailServiceMock.Object,
-                _fileServiceMock.Object,
-                new Mock<Microsoft.Extensions.Configuration.IConfiguration>().Object
-            )!;
     }
 
-    [ServiceFact(typeof(IProfileService))]
+    [Fact]
     public async Task GetProfileAsync_ExistingUser_ReturnsProfile()
     {
-        var user = SeedUser("user1", "john", "John", "Doe", true, true);
-        await DbContext.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        var user = CreateUser("user1", "john", "John", "Doe", true, true);
+        SetupFindById("user1", user);
 
         var result = await _service!.GetProfileAsync("user1");
 
-        result.Should().NotBeNull();
-        result.FirstName.Should().Be("John");
-        result.IsVerified.Should().BeTrue();
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.FirstName.Should().Be("John");
+        result.Value.IsVerified.Should().BeTrue();
     }
 
-    [ServiceFact(typeof(IProfileService))]
-    public async Task GetProfileAsync_NonexistentUser_ThrowsDomainValidationException()
+    [Fact]
+    public async Task GetProfileAsync_NonexistentUser_ReturnsFailure()
     {
-        Func<Task> act = () => _service!.GetProfileAsync("nobody");
+        var result = await _service!.GetProfileAsync("nobody");
 
-        await act.Should().ThrowAsync<DomainValidationException>();
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().Contain(e => e.Code == "User.NotFound");
     }
 
-    [ServiceFact(typeof(IProfileService))]
+    [Fact]
     public async Task UpdateProfileAsync_ValidData_UpdatesAndPersists()
     {
-        var user = SeedUser("user1", "john", "John", "Doe", true, true, "809-555-1234");
-        await DbContext.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        var user = CreateUser("user1", "john", "John", "Doe", true, true, "809-555-1234");
+        SetupFindById("user1", user);
+        _userManagerMock
+            .Setup(x => x.UpdateAsync(It.IsAny<AppUser>()))
+            .ReturnsAsync(IdentityResult.Success);
 
         var request = new UpdateProfileRequest("Jane", "Smith", "829-555-5678", null);
         var result = await _service!.UpdateProfileAsync("user1", request);
 
-        result.FirstName.Should().Be("Jane");
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.FirstName.Should().Be("Jane");
+        user.FirstName.Should().Be("Jane");
+        user.PhoneNumber.Should().Be("829-555-5678");
     }
 
-    [ServiceFact(typeof(IProfileService))]
-    public async Task UpdateProfileAsync_InvalidPhone_ThrowsDomainValidationException()
+    [Fact]
+    public async Task UpdateProfileAsync_InvalidPhone_ReturnsFailure()
     {
-        var user = SeedUser("user1", "john", "John", "Doe", true, true);
-        await DbContext.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        var user = CreateUser("user1", "john", "John", "Doe", true, true);
+        SetupFindById("user1", user);
 
         var request = new UpdateProfileRequest("Jane", "Smith", "123-4567", null);
 
-        Func<Task> act = () => _service!.UpdateProfileAsync("user1", request);
+        var result = await _service!.UpdateProfileAsync("user1", request);
 
-        await act.Should().ThrowAsync<DomainValidationException>();
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().Contain(e => e.Code == "User.InvalidPhoneNumber");
     }
 
-    [ServiceFact(typeof(IProfileService))]
+    [Fact]
     public async Task UpdateProfileAsync_WithNewPhoto_DeletesOldPhoto()
     {
-        var user = SeedUser(
+        var user = CreateUser(
             "user1",
             "john",
             "John",
@@ -120,87 +106,89 @@ public class ProfileServiceTests : InMemoryTestBase
             "809-555-1234",
             "/uploads/old-photo.jpg"
         );
-        await DbContext.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        SetupFindById("user1", user);
+        _userManagerMock
+            .Setup(x => x.UpdateAsync(It.IsAny<AppUser>()))
+            .ReturnsAsync(IdentityResult.Success);
 
+        var formFile = new Mock<Microsoft.AspNetCore.Http.IFormFile>();
+        formFile.Setup(x => x.Length).Returns(1024);
+        _fileServiceMock.Setup(x => x.IsImageValid(It.IsAny<Microsoft.AspNetCore.Http.IFormFile>())).Returns(true);
+        _fileServiceMock
+            .Setup(x => x.UploadFileAsync(It.IsAny<Microsoft.AspNetCore.Http.IFormFile>(), It.IsAny<string>()))
+            .ReturnsAsync("/uploads/new-photo.jpg");
         _fileServiceMock.Setup(x => x.DeleteFile("/uploads/old-photo.jpg"));
 
         var request = new UpdateProfileRequest(
             "John",
             "Doe",
             "809-555-1234",
-            "/uploads/new-photo.jpg"
+            formFile.Object
         );
         var result = await _service!.UpdateProfileAsync("user1", request);
 
+        result.IsSuccess.Should().BeTrue();
         _fileServiceMock.Verify(x => x.DeleteFile("/uploads/old-photo.jpg"), Times.Once);
     }
 
-    [ServiceFact(typeof(IProfileService))]
-    public async Task ChangePasswordAsync_CorrectCurrent_ReturnsRequiresReLogin()
+    [Fact]
+    public async Task ChangePasswordAsync_CorrectCurrentStrong_ReturnsRequiresReLogin()
     {
-        var user = SeedUser("user1", "john", "John", "Doe", true, true);
+        var user = CreateUser("user1", "john", "John", "Doe", true, true);
         var hasher = new PasswordHasher<AppUser>();
         user.PasswordHash = hasher.HashPassword(user, "OldPass1!");
-        await DbContext.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        SetupFindById("user1", user);
+        _userManagerMock.Setup(x => x.CheckPasswordAsync(user, "OldPass1!")).ReturnsAsync(true);
+        _userManagerMock
+            .Setup(x => x.ChangePasswordAsync(user, "OldPass1!", "NewPass2@"))
+            .ReturnsAsync(IdentityResult.Success);
+        _userManagerMock
+            .Setup(x => x.UpdateSecurityStampAsync(user))
+            .ReturnsAsync(IdentityResult.Success);
 
-        var request = new ChangePasswordRequest("OldPass1!", "NewPass1!", "NewPass1!");
+        var request = new ChangePasswordRequest("OldPass1!", "NewPass2@", "NewPass2@");
         var result = await _service!.ChangePasswordAsync("user1", request);
 
-        result.RequiresReLogin.Should().BeTrue();
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.RequiresReLogin.Should().BeTrue();
     }
 
-    [ServiceFact(typeof(IProfileService))]
-    public async Task ChangePasswordAsync_WrongCurrent_ThrowsDomainValidationException()
+    [Fact]
+    public async Task ChangePasswordAsync_WrongCurrent_ReturnsFailure()
     {
-        var user = SeedUser("user1", "john", "John", "Doe", true, true);
+        var user = CreateUser("user1", "john", "John", "Doe", true, true);
         var hasher = new PasswordHasher<AppUser>();
         user.PasswordHash = hasher.HashPassword(user, "RealPass1!");
-        await DbContext.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        SetupFindById("user1", user);
+        _userManagerMock.Setup(x => x.CheckPasswordAsync(user, "Wrong1!")).ReturnsAsync(false);
 
-        var request = new ChangePasswordRequest("Wrong1!", "NewPass1!", "NewPass1!");
+        var request = new ChangePasswordRequest("Wrong1!", "NewPass2@", "NewPass2@");
 
-        Func<Task> act = () => _service!.ChangePasswordAsync("user1", request);
+        var result = await _service!.ChangePasswordAsync("user1", request);
 
-        await act.Should().ThrowAsync<DomainValidationException>();
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().Contain(e => e.Code == "Password.Invalid");
     }
 
-    [ServiceFact(typeof(IProfileService))]
-    public async Task ChangePasswordAsync_NewEqualsCurrent_ThrowsDomainValidationException()
+    [Fact]
+    public async Task ChangePasswordAsync_NewEqualsCurrent_ReturnsFailure()
     {
-        var user = SeedUser("user1", "john", "John", "Doe", true, true);
-        var hasher = new PasswordHasher<AppUser>();
-        user.PasswordHash = hasher.HashPassword(user, "SamePass1!");
-        await DbContext.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        var user = CreateUser("user1", "john", "John", "Doe", true, true);
+        SetupFindById("user1", user);
+        _userManagerMock.Setup(x => x.CheckPasswordAsync(user, "SamePass1!")).ReturnsAsync(true);
 
         var request = new ChangePasswordRequest("SamePass1!", "SamePass1!", "SamePass1!");
 
-        Func<Task> act = () => _service!.ChangePasswordAsync("user1", request);
+        var result = await _service!.ChangePasswordAsync("user1", request);
 
-        await act.Should().ThrowAsync<DomainValidationException>();
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().Contain(e => e.Code == "Password.SameAsCurrent");
     }
 
-    [ServiceFact(typeof(IProfileService))]
-    public async Task UpdateProfileAsync_UnauthorizedUser_ThrowsDomainValidationException()
-    {
-        var user = SeedUser("user2", "john", "John", "Doe", true, true);
-        await DbContext.AddAsync(user);
-        await DbContext.SaveChangesAsync();
-
-        var request = new UpdateProfileRequest("Jane", "Smith", "809-555-1234", null);
-
-        Func<Task> act = () => _service!.UpdateProfileAsync("user2", request);
-
-        await act.Should().ThrowAsync<DomainValidationException>();
-    }
-
-    [ServiceFact(typeof(IProfileService))]
+    [Fact]
     public async Task GetByEmailAsync_ExistingUser_ReturnsDto()
     {
-        var user = SeedUser(
+        var user = CreateUser(
             "user1",
             "john",
             "John",
@@ -211,8 +199,7 @@ public class ProfileServiceTests : InMemoryTestBase
             null,
             "john@test.com"
         );
-        await DbContext.AddAsync(user);
-        await DbContext.SaveChangesAsync();
+        _userManagerMock.Setup(x => x.FindByEmailAsync("john@test.com")).ReturnsAsync(user);
 
         var result = await _service!.GetByEmailAsync("john@test.com");
 
@@ -220,7 +207,7 @@ public class ProfileServiceTests : InMemoryTestBase
         result!.Email.Should().Be("john@test.com");
     }
 
-    [ServiceFact(typeof(IProfileService))]
+    [Fact]
     public async Task GetByEmailAsync_Nonexistent_ReturnsNull()
     {
         var result = await _service!.GetByEmailAsync("nonexistent@test.com");
@@ -228,7 +215,47 @@ public class ProfileServiceTests : InMemoryTestBase
         result.Should().BeNull();
     }
 
-    private static AppUser SeedUser(
+    private void SetupFindById(string id, AppUser user)
+    {
+        _userManagerMock.Setup(x => x.FindByIdAsync(id)).ReturnsAsync(user);
+    }
+
+    private Mock<UserManager<AppUser>> CreateUserManager()
+    {
+        var store = new Mock<IUserStore<AppUser>>();
+        _userManagerMock = new Mock<UserManager<AppUser>>(
+            store.Object,
+            null!,
+            null!,
+            null!,
+            null!,
+            null!,
+            null!,
+            null!,
+            null!
+        );
+        _userManagerMock.CallBase = false;
+        return _userManagerMock;
+    }
+
+    private Mock<SignInManager<AppUser>> CreateSignInManager()
+    {
+        var ctx = new Mock<IHttpContextAccessor>();
+        var claimsFactory = new Mock<IUserClaimsPrincipalFactory<AppUser>>();
+        var mock = new Mock<SignInManager<AppUser>>(
+            _userManagerMock.Object,
+            ctx.Object,
+            claimsFactory.Object,
+            null!,
+            null!,
+            null!,
+            null!
+        );
+        mock.Setup(x => x.SignOutAsync()).Returns(Task.CompletedTask);
+        return mock;
+    }
+
+    private static AppUser CreateUser(
         string id,
         string userName,
         string firstName,

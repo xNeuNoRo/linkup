@@ -23,6 +23,11 @@ public interface IReactionRepository : IGenericRepository<Reaction, long>
         CancellationToken cancellationToken = default
     );
 
+    Task<IReadOnlyDictionary<long, ReactionCounts>> GetCountsForPostsAsync(
+        IEnumerable<long> postIds,
+        CancellationToken cancellationToken = default
+    );
+
     Task<int> CountByPostAndTypeAsync(
         long postId,
         ReactionType reactionType,

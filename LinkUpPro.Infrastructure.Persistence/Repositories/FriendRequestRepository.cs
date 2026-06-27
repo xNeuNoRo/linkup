@@ -1,6 +1,7 @@
 using LinkUpPro.Domain.Common;
 using LinkUpPro.Domain.Entities.Friendship;
 using LinkUpPro.Domain.Enums;
+using LinkUpPro.Domain.Interfaces;
 using LinkUpPro.Domain.Interfaces.Repositories;
 using LinkUpPro.Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
@@ -11,8 +12,13 @@ public sealed class FriendRequestRepository
     : GenericRepository<FriendRequest, long>,
         IFriendRequestRepository
 {
-    public FriendRequestRepository(AppDbContext context)
-        : base(context) { }
+    private readonly IUserDirectory _userDirectory;
+
+    public FriendRequestRepository(AppDbContext context, IUserDirectory userDirectory)
+        : base(context)
+    {
+        _userDirectory = userDirectory;
+    }
 
     public async Task<IReadOnlyCollection<FriendRequest>> GetPendingReceivedAsync(
         string receiverId,
@@ -109,6 +115,27 @@ public sealed class FriendRequestRepository
             r => r.Id == requestId && r.ReceiverId == receiverId,
             cancellationToken
         );
+    }
+
+    public async Task<IReadOnlyCollection<UserSearchResult>> SearchAvailableUsersPagedAsync(
+        string userId,
+        string? search,
+        QueryOptions<UserSearchResult> options,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _userDirectory.SearchAvailableUsersPagedAsync(
+            userId, search, options, cancellationToken);
+    }
+
+    public async Task<int> CountAvailableUsersAsync(
+        string userId,
+        string? search,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _userDirectory.CountAvailableUsersAsync(
+            userId, search, cancellationToken);
     }
 
     private static IQueryable<FriendRequest> ApplyOptionsToQuery(

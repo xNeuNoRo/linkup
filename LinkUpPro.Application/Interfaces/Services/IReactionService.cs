@@ -6,7 +6,7 @@ namespace LinkUpPro.Application.Interfaces.Services;
 
 public interface IReactionService
 {
-    Task<Result<ReactionResponseDto>> ReactAsync(string userId, CreateReactionRequest request);
+    Task<Result<ReactionResponseDto?>> ReactAsync(string userId, CreateReactionRequest request);
 
     Task<Result> DeleteAsync(string userId, long postId);
 

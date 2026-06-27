@@ -115,7 +115,7 @@ public static class MappingConfig
             .Map(dest => dest.Message, src => src.Message)
             .Map(dest => dest.CreatedAt, src => src.CreatedAt)
             .Map(dest => dest.IsRead, src => src.IsRead)
-            .Map(dest => dest.RelatedPostId, src => src.RelatedPostId);
+            .Map(dest => dest.RelatedEntityId, src => src.RelatedEntityId);
         // ActorName, ActorProfilePicture - manual
 
         // ==========================================

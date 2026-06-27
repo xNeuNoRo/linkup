@@ -1,9 +1,8 @@
 using System.Text;
-using LinkUpPro.Application.DTOs.Profile.Requests;
-using LinkUpPro.Application.DTOs.Profile.Responses;
 using LinkUpPro.Application.DTOs.User.Requests;
 using LinkUpPro.Application.DTOs.User.Responses;
 using LinkUpPro.Application.Interfaces;
+using LinkUpPro.Application.Interfaces.Services;
 using LinkUpPro.Application.Models.Emails;
 using LinkUpPro.Domain.Common;
 using LinkUpPro.Domain.Exceptions;
@@ -20,18 +19,21 @@ public class AccountService : IAccountService
     private readonly SignInManager<AppUser> _signInManager;
     private readonly IEmailService _emailService;
     private readonly IFileService _fileService;
+    private readonly IProfileService _profileService;
 
     public AccountService(
         UserManager<AppUser> userManager,
         SignInManager<AppUser> signInManager,
         IEmailService emailService,
-        IFileService fileService
+        IFileService fileService,
+        IProfileService profileService
     )
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _emailService = emailService;
         _fileService = fileService;
+        _profileService = profileService;
     }
 
     public async Task<AuthResponseDto> LoginAsync(LoginRequest request, bool rememberMe)
@@ -100,14 +102,15 @@ public class AccountService : IAccountService
         var user = new AppUser
         {
             UserName = request.UserName,
-            Email = request.Email,
-            FirstName = request.FirstName,
-            LastName = request.LastName,
-            PhoneNumber = request.PhoneNumber,
+            FirstName = request.FirstName.Trim(),
+            LastName = request.LastName.Trim(),
             ProfilePicturePath = request.ProfilePicturePath,
             EmailConfirmed = false,
             IsActive = false,
         };
+
+        user.SetEmail(request.Email);
+        user.SetPhoneNumber(request.PhoneNumber);
 
         var createResult = await _userManager.CreateAsync(user, request.Password);
         if (!createResult.Succeeded)
@@ -246,125 +249,6 @@ public class AccountService : IAccountService
         await _userManager.UpdateSecurityStampAsync(user);
 
         return user.Adapt<AuthResponseDto>();
-    }
-
-    public async Task<UserProfileResponseDto> GetProfileAsync(string userId)
-    {
-        var user = await _userManager.FindByIdAsync(userId);
-        if (user is null)
-            throw new DomainValidationException(
-                "UserId",
-                "Usuario no encontrado.",
-                "Profile.NotFound"
-            );
-
-        return user.Adapt<UserProfileResponseDto>();
-    }
-
-    public async Task<EditProfileResponseDto> UpdateProfileAsync(
-        string userId,
-        UpdateProfileRequest request
-    )
-    {
-        var user = await _userManager.FindByIdAsync(userId);
-        if (user is null)
-            throw new DomainValidationException(
-                "UserId",
-                "Usuario no encontrado.",
-                "Profile.NotFound"
-            );
-
-        string? oldPhotoPath = user.ProfilePicturePath;
-
-        user.FirstName = request.FirstName.Trim();
-        user.LastName = request.LastName.Trim();
-        user.PhoneNumber = request.PhoneNumber.Trim();
-
-        if (request.ProfilePicturePath is not null)
-            user.ProfilePicturePath = request.ProfilePicturePath;
-
-        var result = await _userManager.UpdateAsync(user);
-        if (!result.Succeeded)
-            throw new DomainValidationException(
-                "Profile",
-                result.Errors.FirstOrDefault()?.Description ?? "Error al actualizar el perfil.",
-                "Profile.UpdateFailed"
-            );
-
-        if (
-            request.ProfilePicturePath is not null
-            && oldPhotoPath is not null
-            && oldPhotoPath != "/images/default-avatar.png"
-        )
-            _fileService.DeleteFile(oldPhotoPath);
-
-        return user.Adapt<EditProfileResponseDto>();
-    }
-
-    public async Task<EditProfileResponseDto> ChangePasswordAsync(
-        string userId,
-        ChangePasswordRequest request
-    )
-    {
-        var user = await _userManager.FindByIdAsync(userId);
-        if (user is null)
-            throw new DomainValidationException(
-                "UserId",
-                "Usuario no encontrado.",
-                "Profile.NotFound"
-            );
-
-        var passwordCheck = await _userManager.CheckPasswordAsync(user, request.CurrentPassword);
-        if (!passwordCheck)
-            throw new DomainValidationException(
-                "CurrentPassword",
-                "La contrasena actual es incorrecta.",
-                "Profile.IncorrectPassword"
-            );
-
-        if (request.CurrentPassword == request.NewPassword)
-            throw new DomainValidationException(
-                "NewPassword",
-                "La nueva contrasena debe ser diferente de la contrasena actual.",
-                "Profile.SamePassword"
-            );
-
-        var changeResult = await _userManager.ChangePasswordAsync(
-            user,
-            request.CurrentPassword,
-            request.NewPassword
-        );
-        if (!changeResult.Succeeded)
-            throw new DomainValidationException(
-                "Password",
-                changeResult.Errors.FirstOrDefault()?.Description
-                    ?? "Error al cambiar la contrasena.",
-                "Profile.PasswordChangeFailed"
-            );
-
-        await _userManager.UpdateSecurityStampAsync(user);
-        await _signInManager.SignOutAsync();
-
-        var dto = user.Adapt<EditProfileResponseDto>();
-        return dto with { RequiresReLogin = true };
-    }
-
-    public async Task<UserDto?> GetByIdAsync(string userId)
-    {
-        var user = await _userManager.FindByIdAsync(userId);
-        return user?.Adapt<UserDto>();
-    }
-
-    public async Task<UserDto?> GetByUserNameAsync(string userName)
-    {
-        var user = await _userManager.FindByNameAsync(userName);
-        return user?.Adapt<UserDto>();
-    }
-
-    public async Task<UserDto?> GetByEmailAsync(string email)
-    {
-        var user = await _userManager.FindByEmailAsync(email);
-        return user?.Adapt<UserDto>();
     }
 
     public Task SignOutAsync()

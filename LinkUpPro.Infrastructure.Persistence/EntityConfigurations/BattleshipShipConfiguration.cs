@@ -23,6 +23,10 @@ public sealed class BattleshipShipConfiguration : IEntityTypeConfiguration<Battl
         // Auditoría
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.UpdatedAt).IsRequired(false);
+        builder.Property(x => x.DeletedAt).IsRequired(false);
+
+        // QueryFilter para excluir barcos eliminados de consultas normales
+        builder.HasQueryFilter(x => x.DeletedAt == null);
 
         // Indices
         builder.HasIndex(x => x.GameId);

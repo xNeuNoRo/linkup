@@ -15,7 +15,8 @@ public sealed class FileSettings
     public IReadOnlySet<string> AllowedImageExtensions { get; init; } =
         DomainConstants.AllowedImageExtensions;
 
-    public string[] AllowedMimeTypes { get; init; } = { "image/jpeg", "image/png", "image/webp" };
+    public string[] AllowedMimeTypes { get; init; } =
+        { "image/jpeg", "image/jpg", "image/png", "image/webp" };
 
     public string UploadRootPath { get; init; } = "uploads";
 

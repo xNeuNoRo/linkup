@@ -29,5 +29,32 @@ public interface ICommentRepository : IGenericRepository<Comment, long>
 
     Task<int> CountByPostAsync(long postId, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyDictionary<long, int>> GetCountsForPostsAsync(
+        IEnumerable<long> postIds,
+        CancellationToken cancellationToken = default
+    );
+
     Task<bool> HasRepliesAsync(long commentId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyCollection<Comment>> GetRootCommentsByPostAsync(
+        long postId,
+        QueryOptions<Comment> options,
+        CancellationToken cancellationToken = default
+    );
+
+    Task<IReadOnlyCollection<Comment>> GetRepliesByParentAsync(
+        long parentCommentId,
+        QueryOptions<Comment> options,
+        CancellationToken cancellationToken = default
+    );
+
+    Task<int> CountRootCommentsByPostAsync(
+        long postId,
+        CancellationToken cancellationToken = default
+    );
+
+    Task<int> CountRepliesByParentAsync(
+        long parentCommentId,
+        CancellationToken cancellationToken = default
+    );
 }

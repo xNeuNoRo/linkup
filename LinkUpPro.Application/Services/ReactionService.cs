@@ -12,173 +12,131 @@ namespace LinkUpPro.Application.Services;
 
 public sealed class ReactionService : IReactionService
 {
-    private readonly IReactionRepository? _reactionRepository;
-    private readonly IUnitOfWork? _unitOfWork;
-
-    private sealed record StoredReaction(long Id, long PostId, string UserId, int Type, DateTimeOffset CreatedAt, DateTimeOffset? DeletedAt)
-    {
-        public bool IsDeleted => DeletedAt is not null;
-    }
-
-    private readonly List<StoredReaction> _inMemoryStore = [];
-    private long _nextId = 1;
-    private readonly object _lock = new();
+    private readonly IReactionRepository _reactionRepository;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IPostRepository _postRepository;
+    private readonly IProfileService _profileService;
+    private readonly INotificationRepository _notificationRepository;
 
     public ReactionService(
-        IReactionRepository? reactionRepository,
-        IUnitOfWork? unitOfWork,
-        object? _ = null)
+        IReactionRepository reactionRepository,
+        IUnitOfWork unitOfWork,
+        IPostRepository postRepository,
+        IProfileService profileService,
+        INotificationRepository notificationRepository
+    )
     {
         _reactionRepository = reactionRepository;
         _unitOfWork = unitOfWork;
+        _postRepository = postRepository;
+        _profileService = profileService;
+        _notificationRepository = notificationRepository;
     }
 
-    public async Task<Result<ReactionResponseDto>> ReactAsync(string userId, CreateReactionRequest request)
+    public async Task<Result<ReactionResponseDto?>> ReactAsync(
+        string userId,
+        CreateReactionRequest request
+    )
     {
-        if (string.IsNullOrWhiteSpace(userId))
-            return Result<ReactionResponseDto>.Failure(new DomainError("Reaction.UserRequired", "El usuario es requerido."));
+        var reactionType = (ReactionType)request.Type;
+        if (!Enum.IsDefined(reactionType))
+            return Result<ReactionResponseDto?>.Failure(
+                new DomainError("Reaction.InvalidType", "El tipo de reaccion no es valido.")
+            );
 
-        if (_reactionRepository is not null)
+        var existing = await _reactionRepository.GetByPostAndUserAsync(request.PostId, userId);
+
+        if (existing is not null)
         {
-            var reactionType = (ReactionType)request.Type;
-            if (!Enum.IsDefined(reactionType))
-                return Result<ReactionResponseDto>.Failure(new DomainError("Reaction.InvalidType", "El tipo de reaccion no es valido."));
-
-            var existing = await _reactionRepository.GetByPostAndUserAsync(request.PostId, userId);
-
-            if (existing is not null)
+            if (existing.Type == reactionType)
             {
-                if (existing.Type == reactionType)
-                {
-                    existing.MarkAsDeleted();
-                    _reactionRepository.Update(existing);
-                    await _unitOfWork!.SaveChangesAsync();
-                    return Result<ReactionResponseDto>.Success(null!);
-                }
-
-                var changeResult = existing.ChangeTo(reactionType);
-                if (changeResult.IsFailure)
-                    return Result<ReactionResponseDto>.Failure(changeResult.Errors);
-
+                existing.MarkAsDeleted();
                 _reactionRepository.Update(existing);
-                await _unitOfWork!.SaveChangesAsync();
-
-                return Result<ReactionResponseDto>.Success(existing.Adapt<ReactionResponseDto>());
+                await _unitOfWork.SaveChangesAsync();
+                return Result<ReactionResponseDto?>.Success(null);
             }
 
-            var createResult = Reaction.Create(request.PostId, userId, reactionType);
-            if (createResult.IsFailure)
-                return Result<ReactionResponseDto>.Failure(createResult.Errors);
+            var changeResult = existing.ChangeTo(reactionType);
+            if (changeResult.IsFailure)
+                return Result<ReactionResponseDto?>.Failure(changeResult.Errors);
 
-            await _reactionRepository.AddAsync(createResult.Value);
-            await _unitOfWork!.SaveChangesAsync();
+            _reactionRepository.Update(existing);
+            await _unitOfWork.SaveChangesAsync();
 
-            return Result<ReactionResponseDto>.Success(createResult.Value.Adapt<ReactionResponseDto>());
+            await CreateReactionNotificationAsync(request.PostId, userId, reactionType);
+
+            return Result<ReactionResponseDto?>.Success(existing.Adapt<ReactionResponseDto>());
         }
 
-        lock (_lock)
-        {
-            var existing = _inMemoryStore.FirstOrDefault(r =>
-                r.PostId == request.PostId && r.UserId == userId && !r.IsDeleted);
+        var createResult = Reaction.Create(request.PostId, userId, reactionType);
+        if (createResult.IsFailure)
+            return Result<ReactionResponseDto?>.Failure(createResult.Errors);
 
-            if (existing is not null)
-            {
-                if (existing.Type == request.Type)
-                {
-                    _inMemoryStore.Remove(existing);
-                    _inMemoryStore.Add(existing with { DeletedAt = DateTimeOffset.UtcNow });
-                    return Result<ReactionResponseDto>.Success(null!);
-                }
+        await _reactionRepository.AddAsync(createResult.Value);
+        await _unitOfWork.SaveChangesAsync();
 
-                _inMemoryStore.Remove(existing);
-                _inMemoryStore.Add(existing with { Type = request.Type });
-                return Result<ReactionResponseDto>.Success(
-                    new ReactionResponseDto(existing.Id, request.PostId, userId, request.Type, existing.CreatedAt));
-            }
+        await CreateReactionNotificationAsync(request.PostId, userId, reactionType);
 
-            var reaction = new StoredReaction(_nextId++, request.PostId, userId, request.Type, DateTimeOffset.UtcNow, null);
-            _inMemoryStore.Add(reaction);
-
-            return Result<ReactionResponseDto>.Success(
-                new ReactionResponseDto(reaction.Id, reaction.PostId, reaction.UserId, reaction.Type, reaction.CreatedAt));
-        }
+        return Result<ReactionResponseDto?>.Success(
+            createResult.Value.Adapt<ReactionResponseDto>()
+        );
     }
 
     public async Task<Result> DeleteAsync(string userId, long postId)
     {
-        if (string.IsNullOrWhiteSpace(userId))
-            return Result.Failure(new DomainError("Reaction.UserRequired", "El usuario es requerido."));
+        var reaction = await _reactionRepository.GetByPostAndUserAsync(postId, userId);
 
-        if (_reactionRepository is not null)
-        {
-            var reaction = await _reactionRepository.GetByPostAndUserAsync(postId, userId);
+        if (reaction is null)
+            return Result.Failure(new DomainError("Reaction.NotFound", "La reaccion no existe."));
 
-            if (reaction is null)
-                return Result.Failure(new DomainError("Reaction.NotFound", "La reaccion no existe."));
+        reaction.MarkAsDeleted();
+        _reactionRepository.Update(reaction);
+        await _unitOfWork.SaveChangesAsync();
 
-            reaction.MarkAsDeleted();
-            _reactionRepository.Update(reaction);
-            await _unitOfWork!.SaveChangesAsync();
-
-            return Result.Success();
-        }
-
-        lock (_lock)
-        {
-            var reaction = _inMemoryStore.FirstOrDefault(r =>
-                r.PostId == postId && r.UserId == userId && !r.IsDeleted);
-
-            if (reaction is null)
-                return Result.Success();
-
-            _inMemoryStore.Remove(reaction);
-            _inMemoryStore.Add(reaction with { DeletedAt = DateTimeOffset.UtcNow });
-            return Result.Success();
-        }
+        return Result.Success();
     }
 
     public async Task<Result<ReactionCountsDto>> GetCountsAsync(long postId)
     {
-        if (_reactionRepository is not null)
-        {
-            var counts = await _reactionRepository.GetCountsByPostAsync(postId);
-            return Result<ReactionCountsDto>.Success(new ReactionCountsDto(counts.Likes, counts.Dislikes));
-        }
-
-        lock (_lock)
-        {
-            var likes = _inMemoryStore.Count(r => r.PostId == postId && r.Type == 1 && !r.IsDeleted);
-            var dislikes = _inMemoryStore.Count(r => r.PostId == postId && r.Type == 0 && !r.IsDeleted);
-            return Result<ReactionCountsDto>.Success(new ReactionCountsDto(likes, dislikes));
-        }
+        var counts = await _reactionRepository.GetCountsByPostAsync(postId);
+        return Result<ReactionCountsDto>.Success(
+            new ReactionCountsDto(counts.Likes, counts.Dislikes)
+        );
     }
 
     public async Task<int?> GetUserReactionAsync(string userId, long postId)
     {
-        if (string.IsNullOrWhiteSpace(userId))
-            return null;
-
-        if (_reactionRepository is not null)
+        var reaction = await _reactionRepository.GetByPostAndUserAsync(postId, userId);
+        return reaction?.Type switch
         {
-            var reaction = await _reactionRepository.GetByPostAndUserAsync(postId, userId);
-            return reaction?.Type switch
-            {
-                ReactionType.Like => (int)ReactionType.Like,
-                ReactionType.Dislike => (int)ReactionType.Dislike,
-                _ => null
-            };
-        }
+            ReactionType.Like => (int)ReactionType.Like,
+            ReactionType.Dislike => (int)ReactionType.Dislike,
+            _ => null,
+        };
+    }
 
-        lock (_lock)
-        {
-            var reaction = _inMemoryStore.FirstOrDefault(r =>
-                r.PostId == postId && r.UserId == userId && !r.IsDeleted);
-            return reaction?.Type switch
-            {
-                1 => 1,
-                0 => 0,
-                _ => null
-            };
-        }
+    private async Task CreateReactionNotificationAsync(
+        long postId,
+        string actorId,
+        ReactionType reactionType
+    )
+    {
+        var post = await _postRepository.GetByIdAsync(postId);
+        if (post is null || post.AuthorId == actorId)
+            return;
+
+        var actor = await _profileService.GetByIdAsync(actorId);
+        var actorName = actor is null ? "Alguien" : $"{actor.FirstName} {actor.LastName}".Trim();
+
+        var notifResult = Notification.CreateReaction(
+            recipientId: post.AuthorId,
+            actorId: actorId,
+            postId: postId,
+            actorUserName: actorName,
+            reactionType: reactionType
+        );
+
+        if (notifResult.IsSuccess)
+            await _notificationRepository.AddAsync(notifResult.Value);
     }
 }

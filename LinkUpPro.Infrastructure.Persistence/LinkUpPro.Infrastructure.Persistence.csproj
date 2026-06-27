@@ -1,4 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -18,4 +19,5 @@
     <ProjectReference Include="..\LinkUpPro.Domain\LinkUpPro.Domain.csproj" />
     <ProjectReference Include="..\LinkUpPro.Application\LinkUpPro.Application.csproj" />
   </ItemGroup>
+
 </Project>

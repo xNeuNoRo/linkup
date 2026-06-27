@@ -3,7 +3,7 @@ using LinkUpPro.Domain.ValueObjects;
 
 namespace LinkUpPro.Domain.Entities.Battleship;
 
-public sealed class BattleshipAttack : BaseEntity<long>
+public sealed class BattleshipAttack : AuditableBaseEntity<long>
 {
     private BattleshipAttack() { }
 

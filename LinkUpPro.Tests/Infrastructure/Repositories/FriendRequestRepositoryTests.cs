@@ -1,16 +1,25 @@
 using LinkUpPro.Domain.Entities.Friendship;
 using LinkUpPro.Domain.Enums;
+using LinkUpPro.Domain.Interfaces;
+using LinkUpPro.Infrastructure.Persistence.Contexts;
 using LinkUpPro.Infrastructure.Persistence.Repositories;
+using Moq;
 
 namespace LinkUpPro.Tests.Infrastructure.Repositories;
 
 public sealed class FriendRequestRepositoryTests : PersistenceTestBase
 {
+    private static FriendRequestRepository CreateRepository(AppDbContext context)
+    {
+        var userDirectoryMock = new Mock<IUserDirectory>();
+        return new FriendRequestRepository(context, userDirectoryMock.Object);
+    }
+
     [Fact]
     public async Task GetPendingReceivedAsync_ReturnsPending()
     {
         var context = CreateContext();
-        var repo = new FriendRequestRepository(context);
+        var repo = CreateRepository(context);
         var senderId = CreateUserId("sender");
         var receiverId = CreateUserId("receiver");
 
@@ -27,7 +36,7 @@ public sealed class FriendRequestRepositoryTests : PersistenceTestBase
     public async Task GetPendingSentAsync_ReturnsPending()
     {
         var context = CreateContext();
-        var repo = new FriendRequestRepository(context);
+        var repo = CreateRepository(context);
         var senderId = CreateUserId("sender");
         var receiverId = CreateUserId("receiver");
 
@@ -43,7 +52,7 @@ public sealed class FriendRequestRepositoryTests : PersistenceTestBase
     public async Task GetVisibleSentHistoryAsync_ExcludesPendingAndCanceled()
     {
         var context = CreateContext();
-        var repo = new FriendRequestRepository(context);
+        var repo = CreateRepository(context);
         var senderId = CreateUserId("sender");
         var receiverId = CreateUserId("receiver");
 
@@ -64,7 +73,7 @@ public sealed class FriendRequestRepositoryTests : PersistenceTestBase
     public async Task ExistsPendingBetweenAsync_Bidirectional_ReturnsTrue()
     {
         var context = CreateContext();
-        var repo = new FriendRequestRepository(context);
+        var repo = CreateRepository(context);
         var userAId = CreateUserId("userA");
         var userBId = CreateUserId("userB");
 
@@ -82,7 +91,7 @@ public sealed class FriendRequestRepositoryTests : PersistenceTestBase
     public async Task GetPendingBetweenAsync_ReturnsCorrectRequest()
     {
         var context = CreateContext();
-        var repo = new FriendRequestRepository(context);
+        var repo = CreateRepository(context);
         var userAId = CreateUserId("userA");
         var userBId = CreateUserId("userB");
 
@@ -101,7 +110,7 @@ public sealed class FriendRequestRepositoryTests : PersistenceTestBase
     public async Task GetByIdForSenderAsync_ReturnsOnlyIfSender()
     {
         var context = CreateContext();
-        var repo = new FriendRequestRepository(context);
+        var repo = CreateRepository(context);
         var senderId = CreateUserId("sender");
         var receiverId = CreateUserId("receiver");
         var otherId = CreateUserId("other");
@@ -121,7 +130,7 @@ public sealed class FriendRequestRepositoryTests : PersistenceTestBase
     public async Task GetByIdForReceiverAsync_ReturnsOnlyIfReceiver()
     {
         var context = CreateContext();
-        var repo = new FriendRequestRepository(context);
+        var repo = CreateRepository(context);
         var senderId = CreateUserId("sender");
         var receiverId = CreateUserId("receiver");
 
@@ -138,7 +147,7 @@ public sealed class FriendRequestRepositoryTests : PersistenceTestBase
     public async Task ExistsPendingBetweenAsync_NonPending_ReturnsFalse()
     {
         var context = CreateContext();
-        var repo = new FriendRequestRepository(context);
+        var repo = CreateRepository(context);
         var userAId = CreateUserId("userA");
         var userBId = CreateUserId("userB");
 

@@ -22,6 +22,10 @@ public sealed class FriendRequestConfiguration : IEntityTypeConfiguration<Friend
         // Auditoría
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.UpdatedAt).IsRequired(false);
+        builder.Property(x => x.DeletedAt).IsRequired(false);
+
+        // QueryFilter para excluir solicitudes eliminadas de consultas normales
+        builder.HasQueryFilter(x => x.DeletedAt == null);
 
         // Indices
         builder.HasIndex(x => x.ReceiverId);

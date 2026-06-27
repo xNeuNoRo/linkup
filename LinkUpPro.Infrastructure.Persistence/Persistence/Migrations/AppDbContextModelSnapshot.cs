@@ -357,7 +357,7 @@ namespace LinkUpPro.Infrastructure.Persistence.Persistence.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
 
-                    b.Property<long?>("RelatedPostId")
+                    b.Property<long?>("RelatedEntityId")
                         .HasColumnType("bigint");
 
                     b.Property<string>("Type")
@@ -372,7 +372,7 @@ namespace LinkUpPro.Infrastructure.Persistence.Persistence.Migrations
 
                     b.HasIndex("RecipientId");
 
-                    b.HasIndex("RelatedPostId");
+                    b.HasIndex("RelatedEntityId");
 
                     b.HasIndex("RecipientId", "IsRead")
                         .HasDatabaseName("IX_Notifications_Recipient_Unread");
@@ -451,6 +451,9 @@ namespace LinkUpPro.Infrastructure.Persistence.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<long>("PostId")
                         .HasColumnType("bigint");
 
@@ -519,7 +522,7 @@ namespace LinkUpPro.Infrastructure.Persistence.Persistence.Migrations
                 {
                     b.HasOne("LinkUpPro.Domain.Entities.Social.Post", null)
                         .WithMany()
-                        .HasForeignKey("RelatedPostId")
+                        .HasForeignKey("RelatedEntityId")
                         .OnDelete(DeleteBehavior.SetNull);
                 });
 

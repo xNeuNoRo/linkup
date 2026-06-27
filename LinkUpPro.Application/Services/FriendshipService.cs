@@ -1,4 +1,6 @@
+using LinkUpPro.Application.DTOs.Friendship.Requests;
 using LinkUpPro.Application.DTOs.Friendship.Responses;
+using LinkUpPro.Application.DTOs.Profile.Responses;
 using LinkUpPro.Application.Interfaces.Services;
 using LinkUpPro.Domain.Common;
 using LinkUpPro.Domain.Interfaces.Persistence;
@@ -12,101 +14,139 @@ public sealed class FriendshipService : IFriendshipService
     private readonly IFriendshipRepository _friendshipRepository;
     private readonly IProfileService _profileService;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IPostRepository _postRepository;
 
     public FriendshipService(
         IFriendshipRepository friendshipRepository,
         IProfileService profileService,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IPostRepository postRepository
+    )
     {
         _friendshipRepository = friendshipRepository;
         _profileService = profileService;
         _unitOfWork = unitOfWork;
+        _postRepository = postRepository;
     }
 
     public async Task<PagedResult<FriendListItemDto>> GetFriendsAsync(
-        string userId, string? search = null, int page = 1, int pageSize = 20)
+        string userId,
+        string? search = null,
+        int page = 1,
+        int pageSize = 20
+    )
     {
-        var friendIds = await _friendshipRepository.GetActiveFriendIdsAsync(userId);
+        var allFriendIds = await _friendshipRepository.GetActiveFriendIdsAsync(userId);
 
-        var users = new List<UserInfo>();
-        foreach (var friendId in friendIds)
-        {
-            var userDto = await _profileService.GetByIdAsync(friendId);
-            if (userDto is null)
-                continue;
+        if (allFriendIds.Count == 0)
+            return new PagedResult<FriendListItemDto>([], 0, page, pageSize);
 
-            users.Add(new UserInfo(
-                userDto.Id,
-                $"{userDto.FirstName} {userDto.LastName}".Trim(),
-                userDto.UserName,
-                userDto.ProfilePicturePath));
-        }
+        IReadOnlyCollection<string> visibleIds = allFriendIds;
 
         if (!string.IsNullOrWhiteSpace(search))
         {
             var term = search.Trim();
-            users = users.Where(u =>
-                u.UserName.Contains(term, StringComparison.OrdinalIgnoreCase)).ToList();
+            var userDict = await _profileService.GetByIdsAsync(allFriendIds);
+
+            visibleIds = allFriendIds
+                .Where(id =>
+                    userDict.TryGetValue(id, out var u)
+                    && (
+                        u.UserName.Contains(term, StringComparison.OrdinalIgnoreCase)
+                        || $"{u.FirstName} {u.LastName}"
+                            .Trim()
+                            .Contains(term, StringComparison.OrdinalIgnoreCase)
+                    )
+                )
+                .ToList()
+                .AsReadOnly();
+
+            if (visibleIds.Count == 0)
+                return new PagedResult<FriendListItemDto>([], 0, page, pageSize);
         }
 
-        var total = users.Count;
+        var total = visibleIds.Count;
+        var pagedIds = visibleIds.Skip((page - 1) * pageSize).Take(pageSize).ToList();
 
-        var ordered = users
-            .OrderBy(u => u.FullName)
+        var pagedUserDict = await _profileService.GetByIdsAsync(pagedIds);
+
+        var commonCounts = await _friendshipRepository.GetCommonFriendsCountForUsersAsync(
+            userId,
+            pagedIds
+        );
+
+        var items = pagedIds
+            .Where(id => pagedUserDict.ContainsKey(id))
+            .Select(id =>
+            {
+                var u = pagedUserDict[id];
+                return new FriendListItemDto(
+                    id,
+                    $"{u.FirstName} {u.LastName}".Trim(),
+                    u.UserName,
+                    u.ProfilePicturePath,
+                    commonCounts.GetValueOrDefault(id, 0)
+                );
+            })
             .ToList();
-
-        var paged = ordered
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
-
-        var items = new List<FriendListItemDto>(paged.Count);
-        foreach (var user in paged)
-        {
-            var commonCount = await _friendshipRepository.GetCommonFriendsCountAsync(userId, user.Id);
-            items.Add(new FriendListItemDto(
-                user.Id,
-                user.FullName,
-                user.UserName,
-                user.ProfilePicturePath,
-                commonCount));
-        }
 
         return new PagedResult<FriendListItemDto>(items, total, page, pageSize);
     }
 
-    public async Task<Result<CommonFriendsDto>> GetCommonFriendsAsync(string userId, string targetUserId)
+    public async Task<Result<CommonFriendsDto>> GetCommonFriendsAsync(
+        string userId,
+        string targetUserId
+    )
     {
         var commonIds = await _friendshipRepository.GetCommonFriendIdsAsync(userId, targetUserId);
+        if (commonIds.Count == 0)
+        {
+            return Result<CommonFriendsDto>.Success(new CommonFriendsDto(0, []));
+        }
+
+        var commonCounts = await _friendshipRepository.GetCommonFriendsCountForUsersAsync(
+            userId,
+            commonIds
+        );
+
+        var userDict = await _profileService.GetByIdsAsync(commonIds);
 
         var friends = new List<FriendListItemDto>(commonIds.Count);
         foreach (var commonId in commonIds)
         {
-            var userDto = await _profileService.GetByIdAsync(commonId);
-            if (userDto is null)
+            if (!userDict.TryGetValue(commonId, out var user))
                 continue;
 
-            var commonCount = await _friendshipRepository.GetCommonFriendsCountAsync(userId, commonId);
-            friends.Add(new FriendListItemDto(
-                commonId,
-                $"{userDto.FirstName} {userDto.LastName}".Trim(),
-                userDto.UserName,
-                userDto.ProfilePicturePath,
-                commonCount));
+            friends.Add(
+                new FriendListItemDto(
+                    commonId,
+                    $"{user.FirstName} {user.LastName}".Trim(),
+                    user.UserName,
+                    user.ProfilePicturePath,
+                    commonCounts.GetValueOrDefault(commonId, 0)
+                )
+            );
         }
 
         var dto = new CommonFriendsDto(friends.Count, friends);
         return Result<CommonFriendsDto>.Success(dto);
     }
 
-    public async Task<Result<FriendshipResponseDto>> GetFriendshipAsync(string userId, string friendId)
+    public async Task<Result<FriendshipResponseDto>> GetFriendshipAsync(
+        string userId,
+        string friendId
+    )
     {
         var friendship = await _friendshipRepository.GetFriendshipBetweenAsync(userId, friendId);
 
         if (friendship is null)
         {
             return Result<FriendshipResponseDto>.Failure(
-                new DomainError("Friendship.NotFound", "No existe una relacion de amistad entre estos usuarios."));
+                new DomainError(
+                    "Friendship.NotFound",
+                    "No existe una relacion de amistad entre estos usuarios."
+                )
+            );
         }
 
         var friendResult = friendship.GetFriendId(userId);
@@ -118,7 +158,7 @@ public sealed class FriendshipService : IFriendshipService
         var dto = friendship.Adapt<FriendshipResponseDto>() with
         {
             UserId = userId,
-            FriendId = friendResult.Value
+            FriendId = friendResult.Value,
         };
 
         return Result<FriendshipResponseDto>.Success(dto);
@@ -130,22 +170,43 @@ public sealed class FriendshipService : IFriendshipService
 
         if (friendship is null || !friendship.InvolvesUser(userId))
         {
-            return Result.Failure(
-                new DomainError("Friendship.NotFound", "No son amigos."));
+            return Result.Failure(new DomainError("Friendship.NotFound", "No son amigos."));
         }
 
         if (friendship.IsDeleted)
         {
             return Result.Failure(
-                new DomainError("Friendship.AlreadyDeleted", "Esta amistad ya ha sido eliminada."));
+                new DomainError("Friendship.AlreadyDeleted", "Esta amistad ya ha sido eliminada.")
+            );
         }
 
         friendship.MarkAsDeleted();
-        _friendshipRepository.Update(friendship);
-        await _unitOfWork.SaveChangesAsync();
 
-        return Result.Success();
+        await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            _friendshipRepository.Update(friendship);
+            await _unitOfWork.CommitAsync();
+            return Result.Success();
+        }
+        catch
+        {
+            await _unitOfWork.RollbackAsync();
+            throw;
+        }
     }
 
-    private sealed record UserInfo(string Id, string FullName, string UserName, string? ProfilePicturePath);
+    public async Task<int> GetActiveFriendsCountAsync(string userId)
+    {
+        return await _friendshipRepository.GetActiveFriendsCountAsync(userId);
+    }
+
+    public async Task<int> GetAvailablePostsCountAsync(string userId)
+    {
+        var friendIds = await _friendshipRepository.GetActiveFriendIdsAsync(userId);
+        if (friendIds.Count == 0)
+            return 0;
+
+        return await _postRepository.CountAvailableFriendsPostsAsync(userId);
+    }
 }

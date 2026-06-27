@@ -28,6 +28,22 @@ public interface IBattleshipRepository : IGenericRepository<BattleshipGame, long
         CancellationToken cancellationToken = default
     );
 
+    Task<bool> HasCellBeenAttackedAsync(
+        long gameId,
+        string attackerId,
+        byte x,
+        byte y,
+        CancellationToken cancellationToken = default
+    );
+
+    Task<BattleshipShip?> GetShipAtCellAsync(
+        long gameId,
+        string playerId,
+        byte x,
+        byte y,
+        CancellationToken cancellationToken = default
+    );
+
     Task<IReadOnlyCollection<BattleshipShip>> GetShipsByGameAndPlayerAsync(
         long gameId,
         string playerId,
@@ -54,4 +70,8 @@ public interface IBattleshipRepository : IGenericRepository<BattleshipGame, long
         string userId,
         CancellationToken cancellationToken = default
     );
+
+    Task AddShipAsync(BattleshipShip ship, CancellationToken cancellationToken = default);
+
+    Task AddAttackAsync(BattleshipAttack attack, CancellationToken cancellationToken = default);
 }

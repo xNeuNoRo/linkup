@@ -8,22 +8,24 @@ public class PlaceShipRequestValidator : AbstractValidator<PlaceShipRequest>
 {
     public PlaceShipRequestValidator()
     {
+        RuleFor(x => x.StartX)
+            .InclusiveBetween(0, DomainConstants.BoardSize - 1)
+            .WithMessage($"La coordenada X debe estar entre 0 y {DomainConstants.BoardSize - 1}.");
+
+        RuleFor(x => x.StartY)
+            .InclusiveBetween(0, DomainConstants.BoardSize - 1)
+            .WithMessage($"La coordenada Y debe estar entre 0 y {DomainConstants.BoardSize - 1}.");
+
+        RuleFor(x => x.Direction)
+            .InclusiveBetween(1, 4)
+            .WithMessage(
+                "La dirección seleccionada no es válida. Las opciones válidas son: 1 (Arriba), 2 (Abajo), 3 (Derecha), 4 (Izquierda)."
+            );
+
         RuleFor(x => x.ShipSize)
             .Must(size => DomainConstants.RequiredBattleshipFleetSizes.Contains(size))
             .WithMessage(
-                "El tamano del barco no es valido. Los tamanos permitidos son 2, 3, 4 y 5."
+                "El tamaño del barco no es válido. Los tamaños permitidos son 2, 3, 4 y 5."
             );
-
-        RuleFor(x => x.StartX)
-            .InclusiveBetween(0, 11)
-            .WithMessage("La coordenada X debe estar entre 0 y 11.");
-
-        RuleFor(x => x.StartY)
-            .InclusiveBetween(0, 11)
-            .WithMessage("La coordenada Y debe estar entre 0 y 11.");
-
-        RuleFor(x => x.Direction)
-            .InclusiveBetween(0, 3)
-            .WithMessage("La direccion debe ser un valor entre 0 y 3.");
     }
 }

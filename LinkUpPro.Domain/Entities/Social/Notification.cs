@@ -3,11 +3,17 @@ using LinkUpPro.Domain.Enums;
 
 namespace LinkUpPro.Domain.Entities.Social;
 
-public sealed class Notification : BaseEntity<long>
+public sealed class Notification : AuditableBaseEntity<long>
 {
+    // Tipos de notificación existentes
     public const string CommentType = "Comment";
     public const string ReplyType = "Reply";
     public const string ReactionTypeName = "Reaction";
+
+    // Tipos de notificación de amistad
+    public const string FriendRequestSentType = "FriendRequestSent";
+    public const string FriendRequestAcceptedType = "FriendRequestAccepted";
+    public const string FriendRequestRejectedType = "FriendRequestRejected";
 
     private Notification() { }
 
@@ -19,7 +25,7 @@ public sealed class Notification : BaseEntity<long>
 
     public string Message { get; private set; } = null!;
 
-    public long? RelatedPostId { get; private set; }
+    public long? RelatedEntityId { get; private set; }
 
     public bool IsRead { get; private set; }
 
@@ -85,13 +91,13 @@ public sealed class Notification : BaseEntity<long>
 
     public bool IsForUser(string userId) => RecipientId == userId;
 
-    private static Result<Notification> Create(
+    public static Result<Notification> Create(
         string recipientId,
         string actorId,
         string type,
         string message,
-        long? relatedPostId,
-        DateTimeOffset? createdAt
+        long? relatedEntityId = null,
+        DateTimeOffset? createdAt = null
     )
     {
         var errors = new List<DomainError>();
@@ -146,16 +152,6 @@ public sealed class Notification : BaseEntity<long>
             );
         }
 
-        if (relatedPostId <= 0)
-        {
-            errors.Add(
-                new DomainError(
-                    "Notification.InvalidRelatedPost",
-                    "La publicacion relacionada no es valida."
-                )
-            );
-        }
-
         if (errors.Count > 0)
         {
             return Result<Notification>.Failure(errors);
@@ -168,7 +164,7 @@ public sealed class Notification : BaseEntity<long>
                 ActorId = actorId.Trim(),
                 Type = type.Trim(),
                 Message = message.Trim(),
-                RelatedPostId = relatedPostId,
+                RelatedEntityId = relatedEntityId,
                 IsRead = false,
                 CreatedAt = createdAt ?? DateTimeOffset.UtcNow,
             }

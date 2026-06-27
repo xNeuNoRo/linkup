@@ -2,6 +2,7 @@ using LinkUpPro.Domain.Common;
 using LinkUpPro.Domain.Entities.Battleship;
 using LinkUpPro.Domain.Enums;
 using LinkUpPro.Domain.Interfaces.Repositories;
+using LinkUpPro.Domain.ValueObjects;
 using LinkUpPro.Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
 
@@ -79,6 +80,38 @@ public sealed class BattleshipRepository
         );
     }
 
+    public async Task<bool> HasCellBeenAttackedAsync(
+        long gameId,
+        string attackerId,
+        byte x,
+        byte y,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _context
+            .Set<BattleshipAttack>()
+            .AnyAsync(
+                a => a.GameId == gameId && a.AttackerId == attackerId && a.TargetX == x && a.TargetY == y,
+                cancellationToken
+            );
+    }
+
+    public async Task<BattleshipShip?> GetShipAtCellAsync(
+        long gameId,
+        string playerId,
+        byte x,
+        byte y,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var ships = await _context
+            .Set<BattleshipShip>()
+            .Where(s => s.GameId == gameId && s.PlayerId == playerId)
+            .ToListAsync(cancellationToken);
+
+        return ships.FirstOrDefault(s => s.Occupies(Coordinates.Create(x, y)));
+    }
+
     public async Task<IReadOnlyCollection<BattleshipShip>> GetShipsByGameAndPlayerAsync(
         long gameId,
         string playerId,
@@ -145,6 +178,16 @@ public sealed class BattleshipRepository
         var lostGames = totalGames - wonGames;
 
         return new BattleshipGameStats(totalGames, wonGames, lostGames);
+    }
+
+    public async Task AddShipAsync(BattleshipShip ship, CancellationToken cancellationToken = default)
+    {
+        await _context.Set<BattleshipShip>().AddAsync(ship, cancellationToken);
+    }
+
+    public async Task AddAttackAsync(BattleshipAttack attack, CancellationToken cancellationToken = default)
+    {
+        await _context.Set<BattleshipAttack>().AddAsync(attack, cancellationToken);
     }
 
     private static IQueryable<BattleshipGame> ApplyOptionsToQuery(

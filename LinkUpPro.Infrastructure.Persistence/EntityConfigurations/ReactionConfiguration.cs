@@ -19,12 +19,14 @@ public sealed class ReactionConfiguration : IEntityTypeConfiguration<Reaction>
         // Auditoría
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.UpdatedAt).IsRequired(false);
+        builder.Property(x => x.DeletedAt).IsRequired(false);
 
         // Índices
         builder
             .HasIndex(x => new { x.PostId, x.UserId })
             .IsUnique()
-            .HasDatabaseName("UX_Reactions_Post_User");
+            .HasDatabaseName("UX_Reactions_Post_User")
+            .HasFilter("[DeletedAt] IS NULL");
 
         builder.HasIndex(x => x.PostId);
         builder.HasIndex(x => x.UserId);
@@ -36,5 +38,7 @@ public sealed class ReactionConfiguration : IEntityTypeConfiguration<Reaction>
             .HasForeignKey(x => x.PostId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // QueryFilter para excluir reacciones eliminadas de consultas normales
+        builder.HasQueryFilter(x => x.DeletedAt == null);
     }
 }

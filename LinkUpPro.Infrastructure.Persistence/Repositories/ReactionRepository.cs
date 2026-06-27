@@ -54,6 +54,29 @@ public sealed class ReactionRepository : GenericRepository<Reaction, long>, IRea
         return new ReactionCounts(likes, dislikes);
     }
 
+    public async Task<IReadOnlyDictionary<long, ReactionCounts>> GetCountsForPostsAsync(
+        IEnumerable<long> postIds,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var ids = postIds.Distinct().ToList();
+        if (ids.Count == 0)
+            return new Dictionary<long, ReactionCounts>();
+
+        var counts = await _dbSet
+            .Where(r => ids.Contains(r.PostId))
+            .GroupBy(r => r.PostId)
+            .Select(g => new
+            {
+                PostId = g.Key,
+                Likes = g.Count(r => r.Type == ReactionType.Like),
+                Dislikes = g.Count(r => r.Type == ReactionType.Dislike)
+            })
+            .ToDictionaryAsync(x => x.PostId, x => new ReactionCounts(x.Likes, x.Dislikes), cancellationToken);
+
+        return counts;
+    }
+
     public async Task<int> CountByPostAndTypeAsync(
         long postId,
         ReactionType reactionType,

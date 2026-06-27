@@ -3,7 +3,7 @@ using LinkUpPro.Domain.Enums;
 
 namespace LinkUpPro.Domain.Entities.Friendship;
 
-public sealed class FriendRequest : BaseEntity<long>
+public sealed class FriendRequest : AuditableBaseEntity<long>
 {
     private FriendRequest() { }
 

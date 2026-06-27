@@ -46,4 +46,17 @@ public interface IFriendRequestRepository : IGenericRepository<FriendRequest, lo
         string receiverId,
         CancellationToken cancellationToken = default
     );
+
+    Task<IReadOnlyCollection<UserSearchResult>> SearchAvailableUsersPagedAsync(
+        string userId,
+        string? search,
+        QueryOptions<UserSearchResult> options,
+        CancellationToken cancellationToken = default
+    );
+
+    Task<int> CountAvailableUsersAsync(
+        string userId,
+        string? search,
+        CancellationToken cancellationToken = default
+    );
 }

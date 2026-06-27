@@ -12,6 +12,7 @@ public static class ServicesRegistration
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         MappingConfig.RegisterMappings();
+        ValueObjectMappingConfig.RegisterValueObjectMappings();
 
         var config = TypeAdapterConfig.GlobalSettings;
         services.AddSingleton(config);
@@ -19,7 +20,12 @@ public static class ServicesRegistration
         services.AddValidatorsFromAssemblyContaining<ApplicationMarker>();
 
         services.AddScoped<IPostService, PostService>();
+        services.AddScoped<ICommentService, CommentService>();
+        services.AddScoped<IReactionService, ReactionService>();
+        services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IFriendshipService, FriendshipService>();
+        services.AddScoped<IFriendRequestService, FriendRequestService>();
+        services.AddScoped<IBattleshipService, BattleshipService>();
 
         return services;
     }

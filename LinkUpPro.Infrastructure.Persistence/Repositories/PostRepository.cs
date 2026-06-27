@@ -113,6 +113,26 @@ public sealed class PostRepository : GenericRepository<Post, long>, IPostReposit
         return await ApplyOptionsToQuery(query, options).ToListAsync(cancellationToken);
     }
 
+    public async Task<int> CountAvailableFriendsPostsAsync(
+        string userId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var friendIds = await _context
+            .Set<Domain.Entities.Friendship.Friendship>()
+            .Where(f => f.User1Id == userId || f.User2Id == userId)
+            .Select(f => f.User1Id == userId ? f.User2Id : f.User1Id)
+            .ToListAsync(cancellationToken);
+
+        if (friendIds.Count == 0)
+            return 0;
+
+        return await _dbSet.CountAsync(
+            p => friendIds.Contains(p.AuthorId) && p.Privacy == PrivacyLevel.FriendsOnly,
+            cancellationToken
+        );
+    }
+
     private static IQueryable<Post> ApplySearchFilters(
         IQueryable<Post> query,
         string? searchText,

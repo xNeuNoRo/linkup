@@ -42,4 +42,9 @@ public interface IPostRepository : IGenericRepository<Post, long>
         QueryOptions<Post>? options = null,
         CancellationToken cancellationToken = default
     );
+
+    Task<int> CountAvailableFriendsPostsAsync(
+        string userId,
+        CancellationToken cancellationToken = default
+    );
 }

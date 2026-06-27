@@ -1,5 +1,7 @@
 using LinkUpPro.Application.Interfaces;
+using LinkUpPro.Application.Interfaces.Services;
 using LinkUpPro.Domain.Common;
+using LinkUpPro.Domain.Interfaces;
 using LinkUpPro.Infrastructure.Identity.Contexts;
 using LinkUpPro.Infrastructure.Identity.Entities;
 using LinkUpPro.Infrastructure.Identity.Mappings;
@@ -90,6 +92,8 @@ public static class ServicesRegistration
         services.AddAuthorization();
 
         services.AddScoped<IAccountService, AccountService>();
+        services.AddScoped<IProfileService, ProfileService>();
+        services.AddScoped<IUserDirectory, UserDirectory>();
 
         return services;
     }

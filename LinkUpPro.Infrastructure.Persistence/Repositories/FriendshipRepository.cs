@@ -1,4 +1,5 @@
 using LinkUpPro.Domain.Common;
+using LinkUpPro.Domain.Enums;
 using LinkUpPro.Domain.Interfaces.Repositories;
 using LinkUpPro.Infrastructure.Persistence.Contexts;
 using Microsoft.EntityFrameworkCore;
@@ -99,6 +100,102 @@ public sealed class FriendshipRepository
         return firstFriendIds.Intersect(secondFriendIds).ToList();
     }
 
+    public async Task<Dictionary<string, int>> GetCommonFriendsCountForUsersAsync(
+        string userId,
+        IReadOnlyCollection<string> targetUserIds,
+        CancellationToken cancellationToken = default)
+    {
+        var targetList = targetUserIds.ToList();
+        if (targetList.Count == 0)
+            return new Dictionary<string, int>();
+
+        // Query 1: Get userId's friends
+        var userFriendIds = await _dbSet
+            .Where(f => f.User1Id == userId || f.User2Id == userId)
+            .Select(f => f.User1Id == userId ? f.User2Id : f.User1Id)
+            .ToListAsync(cancellationToken);
+        var userFriendIdsSet = userFriendIds.ToHashSet();
+
+        // Query 2: Get friendships for ALL target users in one query (batch)
+        var friendships = await _dbSet
+            .Where(f => targetList.Contains(f.User1Id) || targetList.Contains(f.User2Id))
+            .Select(f => new { f.User1Id, f.User2Id })
+            .ToListAsync(cancellationToken);
+
+        // Process in memory: count common friends per target user
+        var result = new Dictionary<string, int>(targetList.Count);
+        foreach (var targetId in targetList)
+        {
+            var targetFriends = friendships
+                .Where(f => f.User1Id == targetId || f.User2Id == targetId)
+                .Select(f => f.User1Id == targetId ? f.User2Id : f.User1Id);
+            result[targetId] = targetFriends.Intersect(userFriendIdsSet).Count();
+        }
+
+        return result;
+    }
+
+    public async Task<IReadOnlyCollection<string>> GetFriendIdsPagedAsync(
+        string userId,
+        QueryOptions<DomainFriendship> options,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var query = _dbSet
+            .Where(f => f.User1Id == userId || f.User2Id == userId)
+            .Select(f => f.User1Id == userId ? f.User2Id : f.User1Id);
+
+        return await ApplyOptionsToQueryString(query, options).ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> GetActiveFriendsCountWithSearchAsync(
+        string userId,
+        IReadOnlyCollection<string> filteredFriendIds,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var friendSet = await _dbSet
+            .Where(f => f.User1Id == userId || f.User2Id == userId)
+            .Select(f => f.User1Id == userId ? f.User2Id : f.User1Id)
+            .ToListAsync(cancellationToken);
+
+        return friendSet.Count(id => filteredFriendIds.Contains(id));
+    }
+
+    public async Task<IReadOnlyCollection<string>> GetCommonFriendIdsPagedAsync(
+        string firstUserId,
+        string secondUserId,
+        QueryOptions<DomainFriendship> options,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var firstFriendIds = await _dbSet
+            .Where(f => f.User1Id == firstUserId || f.User2Id == firstUserId)
+            .Select(f => f.User1Id == firstUserId ? f.User2Id : f.User1Id)
+            .ToListAsync(cancellationToken);
+        var firstSet = firstFriendIds.ToHashSet();
+
+        var secondQuery = _dbSet
+            .Where(f => f.User1Id == secondUserId || f.User2Id == secondUserId)
+            .Where(f => firstSet.Contains(f.User1Id == secondUserId ? f.User2Id : f.User1Id))
+            .Select(f => f.User1Id == secondUserId ? f.User2Id : f.User1Id);
+
+        return await ApplyOptionsToQueryString(secondQuery, options).ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyCollection<string>> GetPendingRequestUserIdsAsync(
+        string userId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _context
+            .Set<Domain.Entities.Friendship.FriendRequest>()
+            .Where(r => (r.SenderId == userId || r.ReceiverId == userId)
+                && r.Status == FriendRequestStatus.Pending)
+            .Select(r => r.SenderId == userId ? r.ReceiverId : r.SenderId)
+            .ToListAsync(cancellationToken);
+    }
+
     private static (string User1Id, string User2Id) OrderIds(
         string firstUserId,
         string secondUserId
@@ -126,6 +223,29 @@ public sealed class FriendshipRepository
 
         if (options.OrderBy is not null)
             query = options.OrderBy(query);
+
+        if (options.Skip.HasValue)
+            query = query.Skip(options.Skip.Value);
+
+        if (options.Take.HasValue)
+            query = query.Take(options.Take.Value);
+
+        return query;
+    }
+
+    private static IQueryable<string> ApplyOptionsToQueryString(
+        IQueryable<string> query,
+        QueryOptions<DomainFriendship>? options
+    )
+    {
+        if (options is null)
+            return query;
+
+        if (options.Filter is not null)
+            return query; // Filter can't be applied after Select projection easily
+
+        if (options.OrderBy is not null)
+            return query; // OrderBy can't be applied after Select projection easily
 
         if (options.Skip.HasValue)
             query = query.Skip(options.Skip.Value);
