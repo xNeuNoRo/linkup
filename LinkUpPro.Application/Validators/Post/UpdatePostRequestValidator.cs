@@ -54,5 +54,10 @@ public class UpdatePostRequestValidator : AbstractValidator<UpdatePostRequest>
                 .NotEmpty()
                 .WithMessage("Debe ingresar un enlace válido de YouTube.");
         });
+
+        // Validación de exclusividad: no permitir imagen y YouTube simultáneamente
+        RuleFor(x => x)
+            .Must(x => x.ImageFile is null || string.IsNullOrEmpty(x.YouTubeUrl))
+            .WithMessage("No debe permitirse enviar simultáneamente una imagen y un enlace de YouTube.");
     }
 }

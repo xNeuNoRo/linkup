@@ -1,10 +1,12 @@
+using LinkUpPro.Domain.Enums;
+
 namespace LinkUpPro.Application.DTOs.Battleship.Responses;
 
 public record GameListItemDto(
     long Id,
     string OpponentId,
     string OpponentName,
-    int Status,
+    GameStatus Status,
     DateTimeOffset StartedAt,
     DateTimeOffset? FinishedAt,
     string? WinnerId,

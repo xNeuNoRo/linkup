@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Moq;
+using System.IO;
 
 namespace LinkUpPro.Tests.Identity;
 
@@ -133,6 +134,17 @@ public class AccountServiceTests
             )
             .ReturnsAsync(true);
 
+        var formFile = new Mock<Microsoft.AspNetCore.Http.IFormFile>();
+        formFile.Setup(f => f.FileName).Returns("avatar.jpg");
+        formFile.Setup(f => f.Length).Returns(1024);
+        formFile.Setup(f => f.ContentType).Returns("image/jpeg");
+        formFile.Setup(f => f.OpenReadStream()).Returns(new MemoryStream(new byte[] { 0xFF, 0xD8, 0xFF }));
+
+        _fileServiceMock.Setup(x => x.IsImageValid(It.IsAny<Microsoft.AspNetCore.Http.IFormFile>())).Returns(true);
+        _fileServiceMock
+            .Setup(x => x.UploadFileAsync(It.IsAny<Microsoft.AspNetCore.Http.IFormFile>(), It.IsAny<string>()))
+            .ReturnsAsync("/uploads/profiles/avatar.jpg");
+
         var request = new RegisterRequest(
             "newuser",
             "new@test.com",
@@ -141,7 +153,7 @@ public class AccountServiceTests
             "John",
             "Doe",
             "809-555-1234",
-            "/images/avatar.jpg"
+            formFile.Object
         );
 
         var result = await _sut.RegisterAsync(request, "http://localhost");
@@ -166,6 +178,10 @@ public class AccountServiceTests
     {
         _userManagerMock.Setup(m => m.FindByNameAsync("existing")).ReturnsAsync(new AppUser());
 
+        var formFile2 = new Mock<IFormFile>();
+        formFile2.Setup(f => f.FileName).Returns("avatar.jpg");
+        formFile2.Setup(f => f.Length).Returns(1024);
+
         var request = new RegisterRequest(
             "existing",
             "new@test.com",
@@ -174,7 +190,7 @@ public class AccountServiceTests
             "John",
             "Doe",
             "809-555-1234",
-            "/images/avatar.jpg"
+            formFile2.Object
         );
 
         Func<Task> act = () => _sut.RegisterAsync(request, "http://localhost");

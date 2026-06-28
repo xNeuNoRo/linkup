@@ -1,3 +1,4 @@
+using LinkUpPro.Domain.Enums;
 using LinkUpPro.Domain.ValueObjects;
 
 namespace LinkUpPro.Tests.Domain.ValueObjects;

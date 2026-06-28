@@ -56,6 +56,7 @@ public sealed class ReactionService : IReactionService
                 return Result<ReactionResponseDto?>.Success(null);
             }
 
+            var oldType = existing.Type;
             var changeResult = existing.ChangeTo(reactionType);
             if (changeResult.IsFailure)
                 return Result<ReactionResponseDto?>.Failure(changeResult.Errors);
@@ -63,7 +64,7 @@ public sealed class ReactionService : IReactionService
             _reactionRepository.Update(existing);
             await _unitOfWork.SaveChangesAsync();
 
-            await CreateReactionNotificationAsync(request.PostId, userId, reactionType);
+            await CreateReactionChangeNotificationAsync(request.PostId, userId, oldType, reactionType);
 
             return Result<ReactionResponseDto?>.Success(existing.Adapt<ReactionResponseDto>());
         }
@@ -104,15 +105,10 @@ public sealed class ReactionService : IReactionService
         );
     }
 
-    public async Task<int?> GetUserReactionAsync(string userId, long postId)
+    public async Task<ReactionType?> GetUserReactionAsync(string userId, long postId)
     {
         var reaction = await _reactionRepository.GetByPostAndUserAsync(postId, userId);
-        return reaction?.Type switch
-        {
-            ReactionType.Like => (int)ReactionType.Like,
-            ReactionType.Dislike => (int)ReactionType.Dislike,
-            _ => null,
-        };
+        return reaction?.Type;
     }
 
     private async Task CreateReactionNotificationAsync(
@@ -134,6 +130,33 @@ public sealed class ReactionService : IReactionService
             postId: postId,
             actorUserName: actorName,
             reactionType: reactionType
+        );
+
+        if (notifResult.IsSuccess)
+            await _notificationRepository.AddAsync(notifResult.Value);
+    }
+
+    private async Task CreateReactionChangeNotificationAsync(
+        long postId,
+        string actorId,
+        ReactionType oldType,
+        ReactionType newType
+    )
+    {
+        var post = await _postRepository.GetByIdAsync(postId);
+        if (post is null || post.AuthorId == actorId)
+            return;
+
+        var actor = await _profileService.GetByIdAsync(actorId);
+        var actorName = actor is null ? "Alguien" : $"{actor.FirstName} {actor.LastName}".Trim();
+
+        var notifResult = Notification.CreateReactionChange(
+            recipientId: post.AuthorId,
+            actorId: actorId,
+            postId: postId,
+            actorUserName: actorName,
+            oldReactionType: oldType,
+            newReactionType: newType
         );
 
         if (notifResult.IsSuccess)

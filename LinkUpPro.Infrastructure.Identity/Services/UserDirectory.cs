@@ -1,5 +1,4 @@
 using LinkUpPro.Domain.Common;
-using LinkUpPro.Domain.Entities.Friendship;
 using LinkUpPro.Domain.Interfaces;
 using LinkUpPro.Domain.Interfaces.Repositories;
 using LinkUpPro.Infrastructure.Identity.Entities;

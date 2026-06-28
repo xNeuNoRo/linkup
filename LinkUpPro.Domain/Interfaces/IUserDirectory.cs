@@ -1,5 +1,4 @@
 using LinkUpPro.Domain.Common;
-using LinkUpPro.Domain.Entities.Friendship;
 
 namespace LinkUpPro.Domain.Interfaces;
 

@@ -8,6 +8,7 @@ using LinkUpPro.Domain.Interfaces.Repositories;
 using LinkUpPro.Infrastructure.Persistence.Repositories;
 using LinkUpPro.Tests.Base;
 using Moq;
+using FluentAssertions;
 
 namespace LinkUpPro.Tests.Application.Services;
 
@@ -15,10 +16,10 @@ namespace LinkUpPro.Tests.Application.Services;
 public class ReactionServiceTests : InMemoryTestBase
 {
     private IReactionService? _service;
-    private Mock<IUnitOfWork> _unitOfWorkMock = null!;
     private Mock<IProfileService> _profileServiceMock = null!;
     private Mock<INotificationRepository> _notificationRepositoryMock = null!;
     private bool _hasImplementation;
+    private IUnitOfWork _unitOfWork = null!;
 
     public ReactionServiceTests()
     {
@@ -54,11 +55,7 @@ public class ReactionServiceTests : InMemoryTestBase
 
         var reactionRepo = new ReactionRepository(DbContext);
         var postRepo = new PostRepository(DbContext);
-
-        _unitOfWorkMock = new Mock<IUnitOfWork>();
-        _unitOfWorkMock
-            .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1);
+        _unitOfWork = new LinkUpPro.Infrastructure.Persistence.Persistence.UnitOfWork(DbContext);
 
         _profileServiceMock = new Mock<IProfileService>();
         _profileServiceMock
@@ -88,7 +85,7 @@ public class ReactionServiceTests : InMemoryTestBase
             Activator.CreateInstance(
                 implType,
                 reactionRepo,
-                _unitOfWorkMock.Object,
+                _unitOfWork,
                 postRepo,
                 _profileServiceMock.Object,
                 _notificationRepositoryMock.Object
@@ -102,7 +99,7 @@ public class ReactionServiceTests : InMemoryTestBase
         var result = await _service!.ReactAsync("user3", req);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value!.Type.Should().Be(1);
+        result.Value!.Type.Should().Be(ReactionType.Like);
     }
 
     [ServiceFact(typeof(IReactionService))]
@@ -112,7 +109,7 @@ public class ReactionServiceTests : InMemoryTestBase
         var result = await _service!.ReactAsync("user4", req);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value!.Type.Should().Be(2);
+        result.Value!.Type.Should().Be(ReactionType.Dislike);
     }
 
     [ServiceFact(typeof(IReactionService))]
@@ -137,7 +134,7 @@ public class ReactionServiceTests : InMemoryTestBase
         var result = await _service!.GetUserReactionAsync("user2", 1);
 
         result.Should().NotBeNull();
-        result.Should().Be(2);
+        result.Should().Be(ReactionType.Dislike);
     }
 
     [ServiceFact(typeof(IReactionService))]
@@ -146,5 +143,25 @@ public class ReactionServiceTests : InMemoryTestBase
         var result = await _service!.GetUserReactionAsync("user1", 999);
 
         result.Should().BeNull();
+    }
+
+    [ServiceFact(typeof(IReactionService))]
+    public async Task ReactAsync_Change_GeneratesReactionChangeNotification()
+    {
+        var req = new CreateReactionRequest(1, 1);
+        var first = await _service!.ReactAsync("user3", req);
+        first.IsSuccess.Should().BeTrue();
+
+        var changeReq = new CreateReactionRequest(1, 2);
+        var result = await _service!.ReactAsync("user3", changeReq);
+
+        result.IsSuccess.Should().BeTrue();
+        _notificationRepositoryMock.Verify(
+            x => x.AddAsync(
+                It.Is<Notification>(n => n.Type == NotificationType.ReactionChange),
+                It.IsAny<CancellationToken>()
+            ),
+            Times.Once
+        );
     }
 }

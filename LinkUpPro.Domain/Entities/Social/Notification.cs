@@ -5,23 +5,13 @@ namespace LinkUpPro.Domain.Entities.Social;
 
 public sealed class Notification : AuditableBaseEntity<long>
 {
-    // Tipos de notificación existentes
-    public const string CommentType = "Comment";
-    public const string ReplyType = "Reply";
-    public const string ReactionTypeName = "Reaction";
-
-    // Tipos de notificación de amistad
-    public const string FriendRequestSentType = "FriendRequestSent";
-    public const string FriendRequestAcceptedType = "FriendRequestAccepted";
-    public const string FriendRequestRejectedType = "FriendRequestRejected";
-
     private Notification() { }
 
     public string RecipientId { get; private set; } = null!;
 
     public string ActorId { get; private set; } = null!;
 
-    public string Type { get; private set; } = null!;
+    public NotificationType Type { get; private set; }
 
     public string Message { get; private set; } = null!;
 
@@ -39,7 +29,7 @@ public sealed class Notification : AuditableBaseEntity<long>
         Create(
             recipientId,
             actorId,
-            CommentType,
+            NotificationType.Comment,
             $"{actorUserName} comento tu publicacion.",
             postId,
             createdAt
@@ -55,7 +45,7 @@ public sealed class Notification : AuditableBaseEntity<long>
         Create(
             recipientId,
             actorId,
-            ReplyType,
+            NotificationType.Reply,
             $"{actorUserName} respondio tu comentario.",
             postId,
             createdAt
@@ -66,24 +56,88 @@ public sealed class Notification : AuditableBaseEntity<long>
         string actorId,
         long postId,
         string actorUserName,
-        Enums.ReactionType reactionType,
+        ReactionType reactionType,
         DateTimeOffset? createdAt = null
     ) =>
         Create(
             recipientId,
             actorId,
-            ReactionTypeName,
+            NotificationType.Reaction,
             $"{actorUserName} reacciono con {GetReactionDisplayName(reactionType)} a tu publicacion.",
             postId,
+            createdAt
+        );
+
+    public static Result<Notification> CreateReactionChange(
+        string recipientId,
+        string actorId,
+        long postId,
+        string actorUserName,
+        ReactionType oldReactionType,
+        ReactionType newReactionType,
+        DateTimeOffset? createdAt = null
+    ) =>
+        Create(
+            recipientId,
+            actorId,
+            NotificationType.ReactionChange,
+            $"{actorUserName} cambio su reaccion de {GetReactionDisplayName(oldReactionType)} a {GetReactionDisplayName(newReactionType)} en tu publicacion.",
+            postId,
+            createdAt
+        );
+
+    public static Result<Notification> CreateFriendRequestSent(
+        string recipientId,
+        string actorId,
+        long requestId,
+        string actorUserName,
+        DateTimeOffset? createdAt = null
+    ) =>
+        Create(
+            recipientId,
+            actorId,
+            NotificationType.FriendRequestSent,
+            $"{actorUserName} te envio una solicitud de amistad.",
+            requestId,
+            createdAt
+        );
+
+    public static Result<Notification> CreateFriendRequestAccepted(
+        string recipientId,
+        string actorId,
+        long requestId,
+        string actorUserName,
+        DateTimeOffset? createdAt = null
+    ) =>
+        Create(
+            recipientId,
+            actorId,
+            NotificationType.FriendRequestAccepted,
+            $"{actorUserName} acepto tu solicitud de amistad.",
+            requestId,
+            createdAt
+        );
+
+    public static Result<Notification> CreateFriendRequestRejected(
+        string recipientId,
+        string actorId,
+        long requestId,
+        string actorUserName,
+        DateTimeOffset? createdAt = null
+    ) =>
+        Create(
+            recipientId,
+            actorId,
+            NotificationType.FriendRequestRejected,
+            $"{actorUserName} rechazo tu solicitud de amistad.",
+            requestId,
             createdAt
         );
 
     public void MarkAsRead(DateTimeOffset? updatedAt = null)
     {
         if (IsRead)
-        {
             return;
-        }
 
         IsRead = true;
         UpdatedAt = updatedAt ?? DateTimeOffset.UtcNow;
@@ -94,7 +148,7 @@ public sealed class Notification : AuditableBaseEntity<long>
     public static Result<Notification> Create(
         string recipientId,
         string actorId,
-        string type,
+        NotificationType type,
         string message,
         long? relatedEntityId = null,
         DateTimeOffset? createdAt = null
@@ -103,66 +157,29 @@ public sealed class Notification : AuditableBaseEntity<long>
         var errors = new List<DomainError>();
 
         if (string.IsNullOrWhiteSpace(recipientId))
-        {
-            errors.Add(
-                new DomainError(
-                    "Notification.RecipientRequired",
-                    "El destinatario de la notificacion es requerido."
-                )
-            );
-        }
+            errors.Add(new DomainError("Notification.RecipientRequired", "El destinatario de la notificacion es requerido."));
 
         if (string.IsNullOrWhiteSpace(actorId))
-        {
-            errors.Add(
-                new DomainError(
-                    "Notification.ActorRequired",
-                    "El actor de la notificacion es requerido."
-                )
-            );
-        }
+            errors.Add(new DomainError("Notification.ActorRequired", "El actor de la notificacion es requerido."));
 
         if (recipientId == actorId)
-        {
-            errors.Add(
-                new DomainError(
-                    "Notification.SelfNotificationNotAllowed",
-                    "No se generan notificaciones para acciones propias."
-                )
-            );
-        }
+            errors.Add(new DomainError("Notification.SelfNotificationNotAllowed", "No se generan notificaciones para acciones propias."));
 
-        if (string.IsNullOrWhiteSpace(type))
-        {
-            errors.Add(
-                new DomainError(
-                    "Notification.TypeRequired",
-                    "El tipo de notificacion es requerido."
-                )
-            );
-        }
+        if (!Enum.IsDefined(type))
+            errors.Add(new DomainError("Notification.InvalidType", "El tipo de notificacion no es valido."));
 
         if (string.IsNullOrWhiteSpace(message))
-        {
-            errors.Add(
-                new DomainError(
-                    "Notification.MessageRequired",
-                    "El mensaje de la notificacion es requerido."
-                )
-            );
-        }
+            errors.Add(new DomainError("Notification.MessageRequired", "El mensaje de la notificacion es requerido."));
 
         if (errors.Count > 0)
-        {
             return Result<Notification>.Failure(errors);
-        }
 
         return Result<Notification>.Success(
             new Notification
             {
                 RecipientId = recipientId.Trim(),
                 ActorId = actorId.Trim(),
-                Type = type.Trim(),
+                Type = type,
                 Message = message.Trim(),
                 RelatedEntityId = relatedEntityId,
                 IsRead = false,
@@ -171,11 +188,11 @@ public sealed class Notification : AuditableBaseEntity<long>
         );
     }
 
-    private static string GetReactionDisplayName(Enums.ReactionType reactionType) =>
+    private static string GetReactionDisplayName(ReactionType reactionType) =>
         reactionType switch
         {
-            Enums.ReactionType.Like => "Me gusta",
-            Enums.ReactionType.Dislike => "No me gusta",
+            ReactionType.Like => "Me gusta",
+            ReactionType.Dislike => "No me gusta",
             _ => "una reaccion",
         };
 }

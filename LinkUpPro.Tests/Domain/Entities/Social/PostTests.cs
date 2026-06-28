@@ -64,6 +64,7 @@ public class PostTests
         Assert.False(post.AllowComments);
         Assert.True(post.IsEdited);
         Assert.Equal(updatedAt, post.UpdatedAt);
+        Assert.NotEqual(post.CreatedAt, post.UpdatedAt);
     }
 
     [Fact]

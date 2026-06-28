@@ -99,12 +99,24 @@ public class AccountService : IAccountService
                 "Auth.EmailTaken"
             );
 
+        if (!_fileService.IsImageValid(request.ProfilePictureFile))
+            throw new DomainValidationException(
+                "ProfilePicture",
+                "El archivo seleccionado no tiene un formato de imagen valido o supera los 5 MB.",
+                "Auth.InvalidImage"
+            );
+
+        var profilePicturePath = await _fileService.UploadFileAsync(
+            request.ProfilePictureFile,
+            "profiles"
+        );
+
         var user = new AppUser
         {
             UserName = request.UserName,
             FirstName = request.FirstName.Trim(),
             LastName = request.LastName.Trim(),
-            ProfilePicturePath = request.ProfilePicturePath,
+            ProfilePicturePath = profilePicturePath,
             EmailConfirmed = false,
             IsActive = false,
         };

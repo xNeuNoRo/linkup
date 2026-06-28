@@ -1,6 +1,7 @@
 using LinkUpPro.Application.DTOs.Reaction.Requests;
 using LinkUpPro.Application.DTOs.Reaction.Responses;
 using LinkUpPro.Domain.Common;
+using LinkUpPro.Domain.Enums;
 
 namespace LinkUpPro.Application.Interfaces.Services;
 
@@ -12,5 +13,5 @@ public interface IReactionService
 
     Task<Result<ReactionCountsDto>> GetCountsAsync(long postId);
 
-    Task<int?> GetUserReactionAsync(string userId, long postId);
+    Task<ReactionType?> GetUserReactionAsync(string userId, long postId);
 }

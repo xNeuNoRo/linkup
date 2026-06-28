@@ -1,17 +1,11 @@
-namespace LinkUpPro.Application.DTOs.Battleship.Responses;
+using LinkUpPro.Domain.Enums;
 
-public enum CellState : byte
-{
-    Empty = 0,
-    Miss = 1,
-    Hit = 2,
-    Sunk = 3,
-}
+namespace LinkUpPro.Application.DTOs.Battleship.Responses;
 
 public record AttackBoardDto(
     long GameId,
     string PlayerId,
-    CellState[,] Grid,
+    BoardCellState[,] Grid,
     string? CurrentTurnUserId,
     bool IsMyTurn,
     bool IsGameOver,

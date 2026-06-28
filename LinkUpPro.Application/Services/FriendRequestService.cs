@@ -126,6 +126,8 @@ public sealed class FriendRequestService : IFriendRequestService
         );
 
         var userDict = await _profileService.GetByIdsAsync(receiverIds);
+        var sender = await _profileService.GetByIdAsync(userId);
+        var senderName = sender is null ? string.Empty : $"{sender.FirstName} {sender.LastName}".Trim();
 
         var items = new List<SentRequestDto>(requests.Count);
         foreach (var req in requests)
@@ -143,9 +145,10 @@ public sealed class FriendRequestService : IFriendRequestService
                     receiver?.UserName ?? string.Empty,
                     receiver?.ProfilePicturePath,
                     req.SentAt,
-                    (int)req.Status,
+                    req.Status,
                     req.RespondedAt,
-                    req.IsVisibleForSender
+                    req.IsVisibleForSender,
+                    senderName
                 )
             );
         }
@@ -210,12 +213,11 @@ public sealed class FriendRequestService : IFriendRequestService
             ? "Alguien"
             : $"{sender.FirstName} {sender.LastName}".Trim();
 
-        var notifResult = Notification.Create(
+        var notifResult = Notification.CreateFriendRequestSent(
             recipientId: request.ReceiverId,
             actorId: senderId,
-            type: Notification.FriendRequestSentType,
-            message: $"{senderName} te envio una solicitud de amistad.",
-            relatedEntityId: creationResult.Value.Id
+            requestId: creationResult.Value.Id,
+            actorUserName: senderName
         );
 
         await _unitOfWork.BeginTransactionAsync();
@@ -281,12 +283,11 @@ public sealed class FriendRequestService : IFriendRequestService
             ? "Alguien"
             : $"{receiver.FirstName} {receiver.LastName}".Trim();
 
-        var notifResult = Notification.Create(
+        var notifResult = Notification.CreateFriendRequestAccepted(
             recipientId: friendRequest.SenderId,
             actorId: receiverId,
-            type: Notification.FriendRequestAcceptedType,
-            message: $"{receiverName} acepto tu solicitud de amistad.",
-            relatedEntityId: friendRequest.Id
+            requestId: friendRequest.Id,
+            actorUserName: receiverName
         );
 
         await _unitOfWork.BeginTransactionAsync();
@@ -330,12 +331,11 @@ public sealed class FriendRequestService : IFriendRequestService
             ? "Alguien"
             : $"{receiver.FirstName} {receiver.LastName}".Trim();
 
-        var notifResult = Notification.Create(
+        var notifResult = Notification.CreateFriendRequestRejected(
             recipientId: friendRequest.SenderId,
             actorId: receiverId,
-            type: Notification.FriendRequestRejectedType,
-            message: $"{receiverName} rechazo tu solicitud de amistad.",
-            relatedEntityId: friendRequest.Id
+            requestId: friendRequest.Id,
+            actorUserName: receiverName
         );
 
         await _unitOfWork.BeginTransactionAsync();

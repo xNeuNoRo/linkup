@@ -63,8 +63,18 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
                 "Debe ingresar un número telefónico válido de República Dominicana (ej. 809-555-1234)."
             );
 
-        RuleFor(x => x.ProfilePicturePath)
-            .NotEmpty()
-            .WithMessage("La foto de perfil es requerida.");
+        RuleFor(x => x.ProfilePictureFile)
+            .NotNull()
+            .WithMessage("La foto de perfil es requerida.")
+            .Must(f => f!.Length > 0)
+            .WithMessage("La foto de perfil es requerida.")
+            .Must(f => f!.Length <= 5 * 1024 * 1024)
+            .WithMessage("La imagen no puede superar los 5 MB.")
+            .Must(f =>
+            {
+                var ext = Path.GetExtension(f!.FileName).ToLowerInvariant();
+                return new[] { ".jpg", ".jpeg", ".png", ".webp" }.Contains(ext);
+            })
+            .WithMessage("La imagen debe ser .jpg, .jpeg, .png o .webp.");
     }
 }

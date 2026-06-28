@@ -14,7 +14,7 @@ public class NotificationTests
         // Assert
         Assert.True(result.IsSuccess);
         Assert.False(result.Value.IsRead);
-        Assert.Equal(Notification.CommentType, result.Value.Type);
+        Assert.Equal(NotificationType.Comment, result.Value.Type);
         Assert.Equal("Juan123 comento tu publicacion.", result.Value.Message);
     }
 

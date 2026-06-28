@@ -28,7 +28,7 @@
 
 * **Autenticación y Seguridad:** ASP.NET Core Identity (Autenticación basada en Cookies)
 
-* **Mapeo de Objetos:** AutoMapper
+* **Mapeo de Objetos:** Mapster
 
 * **Validaciones:** FluentValidation
 

@@ -335,7 +335,7 @@ public sealed class BattleshipService : IBattleshipService
                     game.Id,
                     opponentId,
                     opponentName,
-                    (int)game.Status,
+                    game.Status,
                     game.StartedAt,
                     game.FinishedAt,
                     game.WinnerId,
@@ -356,7 +356,15 @@ public sealed class BattleshipService : IBattleshipService
                 new DomainError("Battleship.NotFound", "La partida no fue encontrada.")
             );
 
+        var previousStatus = game.Status;
         game.CheckAbandonment(DateTimeOffset.UtcNow);
+
+        // Si el estado cambió por abandono, persistir el cambio
+        if (game.Status != previousStatus)
+        {
+            _battleshipRepository.Update(game);
+            await _unitOfWork.SaveChangesAsync();
+        }
 
         var opponentId = game.GetOpponentId(userId).Value;
         var opponent = await _profileService.GetByIdAsync(opponentId);
@@ -369,7 +377,7 @@ public sealed class BattleshipService : IBattleshipService
                 game.Id,
                 opponentId,
                 opponentName,
-                (int)game.Status,
+                game.Status,
                 game.StartedAt,
                 game.CurrentTurnUserId,
                 game.CurrentTurnUserId == userId,
@@ -504,11 +512,13 @@ public sealed class BattleshipService : IBattleshipService
             attackerId
         );
 
-        var grid = new CellState[DomainConstants.BoardSize, DomainConstants.BoardSize];
+        var grid = new BoardCellState[DomainConstants.BoardSize, DomainConstants.BoardSize];
 
         foreach (var attack in attacks)
         {
-            grid[attack.TargetX, attack.TargetY] = attack.IsHit ? CellState.Hit : CellState.Miss;
+            grid[attack.TargetX, attack.TargetY] = attack.IsHit
+                ? BoardCellState.Hit
+                : BoardCellState.Miss;
         }
 
         return Result<AttackBoardDto>.Success(
@@ -546,10 +556,10 @@ public sealed class BattleshipService : IBattleshipService
                     .ToArray();
                 return new ShipPlacementDto(
                     s.Id,
-                    (int)s.Size,
+                    s.Size,
                     s.StartX,
                     s.StartY,
-                    (int)s.Direction,
+                    s.Direction,
                     s.IsSunk,
                     cells
                 );

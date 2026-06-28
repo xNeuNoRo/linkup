@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Http;
+
 namespace LinkUpPro.Application.DTOs.User.Requests;
 
 public record RegisterRequest(
@@ -8,5 +10,5 @@ public record RegisterRequest(
     string FirstName,
     string LastName,
     string PhoneNumber,
-    string ProfilePicturePath
+    IFormFile ProfilePictureFile
 );

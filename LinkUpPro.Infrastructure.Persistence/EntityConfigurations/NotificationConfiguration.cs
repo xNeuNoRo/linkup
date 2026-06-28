@@ -14,7 +14,7 @@ public sealed class NotificationConfiguration : IEntityTypeConfiguration<Notific
         builder.Property(x => x.Id).ValueGeneratedOnAdd();
         builder.Property(x => x.RecipientId).IsRequired().HasMaxLength(32);
         builder.Property(x => x.ActorId).IsRequired().HasMaxLength(32);
-        builder.Property(x => x.Type).IsRequired().HasMaxLength(50);
+        builder.Property(x => x.Type).IsRequired();
         builder.Property(x => x.Message).IsRequired().HasMaxLength(500);
         builder.Property(x => x.RelatedEntityId).IsRequired(false);
         builder.Property(x => x.IsRead).IsRequired().HasDefaultValue(false);

@@ -210,4 +210,15 @@ public class PostServiceTests : InMemoryTestBase
         var result = await _service!.GetMyPostsAsync("user1", filter);
         result.Should().NotBeNull();
     }
+
+    [ServiceFact(typeof(IPostService))]
+    public async Task CreateAsync_BothImageAndYouTube_ReturnsError()
+    {
+        var formFile = new Mock<IFormFile>();
+        formFile.Setup(x => x.Length).Returns(1024);
+
+        var request = new CreatePostRequest("Test", 1, formFile.Object, "https://www.youtube.com/watch?v=abc", 1, true);
+        var result = await _service!.CreateAsync("user1", request);
+        result.IsFailure.Should().BeTrue();
+    }
 }

@@ -1,11 +1,13 @@
+using LinkUpPro.Domain.Enums;
+
 namespace LinkUpPro.Application.DTOs.Battleship.Responses;
 
 public record ShipPlacementDto(
     long Id,
-    int Size,
+    ShipSize Size,
     int StartX,
     int StartY,
-    int Direction,
+    ShipDirection Direction,
     bool IsSunk,
     int[][] OccupiedCells
 );

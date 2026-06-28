@@ -186,6 +186,49 @@ public class ProfileServiceTests : InMemoryTestBase
     }
 
     [Fact]
+    public async Task ChangePasswordAsync_MismatchConfirm_ReturnsError()
+    {
+        var user = CreateUser("user1", "john", "John", "Doe", true, true);
+        SetupFindById("user1", user);
+
+        var request = new ChangePasswordRequest("OldPass1!", "NewPass2@", "DifferentConfirm!");
+
+        var result = await _service!.ChangePasswordAsync("user1", request);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().Contain(e => e.Code == "Password.Mismatch");
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_MissingConfirmPassword_ReturnsError()
+    {
+        var user = CreateUser("user1", "john", "John", "Doe", true, true);
+        SetupFindById("user1", user);
+
+        var request = new ChangePasswordRequest("OldPass1!", "NewPass2@", "");
+
+        var result = await _service!.ChangePasswordAsync("user1", request);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().Contain(e => e.Code == "Password.ConfirmRequired");
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_WeakPassword_ReturnsSpecificCriteria()
+    {
+        var user = CreateUser("user1", "john", "John", "Doe", true, true);
+        SetupFindById("user1", user);
+        _userManagerMock.Setup(x => x.CheckPasswordAsync(user, "OldPass1!")).ReturnsAsync(true);
+
+        var request = new ChangePasswordRequest("OldPass1!", "weak", "weak");
+
+        var result = await _service!.ChangePasswordAsync("user1", request);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().Contain(e => e.Code == "Password.Weak");
+    }
+
+    [Fact]
     public async Task GetByEmailAsync_ExistingUser_ReturnsDto()
     {
         var user = CreateUser(

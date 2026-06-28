@@ -123,6 +123,26 @@ public sealed class ProfileService : IProfileService
                 new DomainError("User.NotFound", "El usuario no fue encontrado.")
             );
 
+        if (string.IsNullOrWhiteSpace(request.CurrentPassword))
+            return Result<EditProfileResponseDto>.Failure(
+                new DomainError("Password.CurrentRequired", "La contrasena actual es requerida.")
+            );
+
+        if (string.IsNullOrWhiteSpace(request.NewPassword))
+            return Result<EditProfileResponseDto>.Failure(
+                new DomainError("Password.NewRequired", "La nueva contrasena es requerida.")
+            );
+
+        if (string.IsNullOrWhiteSpace(request.ConfirmPassword))
+            return Result<EditProfileResponseDto>.Failure(
+                new DomainError("Password.ConfirmRequired", "La confirmacion de contrasena es requerida.")
+            );
+
+        if (request.NewPassword != request.ConfirmPassword)
+            return Result<EditProfileResponseDto>.Failure(
+                new DomainError("Password.Mismatch", "La nueva contrasena y su confirmacion no coinciden.")
+            );
+
         var passwordValid = await _userManager.CheckPasswordAsync(user, request.CurrentPassword);
         if (!passwordValid)
             return Result<EditProfileResponseDto>.Failure(
@@ -131,20 +151,31 @@ public sealed class ProfileService : IProfileService
 
         if (request.CurrentPassword == request.NewPassword)
             return Result<EditProfileResponseDto>.Failure(
-                new DomainError(
-                    "Password.SameAsCurrent",
-                    "La nueva contrasena no puede ser igual a la actual."
-                )
+                new DomainError("Password.SameAsCurrent", "La nueva contrasena no puede ser igual a la actual.")
             );
 
         var strength = PasswordStrength.Calculate(request.NewPassword);
         if (!strength.IsStrong)
+        {
+            var missing = new List<string>();
+            if ((strength.CriteriaMet & PasswordStrengthCriteria.MinimumLength) == 0)
+                missing.Add("al menos 8 caracteres");
+            if ((strength.CriteriaMet & PasswordStrengthCriteria.UppercaseLetter) == 0)
+                missing.Add("una mayuscula");
+            if ((strength.CriteriaMet & PasswordStrengthCriteria.LowercaseLetter) == 0)
+                missing.Add("una minuscula");
+            if ((strength.CriteriaMet & PasswordStrengthCriteria.Digit) == 0)
+                missing.Add("un numero");
+            if ((strength.CriteriaMet & PasswordStrengthCriteria.SpecialCharacter) == 0)
+                missing.Add("un caracter especial");
+
             return Result<EditProfileResponseDto>.Failure(
                 new DomainError(
                     "Password.Weak",
-                    "La nueva contrasena no cumple con los requisitos de seguridad."
+                    $"La nueva contrasena debe contener: {string.Join(", ", missing)}."
                 )
             );
+        }
 
         var changeResult = await _userManager.ChangePasswordAsync(
             user,

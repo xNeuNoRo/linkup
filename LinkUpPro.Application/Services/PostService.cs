@@ -51,6 +51,12 @@ public sealed class PostService : IPostService
         var contentType = (PostContentType)request.ContentType;
         var privacy = (PrivacyLevel)request.Privacy;
 
+        // Validación defensiva: no permitir imagen y YouTube simultáneamente
+        if (request.ImageFile is not null && !string.IsNullOrEmpty(request.YouTubeUrl))
+            return Result<PostResponseDto>.Failure(
+                new DomainError("Post.MediaConflict", "No debe permitirse enviar simultáneamente una imagen y un enlace de YouTube.")
+            );
+
         string mediaPath;
         try
         {
@@ -124,6 +130,12 @@ public sealed class PostService : IPostService
                     "Post.NotAuthorized",
                     "No tienes permiso para editar esta publicacion."
                 )
+            );
+
+        // Validación defensiva: no permitir imagen y YouTube simultáneamente
+        if (request.ImageFile is not null && !string.IsNullOrEmpty(request.YouTubeUrl))
+            return Result<PostResponseDto>.Failure(
+                new DomainError("Post.MediaConflict", "No debe permitirse enviar simultáneamente una imagen y un enlace de YouTube.")
             );
 
         var content = request.Content ?? post.Content;
@@ -251,7 +263,7 @@ public sealed class PostService : IPostService
         var paged = await _postRepository.SearchFriendsPostsAsync(
             userId,
             filter.SearchText,
-            null,
+            filter.FriendId,
             contentType,
             filter.FromDate,
             filter.ToDate,

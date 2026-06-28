@@ -7,5 +7,6 @@ public record PostFilterRequest(
     DateTimeOffset? ToDate,
     bool? EditedOnly,
     int Page = 1,
-    int PageSize = 20
+    int PageSize = 20,
+    string? FriendId = null
 );
