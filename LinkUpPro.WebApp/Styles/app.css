@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@source "../Views/**/*.cshtml";
+@source "../wwwroot/js/**/*.js";
+
+html.dark {
+    filter: invert(1) hue-rotate(180deg) brightness(1.05) saturate(1.2);
+    background-color: #fff; /* Inverts to pure black to cover the canvas */
+    color-scheme: dark;
+}
+
+/* Double-invert images and svgs so they retain original colors/photos */
+html.dark img, 
+html.dark svg {
+    filter: invert(1) hue-rotate(180deg) brightness(0.95) saturate(0.85);
+}
+
+/* Double-invert the LED pulse to keep it green/red */
+html.dark .pulse-node {
+    filter: invert(1) hue-rotate(180deg);
+}
+
+/* View Transition Magic - CSS Only */
+::view-transition-group(root) {
+  animation-duration: 0.7s;
+  animation-timing-function: cubic-bezier(0.25, 1, 0.3, 1);
+}
+
+::view-transition-new(root),
+::view-transition-old(root) {
+  animation: none;
+  mix-blend-mode: normal;
+  display: block;
+}
+
+/* Going to Dark Mode: Dark expands over Light */
+html.dark::view-transition-old(root) {
+  z-index: 1;
+}
+html.dark::view-transition-new(root) {
+  z-index: 9999;
+  animation: circle-in 0.7s cubic-bezier(0.25, 1, 0.3, 1) forwards;
+}
+
+/* Going to Light Mode: Dark shrinks, leaving Light behind */
+html:not(.dark)::view-transition-new(root) {
+  z-index: 1;
+}
+html:not(.dark)::view-transition-old(root) {
+  z-index: 9999;
+  animation: circle-out 0.7s cubic-bezier(0.25, 1, 0.3, 1) forwards;
+}
+
+/* Fancy Icon Rotation */
+.icon-spin-transition {
+    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.icon-spin-dark {
+    transform: rotate(360deg);
+}
