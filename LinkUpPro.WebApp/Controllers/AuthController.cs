@@ -2,6 +2,7 @@ using LinkUpPro.Application.DTOs.User.Requests;
 using LinkUpPro.Application.Interfaces;
 using LinkUpPro.Application.Interfaces.Services;
 using LinkUpPro.Application.ViewModels.AuthViewModels;
+using LinkUpPro.Domain.Exceptions;
 using LinkUpPro.WebApp.Filters;
 using Mapster;
 using Microsoft.AspNetCore.Authorization;
@@ -171,13 +172,7 @@ public class AuthController : BaseController
             return RedirectToAction(nameof(ForgotPassword));
         }
 
-        return View(
-            new ResetPasswordViewModel
-            {
-                UserId = userId,
-                Token = token
-            }
-        );
+        return View(new ResetPasswordViewModel { UserId = userId, Token = token });
     }
 
     [HttpPost]
@@ -248,11 +243,7 @@ public class AuthController : BaseController
     [HttpGet]
     public async Task<IActionResult> ActivateAccount(string userId, string token)
     {
-        var model = new ActivateAccountViewModel
-        {
-            UserId = userId,
-            Token = token
-        };
+        var model = new ActivateAccountViewModel { UserId = userId, Token = token };
 
         if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token))
         {
@@ -303,16 +294,15 @@ public class AuthController : BaseController
     /// </summary>
     private static string GetUserMessage(Exception ex)
     {
-        if (ex is LinkUpPro.Domain.Exceptions.DomainValidationException validationEx
-            && validationEx.ValidationErrors.Count > 0)
+        if (ex is DomainValidationException validationEx && validationEx.ValidationErrors.Count > 0)
         {
             return string.Join(" ", validationEx.ValidationErrors.Select(e => e.Message));
         }
 
         return ex switch
         {
-            LinkUpPro.Domain.Exceptions.DomainException dex => dex.Message,
-            _ => "Ocurrió un error al procesar la solicitud. Inténtelo nuevamente."
+            DomainException dex => dex.Message,
+            _ => "Ocurrió un error al procesar la solicitud. Inténtelo nuevamente.",
         };
     }
 }

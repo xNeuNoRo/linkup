@@ -33,16 +33,7 @@
 
     <!-- Avatar actor -->
     <a asp-controller="Profile" asp-action="Index" asp-route-id="@Model.ActorId" class="shrink-0">
-        @if (!string.IsNullOrEmpty(Model.ActorProfilePicture))
-        {
-            <img src="@Model.ActorProfilePicture" class="w-9 h-9 rounded-full object-cover" alt="@Model.ActorName" />
-        }
-        else
-        {
-            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white font-bold text-xs">
-                @(Model.ActorName.Length > 0 ? Model.ActorName[0].ToString().ToUpper() : "U")
-            </div>
-        }
+        @await Html.PartialAsync("/Views/Shared/Components/_Avatar.cshtml", (Model.ActorProfilePicture, Model.ActorName, "sm", (string?)null))
     </a>
 
     <!-- Contenido -->

@@ -134,14 +134,17 @@ public class HomeController : BaseController
         }
 
         var post = result.Value;
+        var youTubeUrl = post.ContentType == LinkUpPro.Domain.Enums.PostContentType.YouTubeVideo
+            ? $"https://www.youtube.com/watch?v={post.MediaPath}"
+            : null;
         var editVm = new UpdatePostViewModel
         {
             PostId = post.Id,
             Content = post.Content,
             ContentType = (int)post.ContentType,
-            YouTubeUrl = post.ContentType == LinkUpPro.Domain.Enums.PostContentType.YouTubeVideo ? post.MediaPath : null,
+            YouTubeUrl = youTubeUrl,
             CurrentImagePath = post.ContentType == LinkUpPro.Domain.Enums.PostContentType.Image ? post.MediaPath : null,
-            CurrentYouTubeUrl = post.ContentType == LinkUpPro.Domain.Enums.PostContentType.YouTubeVideo ? post.MediaPath : null,
+            CurrentYouTubeUrl = youTubeUrl,
             Privacy = (int)post.Privacy,
             AllowComments = post.AllowComments
         };
@@ -219,6 +222,7 @@ public class HomeController : BaseController
             return Content("");
 
         var postViewModels = await MapToPostListItemViewModelsAsync(pagedResult.Items);
+        ViewBag.CurrentUserAvatar = _currentUserService.ProfilePicturePath;
         return PartialView("_PostList", postViewModels);
     }
 
@@ -232,6 +236,7 @@ public class HomeController : BaseController
         var pagedResult = await _postService.GetMyPostsAsync(userId, filterRequest);
 
         var postViewModels = await MapToPostListItemViewModelsAsync(pagedResult.Items);
+        ViewBag.CurrentUserAvatar = _currentUserService.ProfilePicturePath;
         return PartialView("_PostList", postViewModels);
     }
 
@@ -312,6 +317,10 @@ public class HomeController : BaseController
             UpdatedAt = c.UpdatedAt?.UtcDateTime,
             RepliesCount = node.TotalRepliesCount,
             HasMoreReplies = node.HasMoreReplies,
+            VisualDepth = node.VisualDepth,
+            IsTruncated = node.IsTruncated,
+            ReplyingToUserName = node.ReplyingToUserName,
+            ShowConnector = node.ShowConnector,
             Replies = node.Replies.Select(r => MapCommentTreeToViewModel(r, currentUserId, canReply && !c.IsDeleted)).ToList(),
             IsDeleted = c.IsDeleted,
             IsOwn = c.AuthorId == currentUserId,

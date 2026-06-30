@@ -3,22 +3,39 @@
     var size = Model.Size ?? "md";
     var sizeClass = size switch
     {
-        "xs" => "w-6 h-6 text-xs",
-        "sm" => "w-8 h-8 text-sm",
-        "md" => "w-10 h-10 text-base",
+        "xs" => "w-6 h-6 text-[9px]",
+        "sm" => "w-8 h-8 text-[10px]",
+        "md" => "w-10 h-10 text-sm",
         "lg" => "w-16 h-16 text-xl",
-        "xl" => "w-24 h-24 text-3xl",
+        "xl" => "w-24 h-24 text-4xl",
         _ => "w-10 h-10"
     };
-    var initial = !string.IsNullOrEmpty(Model.Name) ? Model.Name[0].ToString().ToUpper() : "U";
+
+    var initials = string.IsNullOrEmpty(Model.Name) ? "U"
+        : string.Join("", Model.Name.Split(' ').Where(w => w.Length > 0).Select(w => w[0])).ToUpper();
+    if (initials.Length > 2) initials = initials[..2];
+
+    // Color único generado a partir del nombre (8 paletas)
+    var colorIndex = Math.Abs(Model.Name.GetHashCode()) % 8;
+    var colors = new[] {
+        (from: "indigo-600", to: "violet-600"),
+        (from: "blue-600", to: "cyan-500"),
+        (from: "teal-500", to: "emerald-500"),
+        (from: "emerald-500", to: "lime-500"),
+        (from: "amber-500", to: "orange-500"),
+        (from: "rose-500", to: "pink-500"),
+        (from: "purple-600", to: "fuchsia-500"),
+        (from: "orange-500", to: "red-500")
+    };
+    var color = colors[colorIndex];
 }
 @if (!string.IsNullOrEmpty(Model.Src))
 {
-    <img src="@Model.Src" alt="@Model.Name" class="@sizeClass rounded-full object-cover @Model.CssClass" />
+    <img src="@Model.Src" alt="@Model.Name" class="@sizeClass rounded-full object-cover @Model.CssClass" loading="lazy" />
 }
 else
 {
-    <div class="@sizeClass rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 text-white font-black flex items-center justify-center @Model.CssClass">
-        @initial
+    <div class="@sizeClass rounded-full bg-gradient-to-br from-@color.from to-@color.to text-white font-black flex items-center justify-center shrink-0 @Model.CssClass" aria-label="@Model.Name" role="img">
+        @initials
     </div>
 }

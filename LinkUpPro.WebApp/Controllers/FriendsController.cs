@@ -177,6 +177,7 @@ public class FriendsController : BaseController
             return Content("");
 
         var postViewModels = await MapToPostListItemsAsync(postsResult.Items);
+        ViewBag.CurrentUserAvatar = _currentUserService.ProfilePicturePath;
         return PartialView("_PostList", postViewModels);
     }
 
@@ -326,6 +327,10 @@ public class FriendsController : BaseController
             UpdatedAt = c.UpdatedAt?.UtcDateTime,
             RepliesCount = node.TotalRepliesCount,
             HasMoreReplies = node.HasMoreReplies,
+            VisualDepth = node.VisualDepth,
+            IsTruncated = node.IsTruncated,
+            ReplyingToUserName = node.ReplyingToUserName,
+            ShowConnector = node.ShowConnector,
             Replies = node.Replies.Select(r => MapCommentTreeToViewModel(r, currentUserId, canReply && !c.IsDeleted)).ToList(),
             IsDeleted = c.IsDeleted,
             IsOwn = c.AuthorId == currentUserId,

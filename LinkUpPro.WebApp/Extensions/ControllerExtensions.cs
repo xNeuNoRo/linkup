@@ -30,6 +30,10 @@ public static class ControllerExtensions
         viewModel.CurrentUserName = currentUserService.UserName ?? string.Empty;
         viewModel.CurrentUserProfilePicture = currentUserService.ProfilePicturePath;
 
+        // ViewBag para partials que no tienen acceso al ViewModel tipado
+        _controller.ViewBag.CurrentUserAvatar = currentUserService.ProfilePicturePath;
+        _controller.ViewBag.CurrentUserFullName = currentUserService.FullName ?? "Usuario";
+
         if (string.IsNullOrEmpty(currentUserService.UserId))
             return;
 

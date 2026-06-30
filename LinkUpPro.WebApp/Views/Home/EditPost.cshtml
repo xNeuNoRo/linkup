@@ -24,22 +24,21 @@
             <span asp-validation-for="Content" class="text-red-500 text-xs mt-1 block"></span>
         </div>
 
-        <!-- Tipo Contenido -->
+        <!-- Tipo Contenido (segment buttons) -->
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Tipo de contenido</label>
-            <div class="flex items-center gap-4 text-sm">
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="ContentType" value="1" @(currentTypeImage ? "checked" : "") data-edit-post-type="1" class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500" />
-                    <i data-lucide="image" class="w-4 h-4 text-gray-500"></i>
-                    <span class="text-gray-700 dark:text-gray-300">Imagen</span>
+            <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-0.5 w-fit" role="radiogroup" aria-label="Tipo de contenido">
+                <label class="relative flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all has-[:checked]:bg-white dark:has-[:checked]:bg-gray-600 has-[:checked]:text-gray-900 dark:has-[:checked]:text-gray-100 has-[:checked]:shadow-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                    <input type="radio" name="ContentType" value="1" @(currentTypeImage ? "checked" : "") data-edit-post-type="1" class="absolute opacity-0 w-0 h-0" />
+                    <i data-lucide="image" class="w-4 h-4"></i>
+                    <span>Imagen</span>
                 </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="ContentType" value="2" @(currentTypeYouTube ? "checked" : "") data-edit-post-type="2" class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500" />
-                    <i data-lucide="youtube" class="w-4 h-4 text-gray-500"></i>
-                    <span class="text-gray-700 dark:text-gray-300">Video YouTube</span>
+                <label class="relative flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all has-[:checked]:bg-white dark:has-[:checked]:bg-gray-600 has-[:checked]:text-gray-900 dark:has-[:checked]:text-gray-100 has-[:checked]:shadow-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                    <input type="radio" name="ContentType" value="2" @(currentTypeYouTube ? "checked" : "") data-edit-post-type="2" class="absolute opacity-0 w-0 h-0" />
+                    <i data-lucide="video" class="w-4 h-4"></i>
+                    <span>Video</span>
                 </label>
             </div>
-            <input type="hidden" id="content-type-hidden" name="ContentTypeValue" value="@Model.ContentType" />
         </div>
 
         <!-- Imagen actual (si existe) -->
@@ -63,9 +62,16 @@
         <!-- Enlace YouTube actual (si existe) -->
         @if (!string.IsNullOrEmpty(Model.CurrentYouTubeUrl))
         {
-            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
+            var videoId = LinkUpPro.WebApp.Helpers.YouTubeHelper.ExtractVideoId(Model.CurrentYouTubeUrl);
+            var thumbnailUrl = !string.IsNullOrEmpty(videoId) ? LinkUpPro.WebApp.Helpers.YouTubeHelper.GetThumbnailUrl(videoId) : null;
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 space-y-2">
                 <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Enlace de YouTube actual</p>
+                @if (!string.IsNullOrEmpty(thumbnailUrl))
+                {
+                    <img src="@thumbnailUrl" alt="YouTube preview" class="w-full max-h-48 rounded-xl object-cover" />
+                }
                 <p class="text-sm text-indigo-600 dark:text-indigo-400 break-all">@Model.CurrentYouTubeUrl</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Ingrese un nuevo enlace solo si desea reemplazarlo.</p>
             </div>
         }
 

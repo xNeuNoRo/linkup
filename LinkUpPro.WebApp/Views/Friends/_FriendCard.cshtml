@@ -5,16 +5,7 @@
 
 <div class="px-5 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
     <a asp-controller="Friends" asp-action="Detail" asp-route-id="@Model.FriendId" class="shrink-0">
-        @if (!string.IsNullOrEmpty(Model.FriendProfilePicturePath))
-        {
-            <img src="@Model.FriendProfilePicturePath" class="w-10 h-10 rounded-full object-cover" alt="@Model.FriendName" />
-        }
-        else
-        {
-            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white font-bold text-sm">
-                @(Model.FriendName.Length > 0 ? Model.FriendName[0].ToString().ToUpper() : "U")
-            </div>
-        }
+        @await Html.PartialAsync("/Views/Shared/Components/_Avatar.cshtml", (Model.FriendProfilePicturePath, Model.FriendName, "md", (string?)null))
     </a>
 
     <a asp-controller="Friends" asp-action="Detail" asp-route-id="@Model.FriendId" class="flex-1 min-w-0">

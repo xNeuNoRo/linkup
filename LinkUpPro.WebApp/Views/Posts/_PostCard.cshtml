@@ -11,16 +11,7 @@
 <article class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow" data-post-id="@Model.Id">
     <!-- Header -->
     <div class="p-4 flex items-start gap-3">
-        @if (!string.IsNullOrEmpty(Model.AuthorProfilePicture))
-        {
-            <img src="@Model.AuthorProfilePicture" class="w-10 h-10 rounded-full object-cover shrink-0" alt="@Model.AuthorName" />
-        }
-        else
-        {
-            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
-                @(Model.AuthorName.Length > 0 ? Model.AuthorName[0].ToString().ToUpper() : "U")
-            </div>
-        }
+        @await Html.PartialAsync("/Views/Shared/Components/_Avatar.cshtml", (Model.AuthorProfilePicture, Model.AuthorName, "md", (string?)null))
 
         <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 flex-wrap">

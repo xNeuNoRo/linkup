@@ -29,6 +29,7 @@ public interface ICommentService
         string requesterId,
         long parentCommentId,
         int page = 1,
-        int pageSize = 5
+        int pageSize = 5,
+        int currentDepth = 0
     );
 }

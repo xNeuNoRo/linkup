@@ -532,6 +532,22 @@
     }
 
     // User dropdown
+    function closeAllDropdowns(except) {
+        const pairs = [
+            { btnId: 'user-menu-btn', ddId: 'user-dropdown' },
+            { btnId: 'notification-menu-btn', ddId: 'notification-dropdown' }
+        ];
+        pairs.forEach(function (pair) {
+            if (pair.btnId === except) return;
+            var btn = document.getElementById(pair.btnId);
+            var dd = document.getElementById(pair.ddId);
+            if (dd && !dd.classList.contains('hidden')) {
+                dd.classList.add('hidden');
+                if (btn) btn.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
+
     function initUserDropdown() {
         const btn = document.getElementById('user-menu-btn');
         const dd = document.getElementById('user-dropdown');
@@ -539,7 +555,9 @@
         btn.dataset.bound = '1';
         btn.addEventListener('click', function (e) {
             e.stopPropagation();
-            const isOpen = dd.classList.toggle('hidden') === false;
+            const isOpen = dd.classList.contains('hidden');
+            if (isOpen) closeAllDropdowns('user-menu-btn');
+            dd.classList.toggle('hidden', !isOpen);
             btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
         });
         document.addEventListener('click', function (e) {
@@ -560,24 +578,42 @@
         btn.addEventListener('click', function (e) {
             e.stopPropagation();
             const shouldOpen = dd.classList.contains('hidden');
-            dd.classList.toggle('hidden', !shouldOpen);
-            btn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
 
-            if (shouldOpen && !content.dataset.loaded) {
-                const url = btn.getAttribute('data-notification-url');
-                if (!url) return;
-
-                fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                    .then(response => response.ok ? response.text() : Promise.reject())
-                    .then(html => {
-                        content.innerHTML = html;
-                        content.dataset.loaded = '1';
-                        if (window.lucide) window.lucide.createIcons();
-                    })
-                    .catch(() => {
-                        content.innerHTML = '<div class="px-4 py-8 text-center text-sm text-red-600 dark:text-red-400">No se pudieron cargar las notificaciones.</div>';
-                    });
+            if (!shouldOpen) {
+                // Close
+                dd.classList.add('hidden');
+                btn.setAttribute('aria-expanded', 'false');
+                return;
             }
+
+            closeAllDropdowns('notification-menu-btn');
+
+            if (content.dataset.loaded) {
+                // Already loaded → show immediately
+                dd.classList.remove('hidden');
+                btn.setAttribute('aria-expanded', 'true');
+                return;
+            }
+
+            // First open → load content BEFORE showing to avoid animation stutter
+            const url = btn.getAttribute('data-notification-url');
+            if (!url) return;
+
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (response) { return response.ok ? response.text() : Promise.reject(); })
+                .then(function (html) {
+                    content.innerHTML = html;
+                    content.dataset.loaded = '1';
+                    // Show AFTER content is fully loaded → animation plays cleanly
+                    dd.classList.remove('hidden');
+                    btn.setAttribute('aria-expanded', 'true');
+                    if (window.lucide) window.lucide.createIcons();
+                })
+                .catch(function () {
+                    content.innerHTML = '<div class="px-4 py-8 text-center text-sm text-red-600 dark:text-red-400">No se pudieron cargar las notificaciones.</div>';
+                    dd.classList.remove('hidden');
+                    btn.setAttribute('aria-expanded', 'true');
+                });
         });
 
         dd.addEventListener('click', function (e) { e.stopPropagation(); });
@@ -922,15 +958,16 @@
 
             var parentId = link.dataset.loadReplies;
             var page = parseInt(link.dataset.nextPage) || 1;
+            var depth = parseInt(link.dataset.depth) || 0;
 
             try {
-                var resp = await fetch('/Posts/GetReplies?parentCommentId=' + encodeURIComponent(parentId) + '&page=' + encodeURIComponent(page), {
+                var resp = await fetch('/Posts/GetReplies?parentCommentId=' + encodeURIComponent(parentId) + '&page=' + encodeURIComponent(page) + '&depth=' + encodeURIComponent(depth), {
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 });
                 if (resp.ok) {
                     var html = await resp.text();
                     if (html) {
-                        var container = link.closest('.replies-container') || link.parentElement;
+                        var container = link.closest('.comment-replies, .replies-container') || link.parentElement;
                         link.remove();
                         container.insertAdjacentHTML('beforeend', html);
                         if (window.lucide) window.lucide.createIcons();

@@ -2,16 +2,7 @@
 
 <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
     <a asp-controller="Profile" asp-action="Index" asp-route-id="@Model.ReceiverId" class="shrink-0">
-        @if (!string.IsNullOrEmpty(Model.ReceiverProfilePicture))
-        {
-            <img src="@Model.ReceiverProfilePicture" class="w-12 h-12 rounded-full object-cover" alt="@Model.ReceiverName" />
-        }
-        else
-        {
-            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white font-bold">
-                @(Model.ReceiverName.Length > 0 ? Model.ReceiverName[0].ToString().ToUpper() : "U")
-            </div>
-        }
+        @await Html.PartialAsync("/Views/Shared/Components/_Avatar.cshtml", (Model.ReceiverProfilePicture, Model.ReceiverName, "md", (string?)null))
     </a>
 
     <div class="flex-1 min-w-0">

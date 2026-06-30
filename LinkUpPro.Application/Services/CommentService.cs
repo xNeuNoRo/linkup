@@ -13,7 +13,7 @@ namespace LinkUpPro.Application.Services;
 public sealed class CommentService : ICommentService
 {
     private const int DefaultRepliesPageSize = 5;
-    private const int DefaultMaxThreadDepth = 10;
+    private const int DefaultMaxThreadDepth = 5;
 
     private readonly ICommentRepository _commentRepository;
     private readonly IPostRepository _postRepository;
@@ -244,7 +244,8 @@ public sealed class CommentService : ICommentService
         string requesterId,
         long parentCommentId,
         int page = 1,
-        int pageSize = 5
+        int pageSize = 5,
+        int currentDepth = 0
     )
     {
         var parent = await _commentRepository.GetByIdAsync(parentCommentId);
@@ -284,7 +285,7 @@ public sealed class CommentService : ICommentService
         var items = new List<CommentTreeDto>(replies.Count);
         foreach (var reply in replies)
         {
-            var node = await BuildNodeAsync(reply, userDict, currentDepth: 0, maxDepth: DefaultMaxThreadDepth);
+            var node = await BuildNodeAsync(reply, userDict, currentDepth: currentDepth, maxDepth: DefaultMaxThreadDepth);
             items.Add(node);
         }
 
@@ -330,30 +331,29 @@ public sealed class CommentService : ICommentService
         var dto = BuildCommentDto(comment, userDict);
         var replies = new List<CommentTreeDto>();
         var totalReplies = await _commentRepository.CountRepliesByParentAsync(comment.Id);
-        var hasMore = false;
+        var hasMore = totalReplies > 0;
 
-        if (currentDepth < maxDepth && totalReplies > 0)
+        // Profundidad visual limitada a 5 niveles (0-4 visibles, 5+ truncados)
+        var visualDepth = Math.Min(currentDepth, maxDepth - 1);
+        var isTruncated = currentDepth >= maxDepth - 1;
+        var showConnector = visualDepth < maxDepth - 1 && !isTruncated;
+
+        string? replyingTo = null;
+        if (isTruncated && comment.ParentCommentId.HasValue)
         {
-            var replyOptions = new QueryOptions<Comment>
+            var parent = await _commentRepository.GetByIdAsync(comment.ParentCommentId.Value);
+            if (parent is not null)
             {
-                Skip = 0,
-                Take = DefaultRepliesPageSize,
-                OrderBy = q => q.OrderBy(c => c.CreatedAt),
-                IsTracking = false,
-            };
-
-            var children = await _commentRepository.GetRepliesByParentAsync(comment.Id, replyOptions);
-            hasMore = totalReplies > DefaultRepliesPageSize;
-
-            foreach (var child in children)
-            {
-                var childNode = await BuildNodeAsync(child, userDict, currentDepth + 1, maxDepth);
-                replies.Add(childNode);
+                if (userDict.TryGetValue(parent.AuthorId, out var parentUser))
+                    replyingTo = $"{parentUser.FirstName} {parentUser.LastName}".Trim();
+                else
+                {
+                    // Fallback: load from DB if not in dictionary
+                    var author = await _profileService.GetByIdAsync(parent.AuthorId);
+                    if (author is not null)
+                        replyingTo = $"{author.FirstName} {author.LastName}".Trim();
+                }
             }
-        }
-        else if (totalReplies > 0)
-        {
-            hasMore = true;
         }
 
         return new CommentTreeDto(
@@ -362,7 +362,11 @@ public sealed class CommentService : ICommentService
             TotalRepliesCount: totalReplies,
             HasMoreReplies: hasMore,
             CurrentRepliesPage: 1,
-            RepliesPageSize: DefaultRepliesPageSize
+            RepliesPageSize: DefaultRepliesPageSize,
+            VisualDepth: visualDepth,
+            IsTruncated: isTruncated,
+            ReplyingToUserName: replyingTo,
+            ShowConnector: showConnector
         );
     }
 

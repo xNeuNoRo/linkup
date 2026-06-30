@@ -167,10 +167,11 @@ public class PostsController : BaseController
     // ====================== LOAD MORE REPLIES (AJAX) ======================
 
     [HttpGet]
-    public async Task<IActionResult> GetReplies(long parentCommentId, int page = 1)
+    public async Task<IActionResult> GetReplies(long parentCommentId, int page = 1, int depth = 0)
     {
         var userId = _currentUserService.UserId!;
-        var result = await _commentService.GetCommentRepliesAsync(userId, parentCommentId, page, 5);
+        var nextDepth = depth + 1;
+        var result = await _commentService.GetCommentRepliesAsync(userId, parentCommentId, page, 5, currentDepth: nextDepth);
 
         if (!result.Items.Any())
             return Content("");
@@ -182,6 +183,7 @@ public class PostsController : BaseController
         ViewData["ParentCommentId"] = parentCommentId;
         ViewData["CurrentPage"] = page;
         ViewData["HasMore"] = result.TotalCount > page * 5;
+        ViewData["CommentDepth"] = nextDepth;
 
         return PartialView("_CommentRepliesPartial", viewModels);
     }
@@ -192,6 +194,7 @@ public class PostsController : BaseController
     public IActionResult ReplyForm(long parentCommentId, long postId)
     {
         var vm = new CreateReplyViewModel { PostId = postId, ParentCommentId = parentCommentId };
+        ViewBag.CurrentUserAvatar = _currentUserService.ProfilePicturePath;
         return PartialView("_CommentForm", vm);
     }
 
@@ -218,6 +221,10 @@ public class PostsController : BaseController
             UpdatedAt = c.UpdatedAt?.UtcDateTime,
             RepliesCount = node.TotalRepliesCount,
             HasMoreReplies = node.HasMoreReplies,
+            VisualDepth = node.VisualDepth,
+            IsTruncated = node.IsTruncated,
+            ReplyingToUserName = node.ReplyingToUserName,
+            ShowConnector = node.ShowConnector,
             Replies = node.Replies.Select(r => MapCommentTreeToViewModel(r, currentUserId, canReply && !c.IsDeleted)).ToList(),
             IsDeleted = c.IsDeleted,
             IsOwn = c.AuthorId == currentUserId,

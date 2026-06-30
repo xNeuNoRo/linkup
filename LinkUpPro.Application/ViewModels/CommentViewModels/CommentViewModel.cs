@@ -43,4 +43,26 @@ public class CommentViewModel
     /// Indica si la publicación permite responder (AllowComments).
     /// </summary>
     public bool CanReply { get; set; } = true;
+
+    /// <summary>
+    /// Profundidad visual (0-4). Nivel de anidación mostrado en la UI.
+    /// </summary>
+    public int VisualDepth { get; set; }
+
+    /// <summary>
+    /// Si es true, el comentario está truncado (depth >= 5).
+    /// Se muestra "Respondiendo a [Usuario]" en vez del contenido con layout completo.
+    /// </summary>
+    public bool IsTruncated { get; set; }
+
+    /// <summary>
+    /// Nombre del usuario al que responde (solo para truncados).
+    /// </summary>
+    public string? ReplyingToUserName { get; set; }
+
+    /// <summary>
+    /// Si es true, muestra el conector L visual (::before/::after).
+    /// Solo true para depth < 5 y no truncados.
+    /// </summary>
+    public bool ShowConnector { get; set; }
 }
