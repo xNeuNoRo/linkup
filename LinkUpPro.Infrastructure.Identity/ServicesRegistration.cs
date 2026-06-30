@@ -24,11 +24,9 @@ public static class ServicesRegistration
     {
         IdentityMappingConfig.RegisterMappings();
 
-        var connectionString = configuration.GetConnectionString("LinkUpDb");
-
         services.AddDbContext<IdentityContext>(options =>
             options.UseSqlServer(
-                connectionString,
+                configuration.GetConnectionString("LinkUpDb"),
                 sqlOptions =>
                     sqlOptions.MigrationsAssembly(typeof(IdentityContext).Assembly.FullName)
             )
@@ -55,7 +53,7 @@ public static class ServicesRegistration
 
         services
             .AddIdentityCore<AppUser>()
-            .AddRoles<IdentityRole<string>>()
+            .AddRoles<AppRole>()
             .AddSignInManager()
             .AddEntityFrameworkStores<IdentityContext>()
             .AddDefaultTokenProviders();
@@ -80,9 +78,9 @@ public static class ServicesRegistration
                     // Configuramos el tiempo de vida de la cookie de autenticación
                     opt.ExpireTimeSpan = DomainConstants.PersistentSessionDuration;
                     opt.SlidingExpiration = true;
-                    opt.LoginPath = "/Login";
-                    opt.AccessDeniedPath = "/Login/AccessDenied";
-                    opt.LogoutPath = "/Login/Logout";
+                    opt.LoginPath = "/Auth/Login";
+                    opt.AccessDeniedPath = "/Auth/Login";
+                    opt.LogoutPath = "/Auth/Logout";
                     opt.Cookie.HttpOnly = true;
                     opt.Cookie.SameSite = SameSiteMode.Lax;
                     opt.Cookie.SecurePolicy = CookieSecurePolicy.Always;
@@ -91,6 +89,11 @@ public static class ServicesRegistration
 
         services.AddAuthorization();
 
+        // HttpContextAccessor requerido para ICurrentUserService
+        services.AddHttpContextAccessor();
+
+        // Servicios de la capa Application
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IUserDirectory, UserDirectory>();
@@ -103,7 +106,7 @@ public static class ServicesRegistration
         using var scope = services.CreateScope();
         var provider = scope.ServiceProvider;
 
-        var roleManager = provider.GetRequiredService<RoleManager<IdentityRole<string>>>();
+        var roleManager = provider.GetRequiredService<RoleManager<AppRole>>();
         var userManager = provider.GetRequiredService<UserManager<AppUser>>();
         var configuration = provider.GetRequiredService<IConfiguration>();
 

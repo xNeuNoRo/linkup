@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text;
 using LinkUpPro.Application.DTOs.User.Requests;
 using LinkUpPro.Application.DTOs.User.Responses;
@@ -10,6 +11,7 @@ using LinkUpPro.Infrastructure.Identity.Entities;
 using Mapster;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Logging;
 
 namespace LinkUpPro.Infrastructure.Identity.Services;
 
@@ -20,13 +22,15 @@ public class AccountService : IAccountService
     private readonly IEmailService _emailService;
     private readonly IFileService _fileService;
     private readonly IProfileService _profileService;
+    private readonly ILogger<AccountService> _logger;
 
     public AccountService(
         UserManager<AppUser> userManager,
         SignInManager<AppUser> signInManager,
         IEmailService emailService,
         IFileService fileService,
-        IProfileService profileService
+        IProfileService profileService,
+        ILogger<AccountService> logger
     )
     {
         _userManager = userManager;
@@ -34,6 +38,7 @@ public class AccountService : IAccountService
         _emailService = emailService;
         _fileService = fileService;
         _profileService = profileService;
+        _logger = logger;
     }
 
     public async Task<AuthResponseDto> LoginAsync(LoginRequest request, bool rememberMe)
@@ -42,16 +47,19 @@ public class AccountService : IAccountService
         if (user is null)
             throw new DomainValidationException(
                 "UserName",
-                "El nombre de usuario o la contrasena son incorrectos.",
+                "El nombre de usuario o la contraseña son incorrectos.",
                 "Auth.LoginFailed"
             );
 
         if (!user.IsActive || !user.EmailConfirmed)
             throw new DomainValidationException(
                 "Account",
-                "Su cuenta se encuentra inactiva. Debe activarla mediante el enlace enviado a su correo electronico.",
+                "Su cuenta se encuentra inactiva. Debe activarla mediante el enlace enviado a su correo electrónico.",
                 "Auth.AccountInactive"
             );
+
+        // Limpiar sesiones anteriores para invalidar cookies previas al cambiar contraseña
+        await _userManager.UpdateSecurityStampAsync(user);
 
         var result = await _signInManager.PasswordSignInAsync(
             user.UserName!,
@@ -63,22 +71,55 @@ public class AccountService : IAccountService
         if (result.IsLockedOut)
             throw new DomainValidationException(
                 "Account",
-                "La cuenta se encuentra bloqueada temporalmente debido a varios intentos fallidos. Intentelo nuevamente en 15 minutos o restablezca su contrasena.",
+                "La cuenta se encuentra bloqueada temporalmente debido a varios intentos fallidos. Inténtelo nuevamente en 15 minutos o restablezca su contraseña.",
                 "Auth.AccountLocked"
             );
 
-        if (!result.Succeeded)
+        if (!result.IsLockedOut && !result.Succeeded)
             throw new DomainValidationException(
                 "UserName",
-                "El nombre de usuario o la contrasena son incorrectos.",
+                "El nombre de usuario o la contraseña son incorrectos.",
                 "Auth.LoginFailed"
             );
 
+        // Refrescar la cookie con claims personalizados para SessionAuthorize
         user.LastActivityAt = DateTimeOffset.UtcNow;
         await _userManager.UpdateAsync(user);
 
         var roles = await _userManager.GetRolesAsync(user);
+        var customClaims = BuildCustomClaims(user, rememberMe, roles);
+        await _signInManager.SignInWithClaimsAsync(user, rememberMe, customClaims);
+
         return user.Adapt<AuthResponseDto>() with { Roles = [.. roles] };
+    }
+
+    private static IEnumerable<Claim> BuildCustomClaims(
+        AppUser user,
+        bool rememberMe,
+        IList<string> roles
+    )
+    {
+        var claims = new List<Claim>
+        {
+            new("FirstName", user.FirstName ?? string.Empty),
+            new("LastName", user.LastName ?? string.Empty),
+            new(
+                "ProfilePicturePath",
+                user.ProfilePicturePath ?? string.Empty
+            ),
+            new("RememberMe", rememberMe.ToString()),
+            new(
+                "LastActivityAt",
+                DateTimeOffset.UtcNow.ToString("O")
+            ),
+        };
+
+        foreach (var role in roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+
+        return claims;
     }
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterRequest request, string origin)
@@ -136,12 +177,21 @@ public class AccountService : IAccountService
         await _userManager.AddToRoleAsync(user, "User");
 
         var verificationUri = await GenerateActivationUri(user, origin);
-        await _emailService.SendEmailAsync(
+        var emailSent = await _emailService.SendEmailAsync(
             user.Email!,
             "Activa tu cuenta en LinkUp Pro",
             "AccountActivation",
             new ActivationEmailModel(user.UserName!, verificationUri)
         );
+
+        if (!emailSent)
+        {
+            _logger.LogWarning(
+                "Registro completado para {UserName}, pero no se pudo enviar el correo de activacion a {Email}. El usuario debera usar 'Reenviar correo de activacion'.",
+                user.UserName,
+                user.Email
+            );
+        }
 
         return user.Adapt<AuthResponseDto>();
     }
@@ -272,7 +322,7 @@ public class AccountService : IAccountService
     {
         var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
         var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
-        var route = $"{origin}/Account/ConfirmAccount";
+        var route = $"{origin}/Auth/ActivateAccount";
         var uri = QueryHelpers.AddQueryString(route, "userId", user.Id);
         uri = QueryHelpers.AddQueryString(uri, "token", encodedToken);
         return uri;

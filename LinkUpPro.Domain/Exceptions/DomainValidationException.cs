@@ -8,7 +8,7 @@ public sealed class DomainValidationException : DomainException
 {
     public DomainValidationException(IEnumerable<DomainValidationError> validationErrors)
         : base(
-            "One or more domain validation errors occurred.",
+            "La solicitud no pudo procesarse. Verifique los datos e intente nuevamente.",
             "Domain.ValidationFailed",
             CreateMetadata(validationErrors)
         )

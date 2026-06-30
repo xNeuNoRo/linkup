@@ -1,6 +1,5 @@
 using LinkUpPro.Application.DTOs.Battleship.Requests;
 using LinkUpPro.Application.DTOs.Battleship.Responses;
-using LinkUpPro.Application.DTOs.Profile.Responses;
 using LinkUpPro.Application.Interfaces.Services;
 using LinkUpPro.Domain.Common;
 using LinkUpPro.Domain.Entities.Battleship;
@@ -390,6 +389,18 @@ public sealed class BattleshipService : IBattleshipService
 
     public async Task<Result<AttackBoardDto>> GetMyAttackBoardAsync(string userId, long gameId)
     {
+        var game = await _battleshipRepository.GetByIdAsync(gameId);
+        if (game is not null && game.IsPlayerInGame(userId))
+        {
+            var previousStatus = game.Status;
+            game.CheckAbandonment(DateTimeOffset.UtcNow);
+            if (game.Status != previousStatus)
+            {
+                _battleshipRepository.Update(game);
+                await _unitOfWork.SaveChangesAsync();
+            }
+        }
+
         return await GetAttackBoardAsync(userId, gameId, userId);
     }
 
@@ -460,23 +471,12 @@ public sealed class BattleshipService : IBattleshipService
             : game.WinnerId == opponentId ? opponentName
             : "Desconocido";
 
-        var myAttackBoardResult = await GetAttackBoardAsync(userId, gameId, userId);
-        var opponentAttackBoardResult = await GetAttackBoardAsync(userId, gameId, opponentId);
-        var myPlacementBoardResult = await GetPlacementBoardAsync(userId, gameId, userId);
+        var ships = await _battleshipRepository.GetShipsByGameAsync(gameId);
+        var allAttacks = await _battleshipRepository.GetAttacksByGameAsync(gameId);
 
-        if (
-            myAttackBoardResult.IsFailure
-            || opponentAttackBoardResult.IsFailure
-            || myPlacementBoardResult.IsFailure
-        )
-        {
-            return Result<GameResultDto>.Failure(
-                new DomainError(
-                    "Battleship.DataError",
-                    "No se pudo cargar la informacion de la partida."
-                )
-            );
-        }
+        var myAttackBoard = BuildAttackBoardFromData(game, allAttacks, userId);
+        var opponentAttackBoard = BuildAttackBoardFromData(game, allAttacks, opponentId);
+        var myPlacementBoard = BuildPlacementBoardFromData(ships, gameId, userId);
 
         return Result<GameResultDto>.Success(
             new GameResultDto(
@@ -488,11 +488,56 @@ public sealed class BattleshipService : IBattleshipService
                 duration,
                 result,
                 winner,
-                myAttackBoardResult.Value,
-                opponentAttackBoardResult.Value,
-                myPlacementBoardResult.Value
+                myAttackBoard,
+                opponentAttackBoard,
+                myPlacementBoard
             )
         );
+    }
+
+    private static AttackBoardDto BuildAttackBoardFromData(
+        BattleshipGame game,
+        IReadOnlyCollection<BattleshipAttack> allAttacks,
+        string attackerId
+    )
+    {
+        var playerAttacks = allAttacks.Where(a => a.AttackerId == attackerId).ToArray();
+        var grid = new BoardCellState[DomainConstants.BoardSize, DomainConstants.BoardSize];
+
+        foreach (var attack in playerAttacks)
+        {
+            grid[attack.TargetX, attack.TargetY] = attack.IsHit
+                ? BoardCellState.Hit
+                : BoardCellState.Miss;
+        }
+
+        return new AttackBoardDto(
+            game.Id,
+            attackerId,
+            grid,
+            game.CurrentTurnUserId,
+            game.CurrentTurnUserId == attackerId,
+            game.IsFinished(),
+            game.WinnerId
+        );
+    }
+
+    private static PlacementBoardDto BuildPlacementBoardFromData(
+        IReadOnlyCollection<BattleshipShip> allShips,
+        long gameId,
+        string playerId
+    )
+    {
+        var ships = allShips.Where(s => s.PlayerId == playerId).ToArray();
+        var shipDtos = ships.Select(s =>
+        {
+            var cells = s.GetOccupiedCells()
+                .Select(c => new[] { (int)c.X, (int)c.Y })
+                .ToArray();
+            return new ShipPlacementDto(s.Id, s.Size, s.StartX, s.StartY, s.Direction, s.IsSunk, cells);
+        }).ToArray();
+
+        return new PlacementBoardDto(gameId, playerId, shipDtos);
     }
 
     private async Task<Result<AttackBoardDto>> GetAttackBoardAsync(

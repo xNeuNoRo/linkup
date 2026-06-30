@@ -1,0 +1,37 @@
+@model LinkUpPro.Application.ViewModels.FriendRequestViewModels.SentRequestViewModel
+
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+    <a asp-controller="Profile" asp-action="Index" asp-route-id="@Model.ReceiverId" class="shrink-0">
+        @if (!string.IsNullOrEmpty(Model.ReceiverProfilePicture))
+        {
+            <img src="@Model.ReceiverProfilePicture" class="w-12 h-12 rounded-full object-cover" alt="@Model.ReceiverName" />
+        }
+        else
+        {
+            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white font-bold">
+                @(Model.ReceiverName.Length > 0 ? Model.ReceiverName[0].ToString().ToUpper() : "U")
+            </div>
+        }
+    </a>
+
+    <div class="flex-1 min-w-0">
+        <a asp-controller="Profile" asp-action="Index" asp-route-id="@Model.ReceiverId" class="font-bold text-gray-900 dark:text-gray-100 hover:text-indigo-600">@Model.ReceiverName</a>
+        <p class="text-sm text-gray-500 dark:text-gray-400">@@@Model.ReceiverUserName</p>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1">
+            <i data-lucide="clock" class="w-3 h-3"></i>
+            Enviada el @Model.SentAt.ToString("dd MMM yyyy, HH:mm")
+        </p>
+    </div>
+
+    <div class="shrink-0">
+        @if (Model.Status == LinkUpPro.Domain.Enums.FriendRequestStatus.Pending)
+        {
+            <form asp-action="Cancel" asp-controller="FriendRequests" asp-route-id="@Model.RequestId" method="post" data-confirm='¿Está seguro que desea cancelar la solicitud de amistad enviada a @Model.ReceiverUserName?'>
+                @Html.AntiForgeryToken()
+                <button type="submit" class="px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all text-sm flex items-center gap-1.5">
+                    <i data-lucide="x-circle" class="w-4 h-4"></i> Cancelar solicitud
+                </button>
+            </form>
+        }
+    </div>
+</div>

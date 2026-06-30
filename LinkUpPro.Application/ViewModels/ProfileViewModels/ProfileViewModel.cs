@@ -16,4 +16,11 @@ public class ProfileViewModel
     public bool IsVerified { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? LastActivityAt { get; set; }
+
+    public int TotalPosts { get; set; }
+    public int ImagePosts { get; set; }
+    public int VideoPosts { get; set; }
+    public int FriendsOnlyPosts { get; set; }
+    public int OnlyMePosts { get; set; }
+    public int EditedPosts { get; set; }
 }

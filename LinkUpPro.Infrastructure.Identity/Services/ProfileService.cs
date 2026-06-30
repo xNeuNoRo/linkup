@@ -6,6 +6,7 @@ using LinkUpPro.Domain.Common;
 using LinkUpPro.Domain.Interfaces.Persistence;
 using LinkUpPro.Domain.ValueObjects;
 using LinkUpPro.Infrastructure.Identity.Entities;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,18 +18,21 @@ public sealed class ProfileService : IProfileService
     private readonly SignInManager<AppUser> _signInManager;
     private readonly IFileService _fileService;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     public ProfileService(
         UserManager<AppUser> userManager,
         SignInManager<AppUser> signInManager,
         IFileService fileService,
-        IUnitOfWork unitOfWork
+        IUnitOfWork unitOfWork,
+        IHttpContextAccessor httpContextAccessor
     )
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _fileService = fileService;
         _unitOfWork = unitOfWork;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<Result<UserProfileResponseDto>> GetProfileAsync(string userId)
@@ -65,8 +69,21 @@ public sealed class ProfileService : IProfileService
 
         var oldPhoto = user.ProfilePicturePath;
 
-        user.FirstName = request.FirstName.Trim();
-        user.LastName = request.LastName.Trim();
+        var firstName = request.FirstName?.Trim() ?? string.Empty;
+        var lastName = request.LastName?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(firstName))
+            return Result<EditProfileResponseDto>.Failure(
+                new DomainError("Profile.FirstNameRequired", "El nombre es requerido y no puede contener solo espacios.")
+            );
+
+        if (string.IsNullOrWhiteSpace(lastName))
+            return Result<EditProfileResponseDto>.Failure(
+                new DomainError("Profile.LastNameRequired", "El apellido es requerido y no puede contener solo espacios.")
+            );
+
+        user.FirstName = firstName;
+        user.LastName = lastName;
         user.SetPhoneNumber(phone.Value);
 
         if (request.ProfilePictureFile is not null && request.ProfilePictureFile.Length > 0)
@@ -102,14 +119,49 @@ public sealed class ProfileService : IProfileService
         if (
             request.ProfilePictureFile is not null
             && request.ProfilePictureFile.Length > 0
-            && oldPhoto is not null
-            && !oldPhoto.Contains("default")
+            && !string.IsNullOrEmpty(oldPhoto)
         )
         {
             _fileService.DeleteFile(oldPhoto);
         }
 
+        // Refrescar la cookie con los nuevos claims (FirstName, LastName, ProfilePicturePath)
+        await RefreshSignInCookieAsync(user);
+
         return Result<EditProfileResponseDto>.Success(MapToEditDto(user));
+    }
+
+    private async Task RefreshSignInCookieAsync(AppUser user)
+    {
+        try
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+            var rememberMeClaim = _httpContextAccessor
+                .HttpContext?
+                .User.FindFirst("RememberMe")?.Value;
+            var rememberMe = bool.TryParse(rememberMeClaim, out var rm) && rm;
+
+            var claims = new List<System.Security.Claims.Claim>
+            {
+                new("FirstName", user.FirstName ?? string.Empty),
+                new("LastName", user.LastName ?? string.Empty),
+                new("ProfilePicturePath", user.ProfilePicturePath ?? string.Empty),
+                new("RememberMe", rememberMe.ToString()),
+                new("LastActivityAt", DateTimeOffset.UtcNow.ToString("O")),
+            };
+
+            foreach (var role in roles)
+            {
+                claims.Add(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, role));
+            }
+
+            await _signInManager.SignInWithClaimsAsync(user, rememberMe, claims);
+        }
+        catch
+        {
+            // Si no se puede refrescar la cookie (ej: tests, contexto sin auth),
+            // no afecta la actualización del perfil. Los claims se actualizarán en el próximo login.
+        }
     }
 
     public async Task<Result<EditProfileResponseDto>> ChangePasswordAsync(

@@ -30,10 +30,10 @@ public class ShipDirectionViewModel
     public int StartY { get; set; }
 
     /// <summary>
-    /// Dirección: 1 = Up, 2 = Down, 3 = Right, 4 = Left. Mapea a ShipDirection.
+    /// Dirección: 1 = Up, 2 = Down, 3 = Left, 4 = Right. Mapea a ShipDirection.
     /// </summary>
     [Required(ErrorMessage = "Debe seleccionar una dirección para el barco.")]
-    [Range(1, 4, ErrorMessage = "La dirección seleccionada no es válida. Las opciones válidas son: 1 (Arriba), 2 (Abajo), 3 (Derecha), 4 (Izquierda).")]
+    [Range(1, 4, ErrorMessage = "La dirección seleccionada no es válida. Las opciones válidas son: 1 (Arriba), 2 (Abajo), 3 (Izquierda), 4 (Derecha).")]
     [Display(Name = "Dirección")]
     public int Direction { get; set; }
 

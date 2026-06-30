@@ -1,6 +1,4 @@
-using LinkUpPro.Application.DTOs.Friendship.Requests;
 using LinkUpPro.Application.DTOs.Friendship.Responses;
-using LinkUpPro.Application.DTOs.Profile.Responses;
 using LinkUpPro.Application.Interfaces.Services;
 using LinkUpPro.Domain.Common;
 using LinkUpPro.Domain.Interfaces.Persistence;
@@ -88,6 +86,7 @@ public sealed class FriendshipService : IFriendshipService
                     commonCounts.GetValueOrDefault(id, 0)
                 );
             })
+            .OrderBy(f => f.FriendName)
             .ToList();
 
         return new PagedResult<FriendListItemDto>(items, total, page, pageSize);

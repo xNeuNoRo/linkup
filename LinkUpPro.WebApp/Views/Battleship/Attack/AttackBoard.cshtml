@@ -1,0 +1,106 @@
+@model LinkUpPro.Application.ViewModels.BattleshipViewModels.AttackBoardViewModel
+@{
+    ViewData["Title"] = "Partida con " + Model.OpponentName;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="max-w-4xl mx-auto space-y-6">
+    @Html.AntiForgeryToken()
+
+    <!-- Header: Opponent + Turn Indicator + Actions -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-violet-500 rounded-2xl flex items-center justify-center text-white font-bold">
+                @(Model.OpponentName.Length > 0 ? Model.OpponentName[0].ToString().ToUpper() : "O")
+            </div>
+            <div>
+                <h2 class="text-xl font-black text-gray-900 dark:text-gray-100">@Model.OpponentName</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Turno: <span class="font-bold @(Model.IsMyTurn ? "text-green-600" : "text-amber-600")">
+                        @(Model.IsMyTurn ? "TU TURNO" : "TURNO DE " + Model.OpponentName.ToUpper())
+                    </span>
+                </p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap w-full md:w-auto">
+            <a asp-action="Index" class="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm flex items-center gap-1.5">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i> Volver
+            </a>
+            <a asp-action="RefreshTurn" asp-route-gameId="@Model.GameId" class="px-3 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors text-sm flex items-center gap-1.5" title="Refrescar pantalla">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i> Refrescar
+            </a>
+            <a asp-action="MyBoard" asp-route-gameId="@Model.GameId" class="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm flex items-center gap-1.5">
+                <i data-lucide="grid" class="w-4 h-4"></i> Ver mi tablero
+            </a>
+            @if (!Model.IsGameOver)
+            {
+                <a asp-action="Surrender" asp-route-gameId="@Model.GameId" class="px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-sm flex items-center gap-1.5">
+                    <i data-lucide="flag" class="w-4 h-4"></i> Rendirse
+                </a>
+            }
+        </div>
+    </div>
+
+    <!-- Turn Message -->
+    @if (!string.IsNullOrEmpty(Model.TurnMessage))
+    {
+        <div class="@(Model.IsMyTurn ? "bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300" : "bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300") border rounded-xl p-3 text-center text-sm font-medium flex items-center justify-center gap-2">
+            <i data-lucide="@(Model.IsMyTurn ? "crosshair" : "clock")" class="w-4 h-4"></i>
+            @Model.TurnMessage
+        </div>
+    }
+
+    <!-- Attack Board -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <div class="overflow-x-auto">
+            <div class="battleship-board" id="attack-board" data-attack-url="@Url.Action("ExecuteAttack", "Battleship", new { gameId = Model.GameId })">
+                <div class="battleship-label"></div>
+                @for (int c = 0; c < 12; c++)
+                {
+                    <div class="battleship-label">@((char)('A' + c))</div>
+                }
+                @for (int r = 0; r < 12; r++)
+                {
+                    <div class="battleship-label">@(r + 1)</div>
+                    @for (int c = 0; c < 12; c++)
+                    {
+                        var cell = Model.Board[r, c];
+                        var css = "battleship-cell";
+                        if (cell.State == LinkUpPro.Domain.Enums.BoardCellState.Hit) css += " hit";
+                        else if (cell.State == LinkUpPro.Domain.Enums.BoardCellState.Miss) css += " miss";
+                        else if (cell.State == LinkUpPro.Domain.Enums.BoardCellState.Sunk) css += " sunk";
+                        var isEmpty = cell.State == LinkUpPro.Domain.Enums.BoardCellState.Empty;
+                        var canClick = Model.IsMyTurn && isEmpty && !Model.IsGameOver;
+                        <button type="button" class="@css @(!canClick && isEmpty ? "cursor-default" : "")" @(canClick ? "" : "disabled") data-x="@c" data-y="@r">
+                            @switch (cell.State)
+                            {
+                                case LinkUpPro.Domain.Enums.BoardCellState.Hit:
+                                    <i data-lucide="x" class="w-5 h-5 text-red-600"></i>
+                                    break;
+                                case LinkUpPro.Domain.Enums.BoardCellState.Miss:
+                                    <div class="w-2 h-2 rounded-full bg-green-600"></div>
+                                    break;
+                                case LinkUpPro.Domain.Enums.BoardCellState.Sunk:
+                                    <i data-lucide="x" class="w-5 h-5 text-red-800"></i>
+                                    break;
+                            }
+                        </button>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (Model.IsGameOver)
+    {
+        <div class="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-xl p-4 text-center">
+            <i data-lucide="trophy" class="w-8 h-8 text-indigo-600 dark:text-indigo-400 mx-auto mb-2"></i>
+            <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">Partida finalizada</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Ganador: <strong>@(Model.WinnerId == Model.CurrentUserId ? "Tú" : Model.OpponentName)</strong></p>
+            <a asp-action="Result" asp-route-gameId="@Model.GameId" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700">
+                <i data-lucide="eye" class="w-4 h-4"></i> Ver resultado
+            </a>
+        </div>
+    }
+</div>

@@ -22,6 +22,8 @@ public class CommentViewModel
 
     public int RepliesCount { get; set; }
 
+    public bool HasMoreReplies { get; set; }
+
     /// <summary>
     /// Respuestas anidadas a este comentario.
     /// </summary>

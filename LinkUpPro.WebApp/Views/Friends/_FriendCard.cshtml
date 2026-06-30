@@ -1,0 +1,49 @@
+@model LinkUpPro.Application.ViewModels.FriendshipViewModels.FriendListItemViewModel
+@{
+    var currentUserId = ViewBag.CurrentUserId as string;
+}
+
+<div class="px-5 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+    <a asp-controller="Friends" asp-action="Detail" asp-route-id="@Model.FriendId" class="shrink-0">
+        @if (!string.IsNullOrEmpty(Model.FriendProfilePicturePath))
+        {
+            <img src="@Model.FriendProfilePicturePath" class="w-10 h-10 rounded-full object-cover" alt="@Model.FriendName" />
+        }
+        else
+        {
+            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white font-bold text-sm">
+                @(Model.FriendName.Length > 0 ? Model.FriendName[0].ToString().ToUpper() : "U")
+            </div>
+        }
+    </a>
+
+    <a asp-controller="Friends" asp-action="Detail" asp-route-id="@Model.FriendId" class="flex-1 min-w-0">
+        <p class="friend-name font-bold text-gray-900 dark:text-gray-100 hover:text-indigo-600 truncate">@Model.FriendName</p>
+        <p class="friend-username text-gray-400 text-sm truncate">@@@Model.FriendUserName</p>
+    </a>
+
+    <div class="flex items-center gap-1 shrink-0">
+        <button type="button"
+                class="relative p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl transition-colors"
+                title="Amigos en común"
+                data-common-friends-id="@Model.FriendId"
+                data-common-friends-name="@Model.FriendName">
+            <i data-lucide="users" class="w-5 h-5"></i>
+            @if (Model.CommonFriendsCount > 0)
+            {
+                <span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-indigo-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">@Model.CommonFriendsCount</span>
+            }
+        </button>
+
+        <a asp-controller="Friends" asp-action="Detail" asp-route-id="@Model.FriendId" class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl transition-colors" title="Ver perfil">
+            <i data-lucide="eye" class="w-5 h-5"></i>
+        </a>
+
+        <form asp-action="Remove" asp-controller="Friends" asp-route-friendId="@Model.FriendId" method="post" class="inline" data-confirm="¿Está seguro que desea eliminar de sus amigos al usuario @Model.FriendUserName?" data-confirm-text="Ya no podrá ver sus publicaciones Solo amigos ni acceder a su perfil.">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors" title="Eliminar amigo">
+                <i data-lucide="user-x" class="w-5 h-5"></i>
+            </button>
+        </form>
+    </div>
+</div>

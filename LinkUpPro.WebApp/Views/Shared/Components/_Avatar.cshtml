@@ -1,0 +1,24 @@
+@model (string? Src, string Name, string Size, string? CssClass)
+@{
+    var size = Model.Size ?? "md";
+    var sizeClass = size switch
+    {
+        "xs" => "w-6 h-6 text-xs",
+        "sm" => "w-8 h-8 text-sm",
+        "md" => "w-10 h-10 text-base",
+        "lg" => "w-16 h-16 text-xl",
+        "xl" => "w-24 h-24 text-3xl",
+        _ => "w-10 h-10"
+    };
+    var initial = !string.IsNullOrEmpty(Model.Name) ? Model.Name[0].ToString().ToUpper() : "U";
+}
+@if (!string.IsNullOrEmpty(Model.Src))
+{
+    <img src="@Model.Src" alt="@Model.Name" class="@sizeClass rounded-full object-cover @Model.CssClass" />
+}
+else
+{
+    <div class="@sizeClass rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 text-white font-black flex items-center justify-center @Model.CssClass">
+        @initial
+    </div>
+}

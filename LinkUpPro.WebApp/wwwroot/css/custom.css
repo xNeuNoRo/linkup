@@ -1,0 +1,132 @@
+/* =============================================================
+   CUSTOM CSS - Comment Thread Visual Connectors
+   ============================================================= */
+
+.comment-thread[style*="--depth: 1"]::before,
+.comment-thread[style*="--depth: 2"]::before,
+.comment-thread[style*="--depth: 3"]::before,
+.comment-thread[style*="--depth: 4"]::before,
+.comment-thread[style*="--depth: 5"]::before,
+.comment-thread[style*="--depth: 6"]::before,
+.comment-thread[style*="--depth: 7"]::before,
+.comment-thread[style*="--depth: 8"]::before,
+.comment-thread[style*="--depth: 9"]::before,
+.comment-thread[style*="--depth: 10"]::before {
+  content: '' !important;
+  position: absolute !important;
+  left: 13px !important;
+  top: 22px !important;
+  bottom: 0 !important;
+  width: 2px !important;
+  height: auto !important;
+  background: #d1d5db !important;
+  pointer-events: none !important;
+  z-index: 1 !important;
+  display: block !important;
+}
+
+.dark .comment-thread[style*="--depth: 1"]::before,
+.dark .comment-thread[style*="--depth: 2"]::before,
+.dark .comment-thread[style*="--depth: 3"]::before,
+.dark .comment-thread[style*="--depth: 4"]::before,
+.dark .comment-thread[style*="--depth: 5"]::before,
+.dark .comment-thread[style*="--depth: 6"]::before,
+.dark .comment-thread[style*="--depth: 7"]::before,
+.dark .comment-thread[style*="--depth: 8"]::before,
+.dark .comment-thread[style*="--depth: 9"]::before,
+.dark .comment-thread[style*="--depth: 10"]::before {
+  background: #6b7280 !important;
+}
+
+.comment-thread[style*="--depth: 1"]::after,
+.comment-thread[style*="--depth: 2"]::after,
+.comment-thread[style*="--depth: 3"]::after,
+.comment-thread[style*="--depth: 4"]::after,
+.comment-thread[style*="--depth: 5"]::after,
+.comment-thread[style*="--depth: 6"]::after,
+.comment-thread[style*="--depth: 7"]::after,
+.comment-thread[style*="--depth: 8"]::after,
+.comment-thread[style*="--depth: 9"]::after,
+.comment-thread[style*="--depth: 10"]::after {
+  content: '' !important;
+  position: absolute !important;
+  left: 15px !important;
+  top: 21px !important;
+  width: 10px !important;
+  height: 2px !important;
+  background: #d1d5db !important;
+  pointer-events: none !important;
+  z-index: 1 !important;
+  display: block !important;
+}
+
+.dark .comment-thread[style*="--depth: 1"]::after,
+.dark .comment-thread[style*="--depth: 2"]::after,
+.dark .comment-thread[style*="--depth: 3"]::after,
+.dark .comment-thread[style*="--depth: 4"]::after,
+.dark .comment-thread[style*="--depth: 5"]::after,
+.dark .comment-thread[style*="--depth: 6"]::after,
+.dark .comment-thread[style*="--depth: 7"]::after,
+.dark .comment-thread[style*="--depth: 8"]::after,
+.dark .comment-thread[style*="--depth: 9"]::after,
+.dark .comment-thread[style*="--depth: 10"]::after {
+  background: #6b7280 !important;
+}
+
+/* =============================================================
+   Nested Replies Container
+   ============================================================= */
+
+.nested-replies {
+  margin-left: calc(0.75rem + (var(--thread-depth, 0) * 0.5rem)) !important;
+  padding-left: 0.75rem !important;
+  border-left: 2px solid #d1d5db !important;
+}
+
+.dark .nested-replies {
+  border-left-color: #4b5563 !important;
+}
+
+/* =============================================================
+   Load More Replies button - make it visible!
+   ============================================================= */
+
+a[data-load-replies] {
+  display: inline-block !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  padding: 4px 8px !important;
+  margin-top: 4px !important;
+  margin-left: 4px !important;
+  color: #4f46e5 !important;
+  border-radius: 6px !important;
+  transition: all 0.15s ease !important;
+}
+
+a[data-load-replies]:hover {
+  background: #eef2ff !important;
+  text-decoration: underline !important;
+}
+
+.dark a[data-load-replies] {
+  color: #818cf8 !important;
+}
+
+.dark a[data-load-replies]:hover {
+  background: rgba(79, 70, 229, 0.1) !important;
+}
+
+/* =============================================================
+   Touch Targets (Mobile)
+   ============================================================= */
+
+@media (hover: none) and (pointer: coarse) {
+  .reaction-btn,
+  [data-toggle-comments],
+  [data-toggle-reply],
+  [data-edit-comment],
+  button, a {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+}

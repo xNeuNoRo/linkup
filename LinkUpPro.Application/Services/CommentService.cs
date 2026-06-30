@@ -13,6 +13,7 @@ namespace LinkUpPro.Application.Services;
 public sealed class CommentService : ICommentService
 {
     private const int DefaultRepliesPageSize = 5;
+    private const int DefaultMaxThreadDepth = 10;
 
     private readonly ICommentRepository _commentRepository;
     private readonly IPostRepository _postRepository;
@@ -69,7 +70,11 @@ public sealed class CommentService : ICommentService
         await _unitOfWork.SaveChangesAsync();
 
         if (post.AuthorId != authorId)
-            await CreateCommentNotificationAsync(post.AuthorId, authorId, request.PostId);
+        {
+            var actor = await _profileService.GetByIdAsync(authorId);
+            var actorName = actor is null ? "Alguien" : $"{actor.FirstName} {actor.LastName}".Trim();
+            await CreateCommentNotificationAsync(post.AuthorId, authorId, request.PostId, actorName);
+        }
 
         return await ToResponseDtoAsync(creationResult.Value);
     }
@@ -124,11 +129,16 @@ public sealed class CommentService : ICommentService
         await _unitOfWork.SaveChangesAsync();
 
         if (parentComment.AuthorId != authorId)
+        {
+            var actor = await _profileService.GetByIdAsync(authorId);
+            var actorName = actor is null ? "Alguien" : $"{actor.FirstName} {actor.LastName}".Trim();
             await CreateReplyNotificationAsync(
                 parentComment.AuthorId,
                 authorId,
-                parentComment.PostId
+                parentComment.PostId,
+                actorName
             );
+        }
 
         return await ToResponseDtoAsync(creationResult.Value);
     }
@@ -223,7 +233,7 @@ public sealed class CommentService : ICommentService
         var items = new List<CommentTreeDto>(rootComments.Count);
         foreach (var root in rootComments)
         {
-            var node = await BuildRootNodeWithRepliesAsync(root, userDict, 1);
+            var node = await BuildNodeAsync(root, userDict, currentDepth: 0, maxDepth: DefaultMaxThreadDepth);
             items.Add(node);
         }
 
@@ -274,7 +284,7 @@ public sealed class CommentService : ICommentService
         var items = new List<CommentTreeDto>(replies.Count);
         foreach (var reply in replies)
         {
-            var node = await BuildReplyNodeAsync(reply, userDict, page, pageSize, totalReplies);
+            var node = await BuildNodeAsync(reply, userDict, currentDepth: 0, maxDepth: DefaultMaxThreadDepth);
             items.Add(node);
         }
 
@@ -310,93 +320,49 @@ public sealed class CommentService : ICommentService
         return users.ToDictionary(u => u.Key, u => u.Value);
     }
 
-    private async Task<CommentTreeDto> BuildRootNodeWithRepliesAsync(
-        Comment root,
+    private async Task<CommentTreeDto> BuildNodeAsync(
+        Comment comment,
         Dictionary<string, UserResponseDto> userDict,
-        int repliesPage
+        int currentDepth,
+        int maxDepth
     )
     {
-        var dto = BuildCommentDto(root, userDict);
+        var dto = BuildCommentDto(comment, userDict);
+        var replies = new List<CommentTreeDto>();
+        var totalReplies = await _commentRepository.CountRepliesByParentAsync(comment.Id);
+        var hasMore = false;
 
-        var replyOptions = new QueryOptions<Comment>
+        if (currentDepth < maxDepth && totalReplies > 0)
         {
-            Skip = (repliesPage - 1) * DefaultRepliesPageSize,
-            Take = DefaultRepliesPageSize,
-            OrderBy = q => q.OrderBy(c => c.CreatedAt),
-            IsTracking = false,
-        };
+            var replyOptions = new QueryOptions<Comment>
+            {
+                Skip = 0,
+                Take = DefaultRepliesPageSize,
+                OrderBy = q => q.OrderBy(c => c.CreatedAt),
+                IsTracking = false,
+            };
 
-        var replies = await _commentRepository.GetRepliesByParentAsync(root.Id, replyOptions);
-        var totalReplies = await _commentRepository.CountRepliesByParentAsync(root.Id);
+            var children = await _commentRepository.GetRepliesByParentAsync(comment.Id, replyOptions);
+            hasMore = totalReplies > DefaultRepliesPageSize;
 
-        var replyDtos = new List<CommentTreeDto>(replies.Count);
-        foreach (var reply in replies)
+            foreach (var child in children)
+            {
+                var childNode = await BuildNodeAsync(child, userDict, currentDepth + 1, maxDepth);
+                replies.Add(childNode);
+            }
+        }
+        else if (totalReplies > 0)
         {
-            var replyNode = await BuildReplyNodeAsync(
-                reply,
-                userDict,
-                repliesPage,
-                DefaultRepliesPageSize,
-                totalReplies
-            );
-            replyDtos.Add(replyNode);
+            hasMore = true;
         }
 
         return new CommentTreeDto(
             dto,
-            replyDtos,
-            totalReplies,
-            HasMoreReplies: totalReplies > DefaultRepliesPageSize,
-            CurrentRepliesPage: repliesPage,
-            RepliesPageSize: DefaultRepliesPageSize
-        );
-    }
-
-    private async Task<CommentTreeDto> BuildReplyNodeAsync(
-        Comment reply,
-        Dictionary<string, UserResponseDto> userDict,
-        int repliesPage,
-        int repliesPageSize,
-        int totalReplies
-    )
-    {
-        var dto = BuildCommentDto(reply, userDict);
-
-        var grandChildrenOptions = new QueryOptions<Comment>
-        {
-            Skip = 0,
-            Take = repliesPageSize,
-            OrderBy = q => q.OrderBy(c => c.CreatedAt),
-            IsTracking = false,
-        };
-
-        var grandChildren = await _commentRepository.GetRepliesByParentAsync(
-            reply.Id,
-            grandChildrenOptions
-        );
-        var totalGrandChildren = await _commentRepository.CountRepliesByParentAsync(reply.Id);
-
-        var grandChildDtos = new List<CommentTreeDto>(grandChildren.Count);
-        foreach (var gc in grandChildren)
-        {
-            var gcNode = new CommentTreeDto(
-                BuildCommentDto(gc, userDict),
-                new List<CommentTreeDto>(),
-                TotalRepliesCount: 0,
-                HasMoreReplies: false,
-                CurrentRepliesPage: 1,
-                RepliesPageSize: repliesPageSize
-            );
-            grandChildDtos.Add(gcNode);
-        }
-
-        return new CommentTreeDto(
-            dto,
-            grandChildDtos,
-            TotalRepliesCount: totalGrandChildren,
-            HasMoreReplies: totalGrandChildren > repliesPageSize,
+            replies,
+            TotalRepliesCount: totalReplies,
+            HasMoreReplies: hasMore,
             CurrentRepliesPage: 1,
-            RepliesPageSize: repliesPageSize
+            RepliesPageSize: DefaultRepliesPageSize
         );
     }
 
@@ -418,12 +384,10 @@ public sealed class CommentService : ICommentService
     private async Task CreateCommentNotificationAsync(
         string postAuthorId,
         string commentAuthorId,
-        long postId
+        long postId,
+        string actorName
     )
     {
-        var actor = await _profileService.GetByIdAsync(commentAuthorId);
-        var actorName = actor is null ? "Alguien" : $"{actor.FirstName} {actor.LastName}".Trim();
-
         var notifResult = Notification.CreateComment(
             recipientId: postAuthorId,
             actorId: commentAuthorId,
@@ -438,12 +402,10 @@ public sealed class CommentService : ICommentService
     private async Task CreateReplyNotificationAsync(
         string parentAuthorId,
         string replyAuthorId,
-        long postId
+        long postId,
+        string actorName
     )
     {
-        var actor = await _profileService.GetByIdAsync(replyAuthorId);
-        var actorName = actor is null ? "Alguien" : $"{actor.FirstName} {actor.LastName}".Trim();
-
         var notifResult = Notification.CreateReply(
             recipientId: parentAuthorId,
             actorId: replyAuthorId,

@@ -1,0 +1,49 @@
+@model LinkUpPro.Application.ViewModels.FriendRequestViewModels.SentRequestViewModel
+@{
+    var isAccepted = Model.Status == LinkUpPro.Domain.Enums.FriendRequestStatus.Accepted;
+    var statusColor = isAccepted ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300" : "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300";
+    var statusIcon = isAccepted ? "check-circle" : "x-circle";
+}
+
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+    <a asp-controller="Profile" asp-action="Index" asp-route-id="@Model.ReceiverId" class="shrink-0">
+        @if (!string.IsNullOrEmpty(Model.ReceiverProfilePicture))
+        {
+            <img src="@Model.ReceiverProfilePicture" class="w-12 h-12 rounded-full object-cover" alt="@Model.ReceiverName" />
+        }
+        else
+        {
+            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white font-bold">
+                @(Model.ReceiverName.Length > 0 ? Model.ReceiverName[0].ToString().ToUpper() : "U")
+            </div>
+        }
+    </a>
+
+    <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 flex-wrap">
+            <a asp-controller="Profile" asp-action="Index" asp-route-id="@Model.ReceiverId" class="font-bold text-gray-900 dark:text-gray-100 hover:text-indigo-600">@Model.ReceiverName</a>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full @statusColor">
+                <i data-lucide="@statusIcon" class="w-3 h-3"></i> @Model.StatusLabel
+            </span>
+        </div>
+        <p class="text-sm text-gray-500 dark:text-gray-400">@@@Model.ReceiverUserName</p>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1">
+            <i data-lucide="clock" class="w-3 h-3"></i>
+            Enviada el @Model.SentAt.ToString("dd MMM yyyy")
+            @if (Model.RespondedAt.HasValue)
+            {
+                <span class="mx-1">·</span>
+                <span>respondida el @Model.RespondedAt.Value.ToString("dd MMM yyyy")</span>
+            }
+        </p>
+    </div>
+
+    <div class="shrink-0">
+        <form asp-action="DeleteFromHistory" asp-controller="FriendRequests" asp-route-id="@Model.RequestId" method="post" data-confirm="¿Está seguro que desea eliminar esta solicitud de su historial?" data-confirm-text="Esta acción no se puede deshacer.">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="px-3 py-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors text-sm font-medium flex items-center gap-1.5" title="Eliminar del historial">
+                <i data-lucide="trash-2" class="w-4 h-4"></i> Eliminar
+            </button>
+        </form>
+    </div>
+</div>

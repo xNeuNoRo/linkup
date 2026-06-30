@@ -1,0 +1,77 @@
+@model LinkUpPro.Application.ViewModels.BattleshipViewModels.ShipPlacementViewModel
+@{
+    ViewData["Title"] = "Posicionar barcos";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <div class="flex items-center gap-3 mb-2">
+            <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center">
+                <i data-lucide="anchor" class="w-6 h-6 text-indigo-600 dark:text-indigo-400"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-gray-900 dark:text-gray-100">Posicionar barcos</h1>
+                <p class="text-gray-500 dark:text-gray-400 text-sm">Selecciona un barco para colocarlo en el tablero.</p>
+            </div>
+        </div>
+
+        @if (Model.AllShipsPlaced && !string.IsNullOrEmpty(Model.InfoMessage))
+        {
+            <div class="mt-4 p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-xl flex items-start gap-2">
+                <i data-lucide="info" class="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0"></i>
+                <p class="text-sm text-amber-700 dark:text-amber-300">@Model.InfoMessage</p>
+            </div>
+        }
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Barcos por colocar</h2>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Flota obligatoria: 1 de 5, 1 de 4, 2 de 3 y 1 de 2 posiciones.</p>
+
+        <div class="space-y-3">
+            @if (Model.ShipsToPlace.Any())
+            {
+                @foreach (var ship in Model.ShipsToPlace)
+                {
+                    <form method="get" action="@Url.Action("SelectCell", "Battleship")" class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-100 dark:border-gray-600 flex items-center justify-between hover:border-indigo-300 dark:hover:border-indigo-500 transition-colors">
+                        <input type="hidden" name="gameId" value="@Model.GameId" />
+                        <input type="hidden" name="shipSize" value="@ship.Size" />
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center">
+                                <i data-lucide="anchor" class="w-6 h-6 text-indigo-600 dark:text-indigo-400"></i>
+                            </div>
+                            <div>
+                                <p class="font-bold text-gray-900 dark:text-gray-100">@ship.Label</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">@ship.Size posiciones</p>
+                            </div>
+                        </div>
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors text-sm flex items-center gap-1.5">
+                            <i data-lucide="crosshair" class="w-4 h-4"></i> Posicionar
+                        </button>
+                    </form>
+                }
+            }
+            else
+            {
+                <div class="p-6 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-xl flex items-start gap-3">
+                    <i data-lucide="check-circle" class="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0"></i>
+                    <div>
+                        <p class="font-bold text-green-700 dark:text-green-300">¡Todos tus barcos están posicionados!</p>
+                        <p class="text-sm text-green-600 dark:text-green-400 mt-1">Espera a que el oponente termine o ya puedes revisar tu tablero.</p>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="flex items-center justify-between">
+        <a asp-action="Index" class="inline-flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-medium hover:underline">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Volver al dashboard
+        </a>
+    </div>
+</div>
+
+@section Scripts {
+    <script>lucide.createIcons();</script>
+}

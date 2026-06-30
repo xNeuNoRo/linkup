@@ -1,0 +1,23 @@
+@model List<LinkUpPro.Application.ViewModels.CommentViewModels.CommentViewModel>
+@{
+    var parentId = ViewData["ParentCommentId"] as long? ?? 0;
+    var currentPage = ViewData["CurrentPage"] as int? ?? 1;
+    var hasMore = ViewData["HasMore"] as bool? ?? false;
+}
+
+<div class="replies-container" data-parent-comment-id="@parentId">
+    @foreach (var reply in Model)
+    {
+        @await Html.PartialAsync("/Views/Posts/_CommentThread.cshtml", reply)
+    }
+
+    @if (hasMore)
+    {
+        <a href="#"
+           class="load-more-replies text-[11px] text-indigo-600 dark:text-indigo-400 font-medium pl-2 mt-1 inline-block hover:underline"
+           data-load-replies="@parentId"
+           data-next-page="@(currentPage + 1)">
+            Ver más respuestas
+        </a>
+    }
+</div>

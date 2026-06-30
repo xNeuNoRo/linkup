@@ -1,0 +1,47 @@
+@model LinkUpPro.Application.ViewModels.FriendRequestViewModels.PendingRequestViewModel
+
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+    <a asp-controller="Profile" asp-action="Index" asp-route-id="@Model.SenderId" class="shrink-0">
+        @if (!string.IsNullOrEmpty(Model.SenderProfilePicture))
+        {
+            <img src="@Model.SenderProfilePicture" class="w-12 h-12 rounded-full object-cover" alt="@Model.SenderName" />
+        }
+        else
+        {
+            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white font-bold">
+                @(Model.SenderName.Length > 0 ? Model.SenderName[0].ToString().ToUpper() : "U")
+            </div>
+        }
+    </a>
+
+    <div class="flex-1 min-w-0">
+        <a asp-controller="Profile" asp-action="Index" asp-route-id="@Model.SenderId" class="font-bold text-gray-900 dark:text-gray-100 hover:text-indigo-600">@Model.SenderName</a>
+        <p class="text-sm text-gray-500 dark:text-gray-400">@@@Model.SenderUserName</p>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1">
+            <i data-lucide="clock" class="w-3 h-3"></i>
+            Enviada el @Model.SentAt.ToString("dd MMM yyyy, HH:mm")
+        </p>
+        @if (Model.CommonFriendsCount > 0)
+        {
+            <p class="text-xs text-indigo-600 dark:text-indigo-400 mt-1 flex items-center gap-1">
+                <i data-lucide="users" class="w-3 h-3"></i>
+                @Model.CommonFriendsCount @(Model.CommonFriendsCount == 1 ? "amigo en común" : "amigos en común")
+            </p>
+        }
+    </div>
+
+    <div class="flex items-center gap-2 shrink-0">
+        <form asp-action="Accept" asp-controller="FriendRequests" asp-route-id="@Model.RequestId" method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-xl hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all text-sm shadow-lg shadow-green-200 dark:shadow-green-900/50 flex items-center gap-1.5">
+                <i data-lucide="check" class="w-4 h-4"></i> Aceptar
+            </button>
+        </form>
+        <form asp-action="Reject" asp-controller="FriendRequests" asp-route-id="@Model.RequestId" method="post" data-confirm='¿Está seguro que desea rechazar la solicitud de amistad del usuario @Model.SenderUserName?'>
+            @Html.AntiForgeryToken()
+            <button type="submit" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all text-sm flex items-center gap-1.5">
+                <i data-lucide="x" class="w-4 h-4"></i> Rechazar
+            </button>
+        </form>
+    </div>
+</div>

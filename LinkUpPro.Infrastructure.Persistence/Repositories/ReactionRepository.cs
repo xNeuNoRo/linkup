@@ -89,6 +89,23 @@ public sealed class ReactionRepository : GenericRepository<Reaction, long>, IRea
         );
     }
 
+    public async Task<IReadOnlyDictionary<long, Reaction?>> GetByUserAndPostsAsync(
+        string userId,
+        IEnumerable<long> postIds,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var ids = postIds.Distinct().ToList();
+        if (ids.Count == 0)
+            return new Dictionary<long, Reaction?>();
+
+        var reactions = await _dbSet
+            .Where(r => r.UserId == userId && ids.Contains(r.PostId))
+            .ToListAsync(cancellationToken);
+
+        return ids.ToDictionary(id => id, id => reactions.FirstOrDefault(r => r.PostId == id));
+    }
+
     public async Task<IReadOnlyCollection<Reaction>> GetByUserAsync(
         string userId,
         QueryOptions<Reaction>? options = null,

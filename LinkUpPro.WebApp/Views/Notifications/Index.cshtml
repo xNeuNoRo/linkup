@@ -1,0 +1,85 @@
+@model LinkUpPro.Application.ViewModels.NotificationViewModels.NotificationListViewModel
+@{
+    ViewData["Title"] = "Notificaciones";
+}
+
+<div class="max-w-3xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-black text-gray-900 dark:text-gray-100 flex items-center gap-3">
+                Notificaciones
+                @if (Model.UnreadNotificationsCount > 0)
+                {
+                    <span class="px-2.5 py-1 bg-red-500 text-white text-xs font-bold rounded-full">@Model.UnreadNotificationsCount</span>
+                }
+            </h1>
+            <p class="text-gray-500 dark:text-gray-400 text-sm">Revisa las interacciones en tus publicaciones y comentarios.</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <a asp-action="Index" asp-route-unreadOnly="true" class="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors @(Model.UnreadOnly == true ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300" : "")">
+                <i data-lucide="circle-dot" class="w-4 h-4 inline-block -mt-0.5"></i> No leídas
+            </a>
+            <a asp-action="Index" class="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors @(Model.UnreadOnly == null ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300" : "")">
+                <i data-lucide="list" class="w-4 h-4 inline-block -mt-0.5"></i> Todas
+            </a>
+            @if (Model.UnreadNotificationsCount > 0)
+            {
+                <form asp-action="MarkAllAsRead" method="post" class="inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors flex items-center gap-1">
+                        <i data-lucide="check-check" class="w-4 h-4"></i> Marcar todas leídas
+                    </button>
+                </form>
+            }
+        </div>
+    </div>
+
+    <!-- Listado -->
+    @if (Model.Notifications.Items.Any())
+    {
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
+            @foreach (var n in Model.Notifications.Items)
+            {
+                @await Html.PartialAsync("/Views/Notifications/_NotificationItem.cshtml", n)
+            }
+        </div>
+
+        <!-- Paginación -->
+        @if (Model.Notifications.TotalPages > 1)
+        {
+            <nav class="flex items-center justify-center gap-1" aria-label="Paginación">
+                @if (Model.Notifications.HasPreviousPage)
+                {
+                    <a asp-action="Index" asp-route-page="@(Model.Notifications.Page - 1)" asp-route-unreadOnly="@Model.UnreadOnly" class="px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                    </a>
+                }
+                <span class="px-4 py-1.5 bg-indigo-600 text-white text-sm font-bold rounded-lg">
+                    Página @Model.Notifications.Page de @Model.Notifications.TotalPages
+                </span>
+                @if (Model.Notifications.HasNextPage)
+                {
+                    <a asp-action="Index" asp-route-page="@(Model.Notifications.Page + 1)" asp-route-unreadOnly="@Model.UnreadOnly" class="px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                    </a>
+                }
+            </nav>
+        }
+    }
+    else
+    {
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
+            <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="bell-off" class="w-8 h-8 text-gray-400"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">@(Model.UnreadOnly == true ? "Sin notificaciones no leídas" : "No tienes notificaciones")</h3>
+            <p class="text-gray-500 dark:text-gray-400 text-sm">@(Model.UnreadOnly == true ? "Todas tus notificaciones están al día." : "Cuando alguien interactúe con tus publicaciones, aparecerá aquí.")</p>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>lucide.createIcons();</script>
+}

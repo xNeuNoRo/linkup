@@ -1,0 +1,15 @@
+@model (string Label, int? Value, string CssClass)
+@{
+    var show = Model.Value.HasValue && Model.Value.Value > 0;
+    var cssClass = Model.CssClass ?? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+}
+@if (show)
+{
+    <span class="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-[10px] font-black rounded-full @cssClass">
+        @Model.Value
+    </span>
+}
+else
+{
+    <span class="hidden"></span>
+}

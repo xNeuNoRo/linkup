@@ -35,7 +35,8 @@ public class ProfileServiceTests : InMemoryTestBase
             CreateUserManager().Object,
             CreateSignInManager().Object,
             _fileServiceMock.Object,
-            _unitOfWorkMock.Object
+            _unitOfWorkMock.Object,
+            new Mock<IHttpContextAccessor>().Object
         );
     }
 

@@ -1,8 +1,68 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@model LinkUpPro.Application.ViewModels.PostViewModels.HomeViewModel
+@{
+    ViewData["Title"] = "Home";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="max-w-3xl mx-auto space-y-6">
+    <!-- Form Crear Publicación -->
+    <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+        @await Html.PartialAsync("_CreatePostForm", Model.CreatePost)
+    </section>
+
+    <!-- Filtros -->
+    @{
+        ViewBag.FilterAction = "Index";
+        ViewBag.FilterController = "Home";
+        ViewBag.ShowFriendFilter = false;
+    }
+    @await Html.PartialAsync("/Views/Shared/Components/_PostFiltersPartial.cshtml", Model.Filters)
+
+    <!-- Lista de Publicaciones -->
+    <div id="posts-container" class="space-y-6">
+        @if (Model.Posts.Items.Any())
+        {
+            @foreach (var post in Model.Posts.Items)
+            {
+                @await Html.PartialAsync("/Views/Posts/_PostCard.cshtml", post)
+            }
+
+            @if (Model.Posts.HasNextPage)
+            {
+                <div id="load-more-sentinel" data-load-url="@Url.Action("LoadMorePosts", "Home")" data-container="#posts-container"></div>
+            }
+        }
+        else
+        {
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+                @await Html.PartialAsync("/Views/Shared/Components/_EmptyState.cshtml", (
+                    Icon: Model.Posts.TotalItems == 0 ? "file-plus" : "search-x",
+                    Title: "No se encontraron publicaciones",
+                    Description: Model.Posts.TotalItems == 0 ? "Todavía no ha realizado ninguna publicación." : "No se encontraron publicaciones que coincidan con los criterios seleccionados.",
+                    Action: (string?)null
+                ))
+            </div>
+        }
+    </div>
+
+    <!-- Hidden skeleton template for infinite scroll -->
+    <div id="post-skeleton-template" class="hidden">
+        @await Html.PartialAsync("/Views/Posts/_PostSkeleton.cshtml")
+    </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var params = new URLSearchParams(window.location.search);
+            var postId = params.get('highlightPostId');
+            if (postId) {
+                var commentsDiv = document.getElementById('comments-' + postId);
+                if (commentsDiv) {
+                    commentsDiv.classList.remove('hidden');
+                    commentsDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        });
+    </script>
+}

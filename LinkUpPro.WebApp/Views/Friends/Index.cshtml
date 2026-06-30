@@ -1,0 +1,172 @@
+@model LinkUpPro.Application.ViewModels.FriendshipViewModels.FriendDetailViewModel
+@{
+    ViewData["Title"] = "Amigos";
+    var currentUserId = ViewBag.CurrentUserId as string;
+    var allFriends = ViewBag.AllFriends as List<dynamic> ?? [];
+}
+
+<div class="space-y-6">
+    <!-- Resumen -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-gradient-to-br from-indigo-500 to-violet-600 rounded-2xl shadow-lg p-6 text-white">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                    <i data-lucide="users" class="w-7 h-7 text-white"></i>
+                </div>
+                <div>
+                    <p class="text-4xl font-black">@Model.Summary.TotalActiveFriends</p>
+                    <p class="text-white/80 text-sm font-medium">Total de amigos</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl shadow-lg p-6 text-white">
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                    <i data-lucide="file-text" class="w-7 h-7 text-white"></i>
+                </div>
+                <div>
+                    <p class="text-4xl font-black">@Model.Summary.AvailablePostsCount</p>
+                    <p class="text-white/80 text-sm font-medium">Publicaciones disponibles</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Publicaciones de Amigos -->
+    <section class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+            <i data-lucide="file-text" class="w-5 h-5 text-indigo-600"></i>
+            Publicaciones de amigos
+        </h2>
+
+        <!-- Filtros -->
+        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 mb-4">
+            <form method="get" class="space-y-3" id="friend-posts-filter">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
+                    <div class="relative lg:col-span-2">
+                        <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"></i>
+                        <input name="filter.SearchText" type="search" value="@Model.Filters.SearchText" placeholder="Buscar publicaciones..." class="w-full pl-10 pr-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    </div>
+                    <div>
+                        <select name="filter.FriendId" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">Todos los amigos</option>
+                            @if (allFriends != null)
+                            {
+                                @foreach (var f in allFriends)
+                                {
+                                    <option value="@f.FriendId" selected="@(Model.Filters.FriendId == f.FriendId)">@f.Display</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <select name="filter.ContentType" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">Tipo</option>
+                            <option value="1" selected="@(Model.Filters.ContentType == 1)">Imagen</option>
+                            <option value="2" selected="@(Model.Filters.ContentType == 2)">Video</option>
+                        </select>
+                    </div>
+                    <div>
+                        <select name="filter.EditedOnly" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">Edición</option>
+                            <option value="true" selected="@(Model.Filters.EditedOnly == true)">Editadas</option>
+                            <option value="false" selected="@(Model.Filters.EditedOnly == false)">No editadas</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-1">
+                        <button type="submit" class="px-3 py-2 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-colors whitespace-nowrap">
+                            <i data-lucide="search" class="w-4 h-4"></i>
+                        </button>
+                        <a asp-action="Index" class="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Lista de Publicaciones -->
+        <div id="friend-posts-container" class="space-y-4">
+            @if (Model.Posts.Items.Any())
+            {
+                @foreach (var post in Model.Posts.Items)
+                {
+                    @await Html.PartialAsync("/Views/Posts/_PostCard.cshtml", post)
+                }
+
+                @if (Model.Posts.HasNextPage)
+                {
+                    <div id="load-more-sentinel" data-load-url="@Url.Action("LoadMoreFriendPosts", "Friends")" data-container="#friend-posts-container"></div>
+                }
+            }
+            else
+            {
+                <div class="bg-white dark:bg-gray-800 rounded-xl">
+                    @await Html.PartialAsync("/Views/Shared/Components/_EmptyState.cshtml", (
+                        Icon: "message-square",
+                        Title: "No se encontraron publicaciones",
+                        Description: Model.Posts.TotalItems == 0 ? "Tus amigos todavía no han realizado publicaciones disponibles para ti." : "No se encontraron publicaciones que coincidan con los criterios seleccionados.",
+                        Action: (string?)null
+                    ))
+                </div>
+            }
+        </div>
+    </section>
+
+    <!-- Listado de Amigos -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <i data-lucide="user-check" class="w-5 h-5 text-indigo-600"></i>
+                Mis amigos (@Model.Summary.TotalActiveFriends)
+            </h2>
+            <div class="relative w-full sm:w-72">
+                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                <input type="text" id="friend-search" placeholder="Buscar amigos..." class="w-full pl-10 pr-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+        </div>
+
+        <div id="friends-list" class="divide-y divide-gray-100 dark:divide-gray-700">
+            @if (Model.Friends.Any())
+            {
+                @foreach (var friend in Model.Friends)
+                {
+                    @await Html.PartialAsync("/Views/Friends/_FriendCard.cshtml", friend)
+                }
+            }
+            else
+            {
+                <div class="p-12 text-center">
+                    <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i data-lucide="users" class="w-8 h-8 text-gray-400"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">No tienes amigos agregados</h3>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Ve a Solicitudes y envía una nueva solicitud para empezar.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Hidden skeleton template for infinite scroll -->
+<div id="post-skeleton-template" class="hidden">
+    @await Html.PartialAsync("/Views/Posts/_PostSkeleton.cshtml")
+</div>
+
+@section Scripts {
+    <script>
+        // Client-side search filter for friend list
+        var searchInput = document.getElementById('friend-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', window.LinkUpPro.debounce(function () {
+                var q = this.value.toLowerCase();
+                document.querySelectorAll('#friends-list > div').forEach(function (card) {
+                    var name = card.querySelector('.friend-name')?.textContent.toLowerCase() || '';
+                    var user = card.querySelector('.friend-username')?.textContent.toLowerCase() || '';
+                    card.style.display = (name.includes(q) || user.includes(q)) ? '' : 'none';
+                });
+            }, 200));
+        }
+        lucide.createIcons();
+    </script>
+}

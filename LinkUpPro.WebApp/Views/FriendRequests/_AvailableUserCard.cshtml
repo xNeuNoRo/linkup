@@ -1,0 +1,28 @@
+@model LinkUpPro.Application.ViewModels.FriendRequestViewModels.AvailableUserViewModel
+
+<label class="block px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer transition-colors">
+    <div class="flex items-center gap-3">
+        <input type="radio" name="SelectedUserId" value="@Model.UserId" class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500" />
+        @if (!string.IsNullOrEmpty(Model.ProfilePicturePath))
+        {
+            <img src="@Model.ProfilePicturePath" class="w-10 h-10 rounded-full object-cover" alt="@Model.Name" />
+        }
+        else
+        {
+            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white font-bold text-sm">
+                @(Model.Name.Length > 0 ? Model.Name[0].ToString().ToUpper() : "U")
+            </div>
+        }
+        <div class="flex-1 min-w-0">
+            <p class="user-name-text font-bold text-gray-900 dark:text-gray-100 truncate">@Model.Name</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 truncate">@@@Model.UserName</p>
+        </div>
+        @if (Model.CommonFriendsCount > 0)
+        {
+            <div class="hidden sm:flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded-lg shrink-0">
+                <i data-lucide="users" class="w-3 h-3"></i>
+                <span>@Model.CommonFriendsCount en común</span>
+            </div>
+        }
+    </div>
+</label>

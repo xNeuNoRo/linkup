@@ -1,6 +1,5 @@
 using LinkUpPro.Application.DTOs.FriendRequest.Requests;
 using LinkUpPro.Application.DTOs.FriendRequest.Responses;
-using LinkUpPro.Application.DTOs.Profile.Responses;
 using LinkUpPro.Application.Interfaces.Services;
 using LinkUpPro.Domain.Common;
 using LinkUpPro.Domain.Entities.Friendship;
@@ -8,7 +7,6 @@ using LinkUpPro.Domain.Entities.Social;
 using LinkUpPro.Domain.Enums;
 using LinkUpPro.Domain.Interfaces.Persistence;
 using LinkUpPro.Domain.Interfaces.Repositories;
-using Mapster;
 
 namespace LinkUpPro.Application.Services;
 
@@ -127,7 +125,9 @@ public sealed class FriendRequestService : IFriendRequestService
 
         var userDict = await _profileService.GetByIdsAsync(receiverIds);
         var sender = await _profileService.GetByIdAsync(userId);
-        var senderName = sender is null ? string.Empty : $"{sender.FirstName} {sender.LastName}".Trim();
+        var senderName = sender is null
+            ? string.Empty
+            : $"{sender.FirstName} {sender.LastName}".Trim();
 
         var items = new List<SentRequestDto>(requests.Count);
         foreach (var req in requests)
@@ -144,6 +144,7 @@ public sealed class FriendRequestService : IFriendRequestService
                         : $"{receiver.FirstName} {receiver.LastName}".Trim(),
                     receiver?.UserName ?? string.Empty,
                     receiver?.ProfilePicturePath,
+                    commonCount,
                     req.SentAt,
                     req.Status,
                     req.RespondedAt,

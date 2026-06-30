@@ -34,6 +34,12 @@ public interface IReactionRepository : IGenericRepository<Reaction, long>
         CancellationToken cancellationToken = default
     );
 
+    Task<IReadOnlyDictionary<long, Reaction?>> GetByUserAndPostsAsync(
+        string userId,
+        IEnumerable<long> postIds,
+        CancellationToken cancellationToken = default
+    );
+
     Task<IReadOnlyCollection<Reaction>> GetByUserAsync(
         string userId,
         QueryOptions<Reaction>? options = null,

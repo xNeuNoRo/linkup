@@ -51,4 +51,24 @@ public class ShipPlacementViewModel
     /// Matriz 12x12 de celdas para renderizar el tablero del usuario (vista previa).
     /// </summary>
     public CellViewModel[,] Board { get; set; } = new CellViewModel[DomainConstants.BoardSize, DomainConstants.BoardSize];
+
+    /// <summary>
+    /// Coordenada X inicial del barco seleccionado (fase de selección de dirección).
+    /// </summary>
+    public int? StartX { get; set; }
+
+    /// <summary>
+    /// Coordenada Y inicial del barco seleccionado (fase de selección de dirección).
+    /// </summary>
+    public int? StartY { get; set; }
+
+    /// <summary>
+    /// Etiqueta legible de la celda inicial (ej. "A5").
+    /// </summary>
+    public string? StartCellLabel { get; set; }
+
+    /// <summary>
+    /// Nombre legible del barco seleccionado (ej. "Barco de 5").
+    /// </summary>
+    public string? SelectedShipDisplayName { get; set; }
 }
