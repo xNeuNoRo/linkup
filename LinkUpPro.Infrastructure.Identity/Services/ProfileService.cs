@@ -177,33 +177,33 @@ public sealed class ProfileService : IProfileService
 
         if (string.IsNullOrWhiteSpace(request.CurrentPassword))
             return Result<EditProfileResponseDto>.Failure(
-                new DomainError("Password.CurrentRequired", "La contrasena actual es requerida.")
+                new DomainError("Password.CurrentRequired", "La contraseña actual es requerida.")
             );
 
         if (string.IsNullOrWhiteSpace(request.NewPassword))
             return Result<EditProfileResponseDto>.Failure(
-                new DomainError("Password.NewRequired", "La nueva contrasena es requerida.")
+                new DomainError("Password.NewRequired", "La nueva contraseña es requerida.")
             );
 
         if (string.IsNullOrWhiteSpace(request.ConfirmPassword))
             return Result<EditProfileResponseDto>.Failure(
-                new DomainError("Password.ConfirmRequired", "La confirmacion de contrasena es requerida.")
+                new DomainError("Password.ConfirmRequired", "La confirmacion de contraseña es requerida.")
             );
 
         if (request.NewPassword != request.ConfirmPassword)
             return Result<EditProfileResponseDto>.Failure(
-                new DomainError("Password.Mismatch", "La nueva contrasena y su confirmacion no coinciden.")
+                new DomainError("Password.Mismatch", "La nueva contraseña y su confirmacion no coinciden.")
             );
 
         var passwordValid = await _userManager.CheckPasswordAsync(user, request.CurrentPassword);
         if (!passwordValid)
             return Result<EditProfileResponseDto>.Failure(
-                new DomainError("Password.Invalid", "La contrasena actual es incorrecta.")
+                new DomainError("Password.Invalid", "La contraseña actual es incorrecta.")
             );
 
         if (request.CurrentPassword == request.NewPassword)
             return Result<EditProfileResponseDto>.Failure(
-                new DomainError("Password.SameAsCurrent", "La nueva contrasena no puede ser igual a la actual.")
+                new DomainError("Password.SameAsCurrent", "La nueva contraseña no puede ser igual a la actual.")
             );
 
         var strength = PasswordStrength.Calculate(request.NewPassword);
@@ -224,7 +224,7 @@ public sealed class ProfileService : IProfileService
             return Result<EditProfileResponseDto>.Failure(
                 new DomainError(
                     "Password.Weak",
-                    $"La nueva contrasena debe contener: {string.Join(", ", missing)}."
+                    $"La nueva contraseña debe contener: {string.Join(", ", missing)}."
                 )
             );
         }
@@ -240,7 +240,7 @@ public sealed class ProfileService : IProfileService
             return Result<EditProfileResponseDto>.Failure(
                 new DomainError(
                     "Password.ChangeFailed",
-                    error?.Description ?? "Error al cambiar la contrasena."
+                    error?.Description ?? "Error al cambiar la contraseña."
                 )
             );
         }

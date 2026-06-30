@@ -39,6 +39,11 @@ public class PostFilterViewModel
     [Display(Name = "Amigo")]
     public string? FriendId { get; set; }
 
+    /// <summary>
+    /// Preset rápido: "today", "week", "month". Se calcula en el controlador.
+    /// </summary>
+    public string? Preset { get; set; }
+
     [Range(1, int.MaxValue, ErrorMessage = "El número de página debe ser mayor que cero.")]
     public int Page { get; set; } = 1;
 

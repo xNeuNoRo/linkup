@@ -20,9 +20,15 @@
         <textarea name="Content" rows="2" maxlength="500" placeholder="@(isReply ? "Escribe una respuesta..." : "Escribe un comentario...")" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none transition-all"></textarea>
         <div class="flex items-center justify-between">
             <span class="text-[10px] text-gray-400 char-count">0/500</span>
-            <button type="submit" class="px-4 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors">
-                @(isReply ? "Responder" : "Comentar")
-            </button>
+            <div class="flex items-center gap-1.5">
+                @if (isReply)
+                {
+                    <button type="button" class="px-4 py-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs font-bold rounded-lg transition-colors" data-close-reply-form aria-label="Cancelar">Cancelar</button>
+                }
+                <button type="submit" class="px-4 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors">
+                    @(isReply ? "Responder" : "Comentar")
+                </button>
+            </div>
         </div>
     </div>
 </form>

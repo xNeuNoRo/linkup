@@ -271,7 +271,7 @@ public class AccountService : IAccountService
             var resetUri = await GeneratePasswordResetUri(user, request.Origin);
             await _emailService.SendEmailAsync(
                 user.Email!,
-                "Restablece tu contrasena en LinkUp Pro",
+                "Restablece tu contraseña en LinkUp Pro",
                 "PasswordReset",
                 new ResetPasswordEmailModel(user.UserName!, resetUri)
             );
@@ -294,7 +294,7 @@ public class AccountService : IAccountService
         if (user is null)
             throw new DomainValidationException(
                 "Token",
-                "El enlace para restablecer la contrasena no es valido o ya fue utilizado.",
+                "El enlace para restablecer la contraseña no es valido o ya fue utilizado.",
                 "Auth.InvalidToken"
             );
 
@@ -304,7 +304,7 @@ public class AccountService : IAccountService
         if (!result.Succeeded)
             throw new DomainValidationException(
                 "Token",
-                "El enlace para restablecer la contrasena no es valido o ya fue utilizado.",
+                "El enlace para restablecer la contraseña no es valido o ya fue utilizado.",
                 "Auth.InvalidToken"
             );
 
@@ -332,7 +332,7 @@ public class AccountService : IAccountService
     {
         var token = await _userManager.GeneratePasswordResetTokenAsync(user);
         var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
-        var route = $"{origin}/Account/ResetPassword";
+        var route = $"{origin}/Auth/ResetPassword";
         var uri = QueryHelpers.AddQueryString(route, "userId", user.Id);
         uri = QueryHelpers.AddQueryString(uri, "token", encodedToken);
         return uri;

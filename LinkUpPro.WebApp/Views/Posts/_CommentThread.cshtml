@@ -37,19 +37,25 @@
       </div>
     }
 
-    <footer class="flex items-center gap-2 mt-1 text-[11px] text-gray-500 dark:text-gray-400 pl-1">
+    <footer class="flex items-center gap-1 mt-1 pl-1">
       @if (!Model.IsDeleted)
       {
         @if (Model.CanReply)
         {
-          <button type="button" class="font-medium hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer" data-toggle-reply="@Model.Id" data-reply-to-name="@Model.AuthorName">Responder</button>
+          <button type="button" class="comment-action-btn" data-toggle-reply="@Model.Id" data-reply-to-name="@Model.AuthorName" aria-label="Responder" title="Responder">
+            <i data-lucide="reply" class="w-4 h-4"></i>
+          </button>
         }
         @if (isOwnComment)
         {
-          <button type="button" class="font-medium hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer" data-edit-comment="@Model.Id" data-edit-comment-content="@Model.Content">Editar</button>
-          <form asp-action="DeleteComment" asp-controller="Posts" asp-route-id="@Model.Id" method="post" class="inline" data-confirm="¿Eliminar este comentario?">
+          <button type="button" class="comment-action-btn" data-edit-comment="@Model.Id" data-edit-comment-content="@Model.Content" aria-label="Editar" title="Editar">
+            <i data-lucide="edit-3" class="w-4 h-4"></i>
+          </button>
+          <form asp-action="DeleteComment" asp-controller="Posts" asp-route-id="@Model.Id" method="post" class="inline" data-confirm="¿Eliminar este comentario?" data-confirm-text="Esta acción no se puede deshacer.">
             @Html.AntiForgeryToken()
-            <button type="submit" class="font-medium hover:text-red-600 cursor-pointer">Eliminar</button>
+            <button type="submit" class="comment-action-btn comment-action-btn--danger" aria-label="Eliminar" title="Eliminar">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
           </form>
         }
       }

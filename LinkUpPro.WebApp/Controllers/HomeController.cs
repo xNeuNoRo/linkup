@@ -52,6 +52,9 @@ public class HomeController : BaseController
     {
         var userId = _currentUserService.UserId!;
 
+        // Aplicar preset si viene definido
+        ApplyPreset(filter);
+
         // Mapear el ViewModel al DTO
         var filterRequest = filter.Adapt<PostFilterRequest>();
 
@@ -216,6 +219,7 @@ public class HomeController : BaseController
     public async Task<IActionResult> LoadMorePosts(PostFilterViewModel filter)
     {
         var userId = _currentUserService.UserId!;
+        ApplyPreset(filter);
         var filterRequest = filter.Adapt<PostFilterRequest>();
         var pagedResult = await _postService.GetMyPostsAsync(userId, filterRequest);
         if (pagedResult.Items.Count == 0)
@@ -223,7 +227,7 @@ public class HomeController : BaseController
 
         var postViewModels = await MapToPostListItemViewModelsAsync(pagedResult.Items);
         ViewBag.CurrentUserAvatar = _currentUserService.ProfilePicturePath;
-        return PartialView("_PostList", postViewModels);
+        return PartialView("~/Views/Posts/_PostList.cshtml", postViewModels);
     }
 
     // ====================== FILTER POSTS (AJAX) ======================
@@ -232,12 +236,13 @@ public class HomeController : BaseController
     public async Task<IActionResult> FilterPosts(PostFilterViewModel filter)
     {
         var userId = _currentUserService.UserId!;
+        ApplyPreset(filter);
         var filterRequest = filter.Adapt<PostFilterRequest>();
         var pagedResult = await _postService.GetMyPostsAsync(userId, filterRequest);
 
         var postViewModels = await MapToPostListItemViewModelsAsync(pagedResult.Items);
         ViewBag.CurrentUserAvatar = _currentUserService.ProfilePicturePath;
-        return PartialView("_PostList", postViewModels);
+        return PartialView("~/Views/Posts/_PostList.cshtml", postViewModels);
     }
 
     // ====================== PRIVATE MAPPER ======================
@@ -327,5 +332,27 @@ public class HomeController : BaseController
             CanReply = canReply && !c.IsDeleted
         };
         return vm;
+    }
+
+    private static void ApplyPreset(PostFilterViewModel filter)
+    {
+        if (string.IsNullOrWhiteSpace(filter.Preset)) return;
+
+        var now = DateTime.UtcNow;
+        filter.FromDate = filter.Preset switch
+        {
+            "today" => now.Date,
+            "week" => now.Date.AddDays(-(int)now.DayOfWeek),
+            "month" => new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc),
+            _ => filter.FromDate
+        };
+        filter.ToDate = filter.Preset switch
+        {
+            "today" => now.Date.AddDays(1).AddTicks(-1),
+            "week" => now.Date.AddDays(7 - (int)now.DayOfWeek).AddTicks(-1),
+            "month" => now.Date.AddMonths(1).AddDays(-(now.Day)).AddTicks(-1),
+            _ => filter.ToDate
+        };
+        filter.Preset = null; // ya se aplicó
     }
 }

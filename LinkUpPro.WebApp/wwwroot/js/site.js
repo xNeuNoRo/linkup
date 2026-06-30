@@ -625,17 +625,22 @@
 
     // SweetAlert confirm on delete forms
     function initConfirmForms() {
-        document.querySelectorAll('form[data-confirm]').forEach(form => {
-            if (form.dataset.bound) return;
-            form.dataset.bound = '1';
-            form.addEventListener('submit', function (e) {
-                e.preventDefault();
-                const title = form.dataset.confirm || '¿Está seguro?';
-                const text = form.dataset.confirmText || 'Esta acción no se puede deshacer.';
-                confirmAction(title, text).then(ok => { if (ok) form.submit(); });
-            });
-        });
+        // Handled via global delegation below
     }
+
+    // Delegate: confirm forms (works for dynamically added elements)
+    document.addEventListener('submit', function (e) {
+        var form = e.target.closest('form[data-confirm]');
+        if (!form || form.dataset.confirmBound) return;
+        form.dataset.confirmBound = '1';
+        e.preventDefault();
+        const title = form.dataset.confirm || '¿Está seguro?';
+        const text = form.dataset.confirmText || 'Esta acción no se puede deshacer.';
+        confirmAction(title, text).then(function (ok) {
+            delete form.dataset.confirmBound;
+            if (ok) form.submit();
+        });
+    });
 
     function getRequestVerificationToken() {
         var tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
@@ -671,21 +676,21 @@
         article.querySelector('.dislike-count').textContent = prevDislikeCount;
         [likeBtn, dislikeBtn].forEach(function (r) {
             if (!r) return;
-            r.classList.remove('bg-green-50', 'dark:bg-green-900/30', 'text-green-700', 'dark:text-green-400', 'bg-red-50', 'dark:bg-red-900/30', 'text-red-700', 'dark:text-red-400');
+            r.classList.remove('bg-rose-50', 'dark:bg-rose-900/30', 'text-rose-600', 'dark:text-rose-400', 'bg-indigo-50', 'dark:bg-indigo-900/30', 'text-indigo-600', 'dark:text-indigo-400');
             r.classList.add('text-gray-500', 'dark:text-gray-400');
             var icon = r.querySelector('[data-lucide]');
             if (icon) icon.classList.remove('fill-current');
             r.setAttribute('aria-pressed', 'false');
         });
         if (prevLikeActive && likeBtn) {
-            likeBtn.classList.add('bg-green-50', 'dark:bg-green-900/30', 'text-green-700', 'dark:text-green-400');
+            likeBtn.classList.add('bg-rose-50', 'dark:bg-rose-900/30', 'text-rose-600', 'dark:text-rose-400');
             likeBtn.classList.remove('text-gray-500', 'dark:text-gray-400');
             var icon = likeBtn.querySelector('[data-lucide]');
             if (icon) icon.classList.add('fill-current');
             likeBtn.setAttribute('aria-pressed', 'true');
         }
         if (prevDislikeActive && dislikeBtn) {
-            dislikeBtn.classList.add('bg-red-50', 'dark:bg-red-900/30', 'text-red-700', 'dark:text-red-400');
+            dislikeBtn.classList.add('bg-indigo-50', 'dark:bg-indigo-900/30', 'text-indigo-600', 'dark:text-indigo-400');
             dislikeBtn.classList.remove('text-gray-500', 'dark:text-gray-400');
             var icon = dislikeBtn.querySelector('[data-lucide]');
             if (icon) icon.classList.add('fill-current');
@@ -705,23 +710,27 @@
                 btn.dataset.pending = '1';
 
                 var postId = btn.dataset.postId;
-                var reaction = parseInt(btn.dataset.reaction, 10);
+                var btnType = parseInt(btn.dataset.reaction, 10);
+                if (btnType === 0) return;
                 var article = document.querySelector('article[data-post-id="' + postId + '"]');
                 if (!article) { btn.dataset.pending = '0'; return; }
 
                 // Save previous state for rollback
                 var likeBtn = article.querySelector('.reaction-btn[data-reaction="1"]');
                 var dislikeBtn = article.querySelector('.reaction-btn[data-reaction="2"]');
-                var prevLikeActive = likeBtn ? likeBtn.classList.contains('bg-green-50') : false;
-                var prevDislikeActive = dislikeBtn ? dislikeBtn.classList.contains('bg-red-50') : false;
+                var prevLikeActive = likeBtn ? likeBtn.classList.contains('bg-rose-50') : false;
+                var prevDislikeActive = dislikeBtn ? dislikeBtn.classList.contains('bg-indigo-50') : false;
                 var prevLikeCount = parseInt(article.querySelector('.like-count')?.textContent || '0');
                 var prevDislikeCount = parseInt(article.querySelector('.dislike-count')?.textContent || '0');
 
-                // OPTIMISTIC UI: update immediately
+                // Toggle: if clicking the active reaction, remove it (reactionType=0)
+                var isActive = (btnType === 1 && prevLikeActive) || (btnType === 2 && prevDislikeActive);
+                var reaction = isActive ? 0 : btnType;
+
+                // OPTIMISTIC UI: calculate updated counts
                 var updatedLikeCount = prevLikeCount;
                 var updatedDislikeCount = prevDislikeCount;
 
-                // Calculate optimistic counts
                 if (reaction === 1) {
                     if (!prevLikeActive) { updatedLikeCount++; }
                     if (prevDislikeActive) { updatedDislikeCount--; }
@@ -733,30 +742,51 @@
                     if (prevDislikeActive) { updatedDislikeCount--; }
                 }
 
-                // Apply optimistic UI
+                // Reset both buttons to inactive state
                 [likeBtn, dislikeBtn].forEach(function (r) {
                     if (!r) return;
-                    r.classList.remove('bg-green-50', 'dark:bg-green-900/30', 'text-green-700', 'dark:text-green-400', 'bg-red-50', 'dark:bg-red-900/30', 'text-red-700', 'dark:text-red-400');
+                    r.classList.remove('bg-rose-50', 'dark:bg-rose-900/30', 'text-rose-600', 'dark:text-rose-400', 'bg-indigo-50', 'dark:bg-indigo-900/30', 'text-indigo-600', 'dark:text-indigo-400');
                     r.classList.add('text-gray-500', 'dark:text-gray-400');
                     var icon = r.querySelector('[data-lucide]');
                     if (icon) icon.classList.remove('fill-current');
                     r.setAttribute('aria-pressed', 'false');
                 });
-                if (likeBtn) article.querySelector('.like-count').textContent = updatedLikeCount;
-                if (dislikeBtn) article.querySelector('.dislike-count').textContent = updatedDislikeCount;
 
-                if (reaction === 1 && likeBtn) {
-                    likeBtn.classList.add('bg-green-50', 'dark:bg-green-900/30', 'text-green-700', 'dark:text-green-400');
-                    likeBtn.classList.remove('text-gray-500', 'dark:text-gray-400');
-                    var icon = likeBtn.querySelector('[data-lucide]');
-                    if (icon) icon.classList.add('fill-current');
-                    likeBtn.setAttribute('aria-pressed', 'true');
-                } else if (reaction === 2 && dislikeBtn) {
-                    dislikeBtn.classList.add('bg-red-50', 'dark:bg-red-900/30', 'text-red-700', 'dark:text-red-400');
-                    dislikeBtn.classList.remove('text-gray-500', 'dark:text-gray-400');
-                    var icon = dislikeBtn.querySelector('[data-lucide]');
-                    if (icon) icon.classList.add('fill-current');
-                    dislikeBtn.setAttribute('aria-pressed', 'true');
+                // Apply active state to the clicked reaction
+                if (!isActive) {
+                    if (reaction === 1 && likeBtn) {
+                        likeBtn.classList.add('bg-rose-50', 'dark:bg-rose-900/30', 'text-rose-600', 'dark:text-rose-400');
+                        likeBtn.classList.remove('text-gray-500', 'dark:text-gray-400');
+                        var icon = likeBtn.querySelector('[data-lucide]');
+                        if (icon) icon.classList.add('fill-current');
+                        likeBtn.setAttribute('aria-pressed', 'true');
+                        // Bounce animation
+                        likeBtn.classList.add('bounce');
+                        setTimeout(function () { likeBtn.classList.remove('bounce'); }, 350);
+                    } else if (reaction === 2 && dislikeBtn) {
+                        dislikeBtn.classList.add('bg-indigo-50', 'dark:bg-indigo-900/30', 'text-indigo-600', 'dark:text-indigo-400');
+                        dislikeBtn.classList.remove('text-gray-500', 'dark:text-gray-400');
+                        var icon = dislikeBtn.querySelector('[data-lucide]');
+                        if (icon) icon.classList.add('fill-current');
+                        dislikeBtn.setAttribute('aria-pressed', 'true');
+                        // Bounce animation
+                        dislikeBtn.classList.add('bounce');
+                        setTimeout(function () { dislikeBtn.classList.remove('bounce'); }, 350);
+                    }
+                }
+
+                // Animate counters
+                var likeCountEl = article.querySelector('.like-count');
+                var dislikeCountEl = article.querySelector('.dislike-count');
+                if (likeCountEl) {
+                    likeCountEl.textContent = updatedLikeCount;
+                    likeCountEl.classList.add('count-bounce');
+                    setTimeout(function () { likeCountEl.classList.remove('count-bounce'); }, 300);
+                }
+                if (dislikeCountEl) {
+                    dislikeCountEl.textContent = updatedDislikeCount;
+                    dislikeCountEl.classList.add('count-bounce');
+                    setTimeout(function () { dislikeCountEl.classList.remove('count-bounce'); }, 300);
                 }
 
                 if (window.lucide) window.lucide.createIcons();
@@ -787,6 +817,79 @@
                         btn.dataset.pending = '0';
                     });
             });
+        });
+    }
+
+    function initPostFilters() {
+        var toggle = document.getElementById('toggle-advanced-filters');
+        var panel = document.getElementById('advanced-filters');
+        if (!toggle || !panel) return;
+
+        // Check URL params: open panel if advanced filters (not preset) are active
+        var params = new URLSearchParams(window.location.search);
+        var hasPreset = params.has('preset');
+        var hasAdvanced = !hasPreset && (
+            params.has('FromDate') || params.has('ToDate') || params.has('FriendId')
+            || (params.get('ContentType') && params.get('ContentType') !== '')
+        );
+        if (hasAdvanced) {
+            panel.classList.remove('closed');
+            toggle.setAttribute('aria-expanded', 'true');
+            toggle.classList.add('text-indigo-600', 'dark:text-indigo-400');
+        }
+
+        // Toggle advanced filters
+        toggle.addEventListener('click', function () {
+            var isClosed = panel.classList.toggle('closed');
+            toggle.setAttribute('aria-expanded', !isClosed);
+            toggle.classList.toggle('text-indigo-600', !isClosed);
+            toggle.classList.toggle('dark:text-indigo-400', !isClosed);
+            if (window.lucide) window.lucide.createIcons();
+        });
+
+        // Delegate: preset/quick filter buttons (AJAX)
+        document.querySelector('#filter-form').addEventListener('click', async function (e) {
+            var presetBtn = e.target.closest('[data-preset]');
+            var contentTypeBtn = e.target.closest('[data-content-type]');
+            if (!presetBtn && !contentTypeBtn) return;
+
+            var form = document.getElementById('filter-form');
+            var actionUrl = form.dataset.ajaxFilter;
+            if (!actionUrl) return;
+
+            var params = new URLSearchParams();
+            if (presetBtn) params.set('Preset', presetBtn.dataset.preset);
+            if (contentTypeBtn) params.set('ContentType', contentTypeBtn.dataset.contentType);
+
+            var container = document.getElementById('posts-container');
+            if (!container) return;
+
+            // Show skeleton
+            container.innerHTML = '<div class="flex justify-center py-12"><div class="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div></div>';
+
+            try {
+                var resp = await fetch(actionUrl + '?' + params.toString(), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (resp.ok) {
+                    var html = await resp.text();
+                    if (html) {
+                        container.innerHTML = html;
+                        // Update URL
+                        var url = new URL(window.location);
+                        // Remove existing filter params and set new ones
+                        ['FromDate', 'ToDate', 'ContentType', 'EditedOnly', 'SearchText', 'preset', 'FriendId'].forEach(function (k) { url.searchParams.delete(k); });
+                        if (presetBtn) url.searchParams.set('preset', presetBtn.dataset.preset);
+                        if (contentTypeBtn) url.searchParams.set('ContentType', contentTypeBtn.dataset.contentType);
+                        window.history.pushState({}, '', url);
+                        // Re-init components
+                        initReactionButtons();
+                        initComments();
+                        initConfirmForms();
+                        if (window.lucide) window.lucide.createIcons();
+                    }
+                }
+            } catch (e) { console.error('Error applying filter', e); }
         });
     }
 
@@ -916,9 +1019,15 @@
         // Delegate: reply form toggle (works for dynamically added elements)
         document.addEventListener('click', async function (e) {
             var btn = e.target.closest('[data-toggle-reply]');
-            if (!btn || btn.dataset.bound) return;
-            btn.dataset.bound = '1';
+            if (!btn) return;
             e.preventDefault();
+
+            // Close all other open reply forms before opening this one
+            document.querySelectorAll('.reply-form:not(.hidden)').forEach(function (f) {
+                if (f.id !== 'reply-form-' + btn.dataset.toggleReply) {
+                    f.classList.add('hidden');
+                }
+            });
 
             var form = document.getElementById('reply-form-' + btn.dataset.toggleReply);
             if (!form) return;
@@ -934,6 +1043,7 @@
                         if (resp.ok) {
                             form.insertAdjacentHTML('beforeend', await resp.text());
                             form.dataset.formLoaded = 'true';
+                            initComments();
                         }
                     } catch (e) { console.error('Error loading reply form', e); }
                 }
@@ -946,8 +1056,19 @@
                     ctx.textContent = 'Respondiendo a ' + (btn.dataset.replyToName || '');
                     ctx.classList.remove('hidden');
                 }
+                // Focus the textarea
+                var ta = form.querySelector('textarea');
+                if (ta) setTimeout(function () { ta.focus(); }, 100);
             }
             if (window.lucide) window.lucide.createIcons();
+        });
+
+        // Delegate: close reply form button
+        document.addEventListener('click', function (e) {
+            var closeBtn = e.target.closest('[data-close-reply-form]');
+            if (!closeBtn) return;
+            var form = closeBtn.closest('.reply-form');
+            if (form) form.classList.add('hidden');
         });
 
         // Delegate: load more replies (for static + dynamically added links)
@@ -976,62 +1097,62 @@
             } catch (err) { console.error('Error loading replies', err); }
         });
 
-        document.querySelectorAll('[data-edit-comment]').forEach(function (btn) {
-            if (btn.dataset.bound) return;
-            btn.dataset.bound = '1';
-            btn.addEventListener('click', function () {
-                var commentThread = btn.closest('.comment-thread');
-                if (!commentThread) return;
-                var contentEl = commentThread.querySelector('.comment-content');
-                var editForm = commentThread.querySelector('.edit-comment-form');
+        // Delegate: edit comment (works for dynamically added elements)
+        document.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-edit-comment]');
+            if (!btn) return;
 
-                if (editForm) {
-                    editForm.classList.toggle('hidden');
-                    if (!editForm.classList.contains('hidden')) {
-                        var editTextarea = editForm.querySelector('textarea');
-                        if (editTextarea) {
-                            editTextarea.value = btn.dataset.editCommentContent || '';
-                            editTextarea.focus();
-                        }
+            var commentThread = btn.closest('.comment-thread');
+            if (!commentThread) return;
+            var contentEl = commentThread.querySelector('.comment-content');
+            var editForm = commentThread.querySelector('.edit-comment-form');
+
+            if (editForm) {
+                editForm.classList.toggle('hidden');
+                if (!editForm.classList.contains('hidden')) {
+                    var editTextarea = editForm.querySelector('textarea');
+                    if (editTextarea) {
+                        editTextarea.value = btn.dataset.editCommentContent || '';
+                        editTextarea.focus();
                     }
-                    if (contentEl) contentEl.classList.toggle('hidden');
-                } else {
-                    var originalContent = btn.dataset.editCommentContent || '';
-                    var div = document.createElement('div');
-                    div.className = 'edit-comment-form mt-1 flex flex-col gap-1';
-                    div.innerHTML = '<textarea class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" maxlength="500">' + window.LinkUpPro.escapeHtml(originalContent) + '</textarea>' +
-                        '<div class="flex items-center gap-2">' +
-                        '<button type="button" class="px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 save-edit">Guardar</button>' +
-                        '<button type="button" class="px-3 py-1.5 bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-500 cancel-edit">Cancelar</button>' +
-                        '<span class="text-[10px] text-gray-400 char-count">' + originalContent.length + '/500</span>' +
-                        '</div>';
-                    if (contentEl) contentEl.parentNode.insertBefore(div, contentEl.nextSibling);
-                    if (contentEl) contentEl.classList.add('hidden');
+                }
+                if (contentEl) contentEl.classList.toggle('hidden');
+            } else {
+                var originalContent = btn.dataset.editCommentContent || '';
+                var div = document.createElement('div');
+                div.className = 'edit-comment-form mt-1 flex flex-col gap-1';
+                div.innerHTML = '<textarea class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" maxlength="500">' + window.LinkUpPro.escapeHtml(originalContent) + '</textarea>' +
+                    '<div class="flex items-center gap-2">' +
+                    '<button type="button" class="px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 save-edit">Guardar</button>' +
+                    '<button type="button" class="px-3 py-1.5 bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-500 cancel-edit">Cancelar</button>' +
+                    '<span class="text-[10px] text-gray-400 char-count">' + originalContent.length + '/500</span>' +
+                    '</div>';
+                if (contentEl) contentEl.parentNode.insertBefore(div, contentEl.nextSibling);
+                if (contentEl) contentEl.classList.add('hidden');
 
-                    var textarea = div.querySelector('textarea');
-                    var charCount = div.querySelector('.char-count');
-                    if (textarea && charCount) {
-                        textarea.addEventListener('input', function () { charCount.textContent = textarea.value.length + '/500'; });
-                        textarea.focus();
-                    }
+                var textarea = div.querySelector('textarea');
+                var charCount = div.querySelector('.char-count');
+                if (textarea && charCount) {
+                    textarea.addEventListener('input', function () { charCount.textContent = textarea.value.length + '/500'; });
+                    textarea.focus();
+                }
 
-                    div.querySelector('.save-edit').addEventListener('click', function () {
-                        var newContent = textarea.value.trim();
-                        if (!newContent) { Toast.warning('El comentario no puede estar vacío.'); return; }
-                        if (newContent === btn.dataset.editCommentContent) {
-                            div.classList.add('hidden');
-                            if (contentEl) contentEl.classList.remove('hidden');
-                            return;
-                        }
-                        submitDynamicPost('/Posts/EditComment?id=' + encodeURIComponent(btn.dataset.editComment), { content: newContent });
-                    });
-
-                    div.querySelector('.cancel-edit').addEventListener('click', function () {
+                div.querySelector('.save-edit').addEventListener('click', function () {
+                    var newContent = textarea.value.trim();
+                    if (!newContent) { Toast.warning('El comentario no puede estar vacío.'); return; }
+                    if (newContent === btn.dataset.editCommentContent) {
                         div.classList.add('hidden');
                         if (contentEl) contentEl.classList.remove('hidden');
-                    });
-                }
-            });
+                        return;
+                    }
+                    submitDynamicPost('/Posts/EditComment?id=' + encodeURIComponent(btn.dataset.editComment), { content: newContent });
+                });
+
+                div.querySelector('.cancel-edit').addEventListener('click', function () {
+                    div.classList.add('hidden');
+                    if (contentEl) contentEl.classList.remove('hidden');
+                });
+            }
         });
     }
 
@@ -1147,6 +1268,7 @@
         initReactionButtons();
         initComments();
         initPostCards();
+        initPostFilters();
         initInfiniteScroll();
         initBattleshipBoards();
         initCreateGameSelection();

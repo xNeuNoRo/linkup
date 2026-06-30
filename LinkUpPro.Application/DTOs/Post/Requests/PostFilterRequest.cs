@@ -8,5 +8,6 @@ public record PostFilterRequest(
     bool? EditedOnly,
     int Page = 1,
     int PageSize = 20,
-    string? FriendId = null
+    string? FriendId = null,
+    string? Preset = null
 );
