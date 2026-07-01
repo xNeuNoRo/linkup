@@ -8,16 +8,7 @@
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
         <div class="h-32 bg-gradient-to-r from-indigo-500 via-violet-500 to-pink-500"></div>
         <div class="px-6 pb-6 -mt-12 flex flex-col sm:flex-row items-start sm:items-end gap-4">
-            @if (!string.IsNullOrEmpty(Model.ProfilePicturePath))
-            {
-                <img src="@Model.ProfilePicturePath" class="w-24 h-24 rounded-2xl object-cover border-4 border-white dark:border-gray-800 shadow-lg" alt="@Model.FirstName" />
-            }
-            else
-            {
-                <div class="w-24 h-24 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white font-black text-3xl border-4 border-white dark:border-gray-800 shadow-lg">
-                    @(Model.FirstName.Length > 0 ? Model.FirstName[0].ToString().ToUpper() : "U")
-                </div>
-            }
+            @await Html.PartialAsync("/Views/Shared/Components/_Avatar.cshtml", (Model.ProfilePicturePath, Model.FirstName, "xl", "border-4 border-white dark:border-gray-800 shadow-lg rounded-2xl"))
             <div class="flex-1 min-w-0 pt-2">
                 <h1 class="text-2xl font-black text-gray-900 dark:text-gray-100">@Model.FirstName @Model.LastName</h1>
                 <p class="text-gray-500 dark:text-gray-400">@@@Model.UserName</p>

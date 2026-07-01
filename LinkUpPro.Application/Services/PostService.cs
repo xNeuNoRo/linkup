@@ -353,20 +353,10 @@ public sealed class PostService : IPostService
 
         var visiblePosts = posts.Where(p => p.CanBeViewedBy(requesterId, isFriend)).ToList();
 
-        var totalVisible = await _postRepository.CountAsync(p =>
-            p.AuthorId == targetUserId
-            && (contentType == null || p.ContentType == contentType)
-            && (
-                string.IsNullOrWhiteSpace(filter.SearchText)
-                || p.Content.Contains(filter.SearchText)
-            )
-            && (!filter.FromDate.HasValue || p.CreatedAt >= filter.FromDate)
-            && (!filter.ToDate.HasValue || p.CreatedAt <= filter.ToDate)
-            && (filter.EditedOnly != true || p.IsEdited)
-        );
-
+        var isSelf = requesterId == targetUserId;
         var total = await _postRepository.CountAsync(p =>
-            p.AuthorId == targetUserId && p.CanBeViewedBy(requesterId, isFriend)
+            p.AuthorId == targetUserId
+            && (isSelf || (p.Privacy == PrivacyLevel.FriendsOnly && isFriend))
         );
 
         var items = await MapToListItemDtosAsync(visiblePosts);

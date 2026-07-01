@@ -16,16 +16,7 @@ else
         @foreach (var notification in Model)
         {
             <a href="@(notification.ActionUrl ?? Url.Action("Index", "Notifications"))" class="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors @(notification.IsRead ? string.Empty : "bg-indigo-50/40 dark:bg-indigo-900/10")">
-                @if (!string.IsNullOrEmpty(notification.ActorProfilePicture))
-                {
-                    <img src="@notification.ActorProfilePicture" alt="@notification.ActorName" class="w-9 h-9 rounded-full object-cover shrink-0" />
-                }
-                else
-                {
-                    <div class="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 text-white flex items-center justify-center font-black text-xs shrink-0">
-                        @(notification.ActorName.Length > 0 ? notification.ActorName[0].ToString().ToUpper() : "U")
-                    </div>
-                }
+                @await Html.PartialAsync("/Views/Shared/Components/_Avatar.cshtml", (notification.ActorProfilePicture, notification.ActorName, "sm", (string?)null))
 
                 <div class="min-w-0 flex-1">
                     <p class="text-sm text-gray-700 dark:text-gray-200 leading-snug">

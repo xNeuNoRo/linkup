@@ -16,16 +16,7 @@
 
         <!-- Foto actual -->
         <div class="flex items-center gap-4">
-            @if (!string.IsNullOrEmpty(Model.UpdateProfile.CurrentProfilePicturePath))
-            {
-                <img src="@Model.UpdateProfile.CurrentProfilePicturePath" class="w-16 h-16 rounded-2xl object-cover" alt="Foto actual" />
-            }
-            else
-            {
-                <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white font-black text-xl">
-                    @(Model.UpdateProfile.FirstName.Length > 0 ? Model.UpdateProfile.FirstName[0].ToString().ToUpper() : "U")
-                </div>
-            }
+            @await Html.PartialAsync("/Views/Shared/Components/_Avatar.cshtml", (Model.UpdateProfile.CurrentProfilePicturePath, ViewBag.CurrentUserFullName as string ?? "Usuario", "lg", (string?)null))
             <div>
                 <p class="text-xs text-gray-500 dark:text-gray-400">Foto actual</p>
                 <p class="text-sm font-medium text-gray-900 dark:text-gray-100">Cargue una nueva imagen solo si desea reemplazarla.</p>

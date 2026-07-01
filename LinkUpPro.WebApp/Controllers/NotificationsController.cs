@@ -57,12 +57,10 @@ public class NotificationsController : BaseController
         await _notificationService.MarkAsReadAsync(userId, new MarkAsReadRequest(id));
 
         // Determine destination
-        switch (notif.Type)
+        switch (notif.RelatedEntityType)
         {
-            case NotificationType.Comment:
-            case NotificationType.Reply:
-            case NotificationType.Reaction:
-            case NotificationType.ReactionChange:
+            case RelatedEntityType.Post:
+            case RelatedEntityType.Comment:
                 if (notif.RelatedEntityId.HasValue)
                 {
                     var postResult = await _postService.GetByIdAsync(userId, notif.RelatedEntityId.Value);
@@ -72,9 +70,7 @@ public class NotificationsController : BaseController
                     return RedirectToAction(nameof(Index));
                 }
                 break;
-            case NotificationType.FriendRequestSent:
-            case NotificationType.FriendRequestAccepted:
-            case NotificationType.FriendRequestRejected:
+            case RelatedEntityType.FriendRequest:
                 return RedirectToAction("Index", "FriendRequests");
         }
 
@@ -182,17 +178,13 @@ public class NotificationsController : BaseController
         string? actionUrl = null;
         if (dto.RelatedEntityId.HasValue)
         {
-            switch (dto.Type)
+            switch (dto.RelatedEntityType)
             {
-                case NotificationType.Comment:
-                case NotificationType.Reply:
-                case NotificationType.Reaction:
-                case NotificationType.ReactionChange:
+                case RelatedEntityType.Post:
+                case RelatedEntityType.Comment:
                     actionUrl = Url.Action("Index", "Home", new { highlightPostId = dto.RelatedEntityId.Value });
                     break;
-                case NotificationType.FriendRequestSent:
-                case NotificationType.FriendRequestAccepted:
-                case NotificationType.FriendRequestRejected:
+                case RelatedEntityType.FriendRequest:
                     actionUrl = Url.Action("Index", "FriendRequests");
                     break;
                 default:
@@ -211,6 +203,7 @@ public class NotificationsController : BaseController
             Message = dto.Message,
             CreatedAt = dto.CreatedAt.UtcDateTime,
             IsRead = dto.IsRead,
+            RelatedEntityType = dto.RelatedEntityType,
             RelatedEntityId = dto.RelatedEntityId,
             ActionUrl = actionUrl
         };

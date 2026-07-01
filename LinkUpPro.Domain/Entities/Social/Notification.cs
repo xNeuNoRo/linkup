@@ -17,6 +17,8 @@ public sealed class Notification : AuditableBaseEntity<long>
 
     public long? RelatedEntityId { get; private set; }
 
+    public RelatedEntityType RelatedEntityType { get; private set; }
+
     public bool IsRead { get; private set; }
 
     public static Result<Notification> CreateComment(
@@ -31,6 +33,7 @@ public sealed class Notification : AuditableBaseEntity<long>
             actorId,
             NotificationType.Comment,
             $"{actorUserName} comento tu publicacion.",
+            RelatedEntityType.Post,
             postId,
             createdAt
         );
@@ -47,6 +50,7 @@ public sealed class Notification : AuditableBaseEntity<long>
             actorId,
             NotificationType.Reply,
             $"{actorUserName} respondio tu comentario.",
+            RelatedEntityType.Post,
             postId,
             createdAt
         );
@@ -64,6 +68,7 @@ public sealed class Notification : AuditableBaseEntity<long>
             actorId,
             NotificationType.Reaction,
             $"{actorUserName} reacciono con {GetReactionDisplayName(reactionType)} a tu publicacion.",
+            RelatedEntityType.Post,
             postId,
             createdAt
         );
@@ -82,6 +87,7 @@ public sealed class Notification : AuditableBaseEntity<long>
             actorId,
             NotificationType.ReactionChange,
             $"{actorUserName} cambio su reaccion de {GetReactionDisplayName(oldReactionType)} a {GetReactionDisplayName(newReactionType)} en tu publicacion.",
+            RelatedEntityType.Post,
             postId,
             createdAt
         );
@@ -98,6 +104,7 @@ public sealed class Notification : AuditableBaseEntity<long>
             actorId,
             NotificationType.FriendRequestSent,
             $"{actorUserName} te envio una solicitud de amistad.",
+            RelatedEntityType.FriendRequest,
             requestId,
             createdAt
         );
@@ -114,6 +121,7 @@ public sealed class Notification : AuditableBaseEntity<long>
             actorId,
             NotificationType.FriendRequestAccepted,
             $"{actorUserName} acepto tu solicitud de amistad.",
+            RelatedEntityType.FriendRequest,
             requestId,
             createdAt
         );
@@ -130,6 +138,7 @@ public sealed class Notification : AuditableBaseEntity<long>
             actorId,
             NotificationType.FriendRequestRejected,
             $"{actorUserName} rechazo tu solicitud de amistad.",
+            RelatedEntityType.FriendRequest,
             requestId,
             createdAt
         );
@@ -150,6 +159,7 @@ public sealed class Notification : AuditableBaseEntity<long>
         string actorId,
         NotificationType type,
         string message,
+        RelatedEntityType entityType = RelatedEntityType.None,
         long? relatedEntityId = null,
         DateTimeOffset? createdAt = null
     )
@@ -171,6 +181,9 @@ public sealed class Notification : AuditableBaseEntity<long>
         if (string.IsNullOrWhiteSpace(message))
             errors.Add(new DomainError("Notification.MessageRequired", "El mensaje de la notificacion es requerido."));
 
+        if (relatedEntityId.HasValue && entityType == RelatedEntityType.None)
+            errors.Add(new DomainError("Notification.EntityTypeRequired", "El tipo de entidad relacionada es requerido cuando se especifica un ID."));
+
         if (errors.Count > 0)
             return Result<Notification>.Failure(errors);
 
@@ -181,6 +194,7 @@ public sealed class Notification : AuditableBaseEntity<long>
                 ActorId = actorId.Trim(),
                 Type = type,
                 Message = message.Trim(),
+                RelatedEntityType = entityType,
                 RelatedEntityId = relatedEntityId,
                 IsRead = false,
                 CreatedAt = createdAt ?? DateTimeOffset.UtcNow,

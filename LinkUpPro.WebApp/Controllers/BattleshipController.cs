@@ -439,8 +439,8 @@ public class BattleshipController : BaseController
             for (var r = 0; r < 12; r++)
             for (var c = 0; c < 12; c++)
             {
-                if (attack.Grid[r, c] == BoardCellState.Hit || attack.Grid[r, c] == BoardCellState.Sunk)
-                    board[r, c].State = attack.Grid[r, c];
+                if (attack.Grid[c, r] == BoardCellState.Hit || attack.Grid[c, r] == BoardCellState.Sunk)
+                    board[r, c].State = attack.Grid[c, r];
             }
         }
 
@@ -606,9 +606,9 @@ public class BattleshipController : BaseController
             for (var r = 0; r < 12; r++)
             for (var c = 0; c < 12; c++)
             {
-                if (attackResult.Value.Grid[r, c] == BoardCellState.Hit ||
-                    attackResult.Value.Grid[r, c] == BoardCellState.Sunk)
-                    board[r, c].State = attackResult.Value.Grid[r, c];
+                if (attackResult.Value.Grid[c, r] == BoardCellState.Hit ||
+                    attackResult.Value.Grid[c, r] == BoardCellState.Sunk)
+                    board[r, c].State = attackResult.Value.Grid[c, r];
             }
         }
 
@@ -765,7 +765,7 @@ public class BattleshipController : BaseController
         var board = new CellViewModel[12, 12];
         for (var r = 0; r < 12; r++)
         for (var c = 0; c < 12; c++)
-            board[r, c] = new CellViewModel { X = c, Y = r, State = grid[r, c] };
+            board[r, c] = new CellViewModel { X = c, Y = r, State = grid[c, r] };
         return board;
     }
 
