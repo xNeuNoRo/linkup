@@ -84,7 +84,7 @@
                     <label asp-for="PhoneNumber" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5"></label>
                     <div class="relative">
                         <i data-lucide="phone" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
-                        <input asp-for="PhoneNumber" placeholder="809-555-1234" data-step-input class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        <input asp-for="PhoneNumber" type="tel" placeholder="809-555-1234" data-step-input data-phone-mask class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                     </div>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Formato: 809-555-1234, 829-555-1234 o 849-555-1234</p>
                     <span asp-validation-for="PhoneNumber" class="text-red-500 text-xs mt-1 block"></span>

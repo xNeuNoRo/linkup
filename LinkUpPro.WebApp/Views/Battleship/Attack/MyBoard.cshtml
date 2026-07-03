@@ -9,13 +9,22 @@
         <div class="flex items-center justify-between mb-4">
             <h1 class="text-xl font-black text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <i data-lucide="grid" class="w-5 h-5 text-indigo-600"></i>
-                Tus barcos posicionados
+                <span id="board-title">Tus barcos</span>
             </h1>
-            <a asp-action="AttackBoard" asp-route-gameId="@Model.GameId" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">← Volver al ataque</a>
+            <div class="flex items-center gap-2">
+                @if (Model.ReceivedAttacksBoard is not null)
+                {
+                    <button type="button" id="toggle-board-view" class="px-3 py-1.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-colors flex items-center gap-1">
+                        <i data-lucide="eye" class="w-4 h-4"></i> <span id="toggle-btn-text">Ver ataques enemigos</span>
+                    </button>
+                }
+                <a asp-action="AttackBoard" asp-route-gameId="@Model.GameId" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">← Volver</a>
+            </div>
         </div>
 
         <div class="overflow-x-auto">
-            <div class="battleship-board">
+            <!-- My Ships Board -->
+            <div class="battleship-board" id="my-ships-board">
                 <div class="battleship-label"></div>
                 @for (int c = 0; c < 12; c++)
                 {
@@ -49,10 +58,71 @@
                     }
                 }
             </div>
+
+            <!-- Enemy Attacks Board -->
+            @if (Model.ReceivedAttacksBoard is not null)
+            {
+                <div class="battleship-board hidden" id="enemy-attacks-board">
+                    <div class="battleship-label"></div>
+                    @for (int c = 0; c < 12; c++)
+                    {
+                        <div class="battleship-label">@((char)('A' + c))</div>
+                    }
+                    @for (int r = 0; r < 12; r++)
+                    {
+                        <div class="battleship-label">@(r + 1)</div>
+                        @for (int c = 0; c < 12; c++)
+                        {
+                            var cell = Model.ReceivedAttacksBoard[r, c];
+                            var css = "battleship-cell";
+                            if (cell.State == LinkUpPro.Domain.Enums.BoardCellState.Hit) css += " hit";
+                            else if (cell.State == LinkUpPro.Domain.Enums.BoardCellState.Miss) css += " miss";
+                            else if (cell.State == LinkUpPro.Domain.Enums.BoardCellState.Sunk) css += " sunk";
+                            <div class="@css">
+                                @switch (cell.State)
+                                {
+                                    case LinkUpPro.Domain.Enums.BoardCellState.Hit:
+                                        <i data-lucide="x" class="w-5 h-5 text-red-600"></i>
+                                        break;
+                                    case LinkUpPro.Domain.Enums.BoardCellState.Miss:
+                                        <div class="w-2 h-2 rounded-full bg-green-600"></div>
+                                        break;
+                                    case LinkUpPro.Domain.Enums.BoardCellState.Sunk:
+                                        <i data-lucide="x" class="w-5 h-5 text-red-800"></i>
+                                        break;
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+            }
         </div>
     </div>
 </div>
 
 @section Scripts {
-    <script>lucide.createIcons();</script>
+    <script>
+        lucide.createIcons();
+
+        @if (Model.ReceivedAttacksBoard is not null)
+        {
+            <text>
+                document.getElementById('toggle-board-view')?.addEventListener('click', function () {
+                    var shipsBoard = document.getElementById('my-ships-board');
+                    var attacksBoard = document.getElementById('enemy-attacks-board');
+                    var title = document.getElementById('board-title');
+                    var btnText = document.getElementById('toggle-btn-text');
+
+                    var showingAttacks = !attacksBoard.classList.contains('hidden');
+
+                    shipsBoard.classList.toggle('hidden', !showingAttacks);
+                    attacksBoard.classList.toggle('hidden', showingAttacks);
+
+                    title.textContent = showingAttacks ? 'Tus barcos' : 'Ataques enemigos';
+                    btnText.textContent = showingAttacks ? 'Ver ataques enemigos' : 'Ver tus barcos';
+                    lucide.createIcons();
+                });
+            </text>
+        }
+    </script>
 }

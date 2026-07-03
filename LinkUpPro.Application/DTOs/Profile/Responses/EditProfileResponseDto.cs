@@ -6,6 +6,7 @@ public record EditProfileResponseDto(
     string LastName,
     string Email,
     string UserName,
+    string? ProfilePicturePath,
     bool IsVerified,
     bool RequiresReLogin
 );

@@ -44,14 +44,15 @@ public class NotificationsController : BaseController
     {
         var userId = _currentUserService.UserId!;
 
-        // Get notification and verify ownership
-        var paged = await _notificationService.GetNotificationsAsync(userId, null, 1, int.MaxValue);
-        var notif = paged.Items.FirstOrDefault(n => n.Id == id);
-        if (notif is null)
+        // Get notification by ID directly (optimized - single query)
+        var notifResult = await _notificationService.GetByIdAsync(userId, id);
+        if (!notifResult.IsSuccess || notifResult.Value is null)
         {
             ShowError("La notificación no fue encontrada.");
             return RedirectToAction(nameof(Index));
         }
+
+        var notif = notifResult.Value;
 
         // Mark as read
         await _notificationService.MarkAsReadAsync(userId, new MarkAsReadRequest(id));
