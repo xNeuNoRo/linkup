@@ -193,7 +193,7 @@ public class FriendRequestsController : BaseController
     {
         if (string.IsNullOrEmpty(model.SelectedUserId))
         {
-            ShowError("Debe seleccionar un usuario para enviar la solicitud de amistad.");
+            ModelState.AddModelError(string.Empty, "Debe seleccionar un usuario para enviar la solicitud de amistad.");
             return await SendRequest(model.SearchText);
         }
 
@@ -205,16 +205,18 @@ public class FriendRequestsController : BaseController
             );
 
             if (!result.IsSuccess)
-                ShowError(result.Error?.Message ?? "No se pudo enviar la solicitud.");
-            else
-                ShowAlert("La solicitud de amistad fue enviada correctamente.");
+            {
+                ModelState.AddModelError(string.Empty, result.Error?.Message ?? "No se pudo enviar la solicitud.");
+                return await SendRequest(model.SearchText);
+            }
 
+            ShowAlert("La solicitud de amistad fue enviada correctamente.");
             return RedirectToAction(nameof(Index));
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Error enviando solicitud a {UserId}", model.SelectedUserId);
-            ShowError("No se pudo enviar la solicitud.");
+            ModelState.AddModelError(string.Empty, "No se pudo enviar la solicitud.");
             return await SendRequest(model.SearchText);
         }
     }

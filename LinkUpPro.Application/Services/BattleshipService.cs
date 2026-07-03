@@ -3,6 +3,7 @@ using LinkUpPro.Application.DTOs.Battleship.Responses;
 using LinkUpPro.Application.Interfaces.Services;
 using LinkUpPro.Domain.Common;
 using LinkUpPro.Domain.Entities.Battleship;
+using LinkUpPro.Domain.Entities.Social;
 using LinkUpPro.Domain.Enums;
 using LinkUpPro.Domain.Exceptions;
 using LinkUpPro.Domain.Interfaces.Persistence;
@@ -17,18 +18,21 @@ public sealed class BattleshipService : IBattleshipService
     private readonly IBattleshipRepository _battleshipRepository;
     private readonly IFriendshipRepository _friendshipRepository;
     private readonly IProfileService _profileService;
+    private readonly INotificationRepository _notificationRepository;
     private readonly IUnitOfWork _unitOfWork;
 
     public BattleshipService(
         IBattleshipRepository battleshipRepository,
         IFriendshipRepository friendshipRepository,
         IProfileService profileService,
+        INotificationRepository notificationRepository,
         IUnitOfWork unitOfWork
     )
     {
         _battleshipRepository = battleshipRepository;
         _friendshipRepository = friendshipRepository;
         _profileService = profileService;
+        _notificationRepository = notificationRepository;
         _unitOfWork = unitOfWork;
     }
 
@@ -63,6 +67,21 @@ public sealed class BattleshipService : IBattleshipService
             );
 
         await _battleshipRepository.AddAsync(gameResult.Value);
+        await _unitOfWork.SaveChangesAsync();
+
+        // Notify opponent about the invitation
+        var creator = await _profileService.GetByIdAsync(creatorId);
+        var creatorName = creator is null
+            ? "Alguien"
+            : $"{creator.FirstName} {creator.LastName}".Trim();
+        var inviteNotif = Notification.CreateBattleshipGameInvited(
+            recipientId: request.OpponentId,
+            actorId: creatorId,
+            gameId: gameResult.Value.Id,
+            actorUserName: creatorName
+        );
+        if (inviteNotif.IsSuccess)
+            await _notificationRepository.AddAsync(inviteNotif.Value);
         await _unitOfWork.SaveChangesAsync();
 
         return Result<GameResponseDto>.Success(gameResult.Value.Adapt<GameResponseDto>());
@@ -131,6 +150,29 @@ public sealed class BattleshipService : IBattleshipService
                 _battleshipRepository.Update(game);
 
             await _unitOfWork.CommitAsync();
+
+            // Notify opponent when game starts (both players placed all ships)
+            if (game.Status == GameStatus.InProgress)
+            {
+                var player = await _profileService.GetByIdAsync(userId);
+                var playerName = player is null
+                    ? "Alguien"
+                    : $"{player.FirstName} {player.LastName}".Trim();
+                var opponentId = game.GetOpponentId(userId);
+                if (opponentId.IsSuccess)
+                {
+                    var startNotif = Notification.CreateBattleshipGameStarted(
+                        recipientId: opponentId.Value,
+                        actorId: userId,
+                        gameId: gameId,
+                        actorUserName: playerName
+                    );
+                    if (startNotif.IsSuccess)
+                        await _notificationRepository.AddAsync(startNotif.Value);
+                    await _unitOfWork.SaveChangesAsync();
+                }
+            }
+
             return Result.Success();
         }
         catch
@@ -201,7 +243,47 @@ public sealed class BattleshipService : IBattleshipService
 
         var isSunk =
             attackResult.Value.TargetShipId.HasValue
-            && opponentShips.Where(s => s.Id == attackResult.Value.TargetShipId).Any(s => s.IsSunk);
+            && opponentShips.Where(s => s.Id == attackResult.Value.TargetShipId.Value).Any(s => s.IsSunk);
+
+        if (isSunk)
+        {
+            var targetShipId = attackResult.Value.TargetShipId!.Value;
+            var attacker = await _profileService.GetByIdAsync(userId);
+            var attackerName = attacker is null
+                ? "Alguien"
+                : $"{attacker.FirstName} {attacker.LastName}".Trim();
+            var sunkShip = opponentShips.First(s => s.Id == targetShipId);
+            var shipSize = (int)sunkShip.Size;
+
+            // Notify defender that their ship was sunk
+            var sunkNotif = Notification.CreateBattleshipShipSunk(
+                recipientId: opponentId.Value,
+                actorId: userId,
+                gameId: gameId,
+                shipSize: shipSize,
+                actorUserName: attackerName
+            );
+            if (sunkNotif.IsSuccess)
+                await _notificationRepository.AddAsync(sunkNotif.Value);
+
+            // Notify attacker that they sunk a ship
+            // Use the defender as actor (ship owner) to avoid self-notification rule
+            var opponentProfile = await _profileService.GetByIdAsync(opponentId.Value);
+            var opponentName = opponentProfile is null
+                ? "Alguien"
+                : $"{opponentProfile.FirstName} {opponentProfile.LastName}".Trim();
+            var sunkByNotif = Notification.CreateBattleshipShipSunkByOpponent(
+                recipientId: userId,
+                actorId: opponentId.Value,
+                gameId: gameId,
+                shipSize: shipSize,
+                actorUserName: opponentName
+            );
+            if (sunkByNotif.IsSuccess)
+                await _notificationRepository.AddAsync(sunkByNotif.Value);
+
+            await _unitOfWork.SaveChangesAsync();
+        }
 
         return Result<AttackResultDto>.Success(
             new AttackResultDto(

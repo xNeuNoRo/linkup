@@ -7,11 +7,17 @@ namespace LinkUpPro.Application.Interfaces.Services;
 public interface INotificationService
 {
     Task<PagedResult<NotificationResponseDto>> GetNotificationsAsync(
-        string userId, bool? unreadOnly = null, int page = 1, int pageSize = 20);
+        string userId,
+        bool? unreadOnly = null,
+        int page = 1,
+        int pageSize = 20
+    );
 
     Task<UnreadCountDto> GetUnreadCountAsync(string userId);
 
     Task<Result> MarkAsReadAsync(string userId, MarkAsReadRequest request);
 
     Task<Result> MarkAllAsReadAsync(string userId);
+
+    Task<Result<NotificationResponseDto?>> GetByIdAsync(string userId, long notificationId);
 }

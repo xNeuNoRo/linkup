@@ -51,6 +51,27 @@
         </div>
     }
 
+    <!-- Waiting Banner (when NOT your turn) -->
+    @if (!Model.IsMyTurn && !Model.IsGameOver)
+    {
+        <div class="bg-amber-50 dark:bg-amber-900/30 border-2 border-amber-300 dark:border-amber-700 rounded-2xl p-5 text-center shadow-lg" role="alert" aria-live="polite">
+            <div class="flex items-center justify-center gap-3 mb-2">
+                <div class="w-10 h-10 bg-amber-100 dark:bg-amber-800 rounded-full flex items-center justify-center shrink-0">
+                    <i data-lucide="clock" class="w-6 h-6 text-amber-600 dark:text-amber-400"></i>
+                </div>
+                <div class="text-left">
+                    <p class="text-lg font-black text-amber-800 dark:text-amber-200">@Model.TurnMessage</p>
+                    <p class="text-sm text-amber-600 dark:text-amber-400">Presiona <strong>Refrescar</strong> para verificar si ya es tu turno.</p>
+                </div>
+            </div>
+            <div class="flex items-center justify-center gap-2 mt-2">
+                <div class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                <span class="text-xs text-amber-600 dark:text-amber-400 font-medium">Esperando turno del oponente...</span>
+                <div class="w-2 h-2 bg-amber-500 rounded-full animate-pulse" style="animation-delay: 0.3s"></div>
+            </div>
+        </div>
+    }
+
     <!-- Attack Board -->
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
         <div class="overflow-x-auto">
@@ -72,7 +93,8 @@
                         else if (cell.State == LinkUpPro.Domain.Enums.BoardCellState.Sunk) css += " sunk";
                         var isEmpty = cell.State == LinkUpPro.Domain.Enums.BoardCellState.Empty;
                         var canClick = Model.IsMyTurn && isEmpty && !Model.IsGameOver;
-                        <button type="button" class="@css @(!canClick && isEmpty ? "cursor-default" : "")" @(canClick ? "" : "disabled") data-x="@c" data-y="@r">
+                        var isDisabled = !canClick || !isEmpty || Model.IsGameOver;
+                        <button type="button" class="@css @(isDisabled ? "disabled opacity-50 cursor-not-allowed" : "")" @(isDisabled ? "disabled" : "") data-x="@c" data-y="@r">
                             @switch (cell.State)
                             {
                                 case LinkUpPro.Domain.Enums.BoardCellState.Hit:

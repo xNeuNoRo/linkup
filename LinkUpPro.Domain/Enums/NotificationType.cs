@@ -9,4 +9,8 @@ public enum NotificationType
     FriendRequestSent = 5,
     FriendRequestAccepted = 6,
     FriendRequestRejected = 7,
+    BattleshipGameInvited = 8,
+    BattleshipGameStarted = 9,
+    BattleshipShipSunk = 10,
+    BattleshipShipSunkByOpponent = 11,
 }

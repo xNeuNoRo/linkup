@@ -171,7 +171,7 @@ public class HomeController : BaseController
 
             if (!result.IsSuccess)
             {
-                ShowError(result.Error?.Message ?? "No se pudo actualizar la publicación.");
+                ModelState.AddModelError(string.Empty, result.Error?.Message ?? "No se pudo actualizar la publicación.");
                 return View(model);
             }
 
@@ -181,7 +181,7 @@ public class HomeController : BaseController
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Error editando publicación {PostId}", model.PostId);
-            ShowError("No se pudo actualizar la publicación.");
+            ModelState.AddModelError(string.Empty, "No se pudo actualizar la publicación.");
             return View(model);
         }
     }

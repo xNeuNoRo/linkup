@@ -109,4 +109,25 @@ public sealed class NotificationService : INotificationService
 
         return Result.Success();
     }
+
+    public async Task<Result<NotificationResponseDto?>> GetByIdAsync(string userId, long notificationId)
+    {
+        var notification = await _notificationRepository.GetForRecipientAsync(notificationId, userId);
+        if (notification is null)
+            return Result<NotificationResponseDto?>.Failure(
+                new DomainError("Notification.NotFound", "La notificacion no fue encontrada.")
+            );
+
+        var dto = notification.Adapt<NotificationResponseDto>();
+
+        var actor = await _profileService.GetByIdAsync(notification.ActorId);
+        if (actor is not null)
+            dto = dto with
+            {
+                ActorName = $"{actor.FirstName} {actor.LastName}".Trim(),
+                ActorProfilePicture = actor.ProfilePicturePath,
+            };
+
+        return Result<NotificationResponseDto?>.Success(dto);
+    }
 }

@@ -53,7 +53,6 @@ public sealed class FriendRequestRepository
         var query = _dbSet.Where(r =>
             r.SenderId == senderId
             && r.IsVisibleForSender
-            && r.Status != FriendRequestStatus.Pending
             && r.Status != FriendRequestStatus.Canceled
         );
         return await ApplyOptionsToQuery(query, options).ToListAsync(cancellationToken);

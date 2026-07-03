@@ -218,4 +218,25 @@ public class FileService : IFileService
             _logger.LogWarning(ex, "No se pudo eliminar el archivo fisico: {Path}.", filePath);
         }
     }
+
+    public async Task DeleteFileAsync(string filePath)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+                return;
+
+            string absolutePath = GetAbsolutePath(filePath);
+
+            if (File.Exists(absolutePath))
+            {
+                await Task.Run(() => File.Delete(absolutePath));
+                _logger.LogInformation("Archivo eliminado del servidor (async): {Path}", absolutePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No se pudo eliminar el archivo fisico: {Path}.", filePath);
+        }
+    }
 }

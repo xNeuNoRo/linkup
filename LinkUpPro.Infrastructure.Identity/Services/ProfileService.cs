@@ -9,6 +9,7 @@ using LinkUpPro.Infrastructure.Identity.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace LinkUpPro.Infrastructure.Identity.Services;
 
@@ -19,13 +20,15 @@ public sealed class ProfileService : IProfileService
     private readonly IFileService _fileService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ILogger<ProfileService> _logger;
 
     public ProfileService(
         UserManager<AppUser> userManager,
         SignInManager<AppUser> signInManager,
         IFileService fileService,
         IUnitOfWork unitOfWork,
-        IHttpContextAccessor httpContextAccessor
+        IHttpContextAccessor httpContextAccessor,
+        ILogger<ProfileService> logger
     )
     {
         _userManager = userManager;
@@ -33,6 +36,7 @@ public sealed class ProfileService : IProfileService
         _fileService = fileService;
         _unitOfWork = unitOfWork;
         _httpContextAccessor = httpContextAccessor;
+        _logger = logger;
     }
 
     public async Task<Result<UserProfileResponseDto>> GetProfileAsync(string userId)
@@ -96,10 +100,22 @@ public sealed class ProfileService : IProfileService
                     )
                 );
 
-            user.ProfilePicturePath = await _fileService.UploadFileAsync(
-                request.ProfilePictureFile,
-                "profiles"
-            );
+            try
+            {
+                user.ProfilePicturePath = await _fileService.UploadFileAsync(
+                    request.ProfilePictureFile,
+                    "profiles"
+                );
+            }
+            catch (Exception)
+            {
+                return Result<EditProfileResponseDto>.Failure(
+                    new DomainError(
+                        "Profile.UploadFailed",
+                        "No se pudo guardar la imagen de perfil. Verifique que el servidor tenga permisos de escritura e intente nuevamente."
+                    )
+                );
+            }
         }
 
         var updateResult = await _userManager.UpdateAsync(user);
@@ -113,8 +129,6 @@ public sealed class ProfileService : IProfileService
                 )
             );
         }
-
-        await _unitOfWork.SaveChangesAsync();
 
         if (
             request.ProfilePictureFile is not null
@@ -157,10 +171,9 @@ public sealed class ProfileService : IProfileService
 
             await _signInManager.SignInWithClaimsAsync(user, rememberMe, claims);
         }
-        catch
+        catch (Exception ex)
         {
-            // Si no se puede refrescar la cookie (ej: tests, contexto sin auth),
-            // no afecta la actualización del perfil. Los claims se actualizarán en el próximo login.
+            _logger.LogWarning(ex, "No se pudo refrescar la cookie de autenticación tras actualizar perfil del usuario {UserId}. El usuario verá la foto anterior hasta que cierre sesión y vuelva a iniciarla.", user.Id);
         }
     }
 
@@ -324,6 +337,7 @@ public sealed class ProfileService : IProfileService
             user.LastName,
             user.Email ?? string.Empty,
             user.UserName ?? string.Empty,
+            user.ProfilePicturePath,
             user.EmailConfirmed,
             false
         );

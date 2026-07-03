@@ -1,13 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 using LinkUpPro.Application.ViewModels.Shared.ValidationAttributes;
-using Microsoft.AspNetCore.Http;
 
 namespace LinkUpPro.Application.ViewModels.ProfileViewModels;
 
 /// <summary>
 /// ViewModel para el formulario de edición de "Mi Perfil".
-/// Campos editables: Nombre, Apellido, Teléfono, Foto de perfil.
-/// Campos NO editables: UserName, Email, IsActive (se ignoran aunque vengan en el POST).
+/// ProfilePictureFile está en EditProfileViewModel (raíz) para evitar
+/// problemas de model binding con IFormFile en tipos anidados.
 /// </summary>
 public class UpdateProfileViewModel
 {
@@ -27,11 +26,6 @@ public class UpdateProfileViewModel
     [DominicanPhone]
     [Display(Name = "Teléfono")]
     public string PhoneNumber { get; set; } = string.Empty;
-
-    [ImageFileExtensions(ErrorMessage = "El archivo seleccionado no tiene un formato de imagen válido.")]
-    [MaxFileSize(5, ErrorMessage = "La imagen seleccionada no puede superar los 5 MB.")]
-    [Display(Name = "Foto de perfil")]
-    public IFormFile? ProfilePictureFile { get; set; }
 
     /// <summary>
     /// Ruta actual de la foto (solo lectura, se muestra en el form).

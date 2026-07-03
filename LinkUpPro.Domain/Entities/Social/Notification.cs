@@ -126,6 +126,76 @@ public sealed class Notification : AuditableBaseEntity<long>
             createdAt
         );
 
+    public static Result<Notification> CreateBattleshipGameInvited(
+        string recipientId,
+        string actorId,
+        long gameId,
+        string actorUserName,
+        DateTimeOffset? createdAt = null
+    ) =>
+        Create(
+            recipientId,
+            actorId,
+            NotificationType.BattleshipGameInvited,
+            $"{actorUserName} te invito a una partida de Battleship.",
+            RelatedEntityType.BattleshipGame,
+            gameId,
+            createdAt
+        );
+
+    public static Result<Notification> CreateBattleshipGameStarted(
+        string recipientId,
+        string actorId,
+        long gameId,
+        string actorUserName,
+        DateTimeOffset? createdAt = null
+    ) =>
+        Create(
+            recipientId,
+            actorId,
+            NotificationType.BattleshipGameStarted,
+            $"{actorUserName} coloco todos sus barcos. ¡La partida comienza!",
+            RelatedEntityType.BattleshipGame,
+            gameId,
+            createdAt
+        );
+
+    public static Result<Notification> CreateBattleshipShipSunk(
+        string recipientId,
+        string actorId,
+        long gameId,
+        int shipSize,
+        string actorUserName,
+        DateTimeOffset? createdAt = null
+    ) =>
+        Create(
+            recipientId,
+            actorId,
+            NotificationType.BattleshipShipSunk,
+            $"{actorUserName} hundio tu barco de {shipSize} posiciones.",
+            RelatedEntityType.BattleshipGame,
+            gameId,
+            createdAt
+        );
+
+    public static Result<Notification> CreateBattleshipShipSunkByOpponent(
+        string recipientId,
+        string actorId,
+        long gameId,
+        int shipSize,
+        string actorUserName,
+        DateTimeOffset? createdAt = null
+    ) =>
+        Create(
+            recipientId,
+            actorId,
+            NotificationType.BattleshipShipSunkByOpponent,
+            $"{actorUserName} ¡Hundiste un barco de {shipSize} posiciones!",
+            RelatedEntityType.BattleshipGame,
+            gameId,
+            createdAt
+        );
+
     public static Result<Notification> CreateFriendRequestRejected(
         string recipientId,
         string actorId,
