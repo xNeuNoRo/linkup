@@ -380,3 +380,142 @@ button:not([class*="cursor-"]) {
   padding-top: 0 !important;
   padding-bottom: 0 !important;
 }
+
+/* =============================================================
+   USER CARDS - Stagger fade-in animation
+   ============================================================= */
+
+.user-card-wrapper {
+  animation: card-fade-in 0.35s ease both;
+}
+
+@keyframes card-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* =============================================================
+   TAB PANELS - Smooth transitions
+   ============================================================= */
+
+.tab-panel {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.tab-panel.hidden {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  position: absolute;
+  width: 100%;
+}
+
+/* =============================================================
+   POST CARDS - Stagger animation
+   ============================================================= */
+
+.post-card-wrapper {
+  animation: card-fade-in 0.35s ease both;
+}
+
+.post-card-wrapper:nth-child(1) { animation-delay: 0ms; }
+.post-card-wrapper:nth-child(2) { animation-delay: 60ms; }
+.post-card-wrapper:nth-child(3) { animation-delay: 120ms; }
+.post-card-wrapper:nth-child(4) { animation-delay: 180ms; }
+.post-card-wrapper:nth-child(5) { animation-delay: 240ms; }
+
+/* =============================================================
+   FRIEND CARDS - Stagger animation
+   ============================================================= */
+
+.friend-card-wrapper {
+  animation: card-fade-in 0.3s ease both;
+}
+
+.friend-card-wrapper:nth-child(1) { animation-delay: 0ms; }
+.friend-card-wrapper:nth-child(2) { animation-delay: 40ms; }
+.friend-card-wrapper:nth-child(3) { animation-delay: 80ms; }
+.friend-card-wrapper:nth-child(4) { animation-delay: 120ms; }
+.friend-card-wrapper:nth-child(5) { animation-delay: 160ms; }
+
+/* =============================================================
+   LOAD MORE BUTTON - Hover effect
+   ============================================================= */
+
+.load-more-btn {
+  transition: all 0.2s ease;
+}
+
+.load-more-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+}
+
+.load-more-btn:active {
+  transform: translateY(0);
+}
+
+/* =============================================================
+   TOGGLE SWITCH - Used for checkboxes styled as switches
+   ============================================================= */
+
+.switch {
+  position: relative;
+  display: inline-flex;
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #d1d5db;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 24px;
+}
+
+.dark .slider {
+  background-color: #4b5563;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .slider {
+  background-color: #4f46e5;
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+input:focus-visible + .slider {
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3);
+}

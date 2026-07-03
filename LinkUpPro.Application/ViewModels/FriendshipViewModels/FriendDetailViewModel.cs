@@ -3,29 +3,25 @@ using LinkUpPro.Application.ViewModels.Shared;
 
 namespace LinkUpPro.Application.ViewModels.FriendshipViewModels;
 
-/// <summary>
-/// ViewModel principal de la pantalla "Amigos".
-/// Combina resumen, publicaciones de amigos, listado de amigos y filtros.
-/// </summary>
 public class FriendDetailViewModel : BaseViewModel
 {
     /// <summary>
-    /// Información del amigo (perfil).
+    /// Información del amigo (perfil, usado en Detail).
     /// </summary>
     public FriendListItemViewModel Friend { get; set; } = new();
 
     /// <summary>
-    /// Resumen de amistades del usuario autenticado.
+    /// Resumen de amistades del usuario autenticado (usado en Index).
     /// </summary>
     public FriendshipSummaryViewModel Summary { get; set; } = new();
 
     /// <summary>
-    /// Publicaciones visibles del amigo (Solo amigos, activas).
+    /// Publicaciones del amigo (usado en Detail).
     /// </summary>
     public PagedResultViewModel<PostListItemViewModel> Posts { get; set; } = new();
 
     /// <summary>
-    /// Filtros de búsqueda de publicaciones.
+    /// Filtros de búsqueda de publicaciones (usado en Detail).
     /// </summary>
     public PostFilterViewModel Filters { get; set; } = new();
 
@@ -33,9 +29,4 @@ public class FriendDetailViewModel : BaseViewModel
     /// Buscador de amigos en el listado.
     /// </summary>
     public FriendSearchViewModel Search { get; set; } = new();
-
-    /// <summary>
-    /// Resultado de la búsqueda actual.
-    /// </summary>
-    public List<FriendListItemViewModel> Friends { get; set; } = [];
 }

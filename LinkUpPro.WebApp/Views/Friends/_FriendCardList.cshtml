@@ -1,0 +1,13 @@
+@model List<LinkUpPro.Application.ViewModels.FriendshipViewModels.FriendListItemViewModel>
+
+@if (Model.Any())
+{
+    @foreach (var friend in Model)
+    {
+        <div class="friend-card-wrapper">
+            @await Html.PartialAsync("/Views/Friends/_FriendCard.cshtml", friend)
+        </div>
+    }
+}
+
+<script>if (window.lucide) lucide.createIcons();</script>

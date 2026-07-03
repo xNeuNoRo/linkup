@@ -165,7 +165,27 @@ public class FriendRequestsController : BaseController
         return RedirectToAction(nameof(Index));
     }
 
-    // ====================== SEND REQUEST (GET - listar usuarios) ======================
+    // ====================== SEARCH USERS (AJAX - partial view) ======================
+
+    [HttpGet]
+    public async Task<IActionResult> SearchUsers(string search, int page = 1, int pageSize = 20)
+    {
+        var userId = _currentUserService.UserId!;
+        var pagedResult = await _friendRequestService.SearchAvailableUsersAsync(userId, search, page, pageSize);
+
+        var items = pagedResult.Items.Select(MapToAvailableUser).ToList();
+
+        var vm = new SendFriendRequestViewModel
+        {
+            SearchText = search,
+            IsSearching = !string.IsNullOrWhiteSpace(search),
+            AvailableUsers = items
+        };
+
+        return PartialView("_AvailableUsersPartial", vm);
+    }
+
+    // ====================== SEND REQUEST (GET - buscar usuarios) ======================
 
     [HttpGet]
     public async Task<IActionResult> SendRequest(string? search)
@@ -176,12 +196,11 @@ public class FriendRequestsController : BaseController
         var vm = new SendFriendRequestViewModel
         {
             SearchText = search,
+            IsSearching = !string.IsNullOrWhiteSpace(search),
             AvailableUsers = pagedResult.Items.Select(MapToAvailableUser).ToList()
         };
 
         await this.PopulateMenuCountersAsync(_currentUserService, _friendRequestService, _notificationService);
-        ViewBag.CurrentUserId = userId;
-
         return View(vm);
     }
 

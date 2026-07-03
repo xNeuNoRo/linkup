@@ -16,9 +16,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace LinkUpPro.WebApp.Controllers;
 
-/// <summary>
-/// Controlador para la gestión de amigos: listado, perfil de amigo, eliminación de amistad, amigos en común.
-/// </summary>
 [SessionAuthorize]
 public class FriendsController : BaseController
 {
@@ -57,26 +54,12 @@ public class FriendsController : BaseController
     // ====================== INDEX ======================
 
     [HttpGet]
-    public async Task<IActionResult> Index(FriendSearchViewModel search, PostFilterViewModel filter)
+    public async Task<IActionResult> Index()
     {
         var userId = _currentUserService.UserId!;
 
         var totalActive = await _friendshipService.GetActiveFriendsCountAsync(userId);
         var availablePosts = await _friendshipService.GetAvailablePostsCountAsync(userId);
-
-        var pagedResult = await _friendshipService.GetFriendsAsync(
-            userId,
-            search.SearchText,
-            search.Page,
-            search.PageSize
-        );
-
-        var friendViewModels = pagedResult.Items.Select(MapToFriendListItem).ToList();
-
-        // Cargar publicaciones de amigos con filtros
-        var filterRequest = filter.Adapt<PostFilterRequest>();
-        var postsResult = await _postService.GetFriendsPostsAsync(userId, filterRequest);
-        var postViewModels = await MapToPostListItemsAsync(postsResult.Items);
 
         var vm = new FriendDetailViewModel
         {
@@ -84,28 +67,183 @@ public class FriendsController : BaseController
             {
                 TotalActiveFriends = totalActive,
                 AvailablePostsCount = availablePosts
-            },
+            }
+        };
+
+        await this.PopulateBaseViewModelAsync(vm, _currentUserService, _friendRequestService, _notificationService);
+        ViewBag.CurrentUserId = userId;
+
+        return View(vm);
+    }
+
+    // ====================== FEED POSTS (AJAX Partial) ======================
+
+    [HttpGet]
+    public async Task<IActionResult> FeedPosts(PostFilterViewModel filter, int page = 1)
+    {
+        var userId = _currentUserService.UserId!;
+
+        var filterRequest = new PostFilterRequest(
+            filter.SearchText,
+            filter.ContentType,
+            filter.FromDate,
+            filter.ToDate,
+            filter.EditedOnly,
+            page,
+            20,
+            filter.FriendId,
+            null
+        );
+
+        var postsResult = await _postService.GetFriendsPostsAsync(userId, filterRequest);
+        var postViewModels = await MapToPostListItemsAsync(postsResult.Items);
+
+        var vm = new FriendsFeedPartialViewModel
+        {
+            Filters = filter,
             Posts = new PagedResultViewModel<PostListItemViewModel>
             {
                 Items = postViewModels,
                 Page = postsResult.Page,
                 PageSize = postsResult.PageSize,
                 TotalItems = postsResult.TotalCount
-            },
-            Filters = filter,
-            Search = search,
-            Friends = friendViewModels
+            }
         };
 
-        await this.PopulateBaseViewModelAsync(vm, _currentUserService, _friendRequestService, _notificationService);
         ViewBag.CurrentUserId = userId;
-        ViewBag.AllFriends = friendViewModels.Select(f => new
-        {
-            f.FriendId,
-            Display = $"{f.FriendName} (@{f.FriendUserName})"
-        }).ToList();
+        ViewBag.AllFriends = await LoadAllFriendsForDropdownAsync(userId);
 
-        return View(vm);
+        return PartialView("_FeedPartial", vm);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> FilterFeedPosts(PostFilterViewModel filter)
+    {
+        var userId = _currentUserService.UserId!;
+
+        var filterRequest = new PostFilterRequest(
+            filter.SearchText,
+            filter.ContentType,
+            filter.FromDate,
+            filter.ToDate,
+            filter.EditedOnly,
+            1,
+            20,
+            filter.FriendId,
+            null
+        );
+
+        var postsResult = await _postService.GetFriendsPostsAsync(userId, filterRequest);
+        var postViewModels = await MapToPostListItemsAsync(postsResult.Items);
+        ViewBag.CurrentUserAvatar = _currentUserService.ProfilePicturePath;
+
+        return PartialView("~/Views/Posts/_PostList.cshtml", postViewModels);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> LoadMoreFeedPosts(PostFilterViewModel filter, int page = 1)
+    {
+        var userId = _currentUserService.UserId!;
+
+        var filterRequest = new PostFilterRequest(
+            filter.SearchText,
+            filter.ContentType,
+            filter.FromDate,
+            filter.ToDate,
+            filter.EditedOnly,
+            page,
+            20,
+            filter.FriendId,
+            null
+        );
+
+        var postsResult = await _postService.GetFriendsPostsAsync(userId, filterRequest);
+        if (postsResult.Items.Count == 0)
+            return Content("");
+
+        var postViewModels = await MapToPostListItemsAsync(postsResult.Items);
+        ViewBag.CurrentUserAvatar = _currentUserService.ProfilePicturePath;
+
+        return PartialView("~/Views/Posts/_PostList.cshtml", postViewModels);
+    }
+
+    // ====================== FRIENDS LIST (AJAX Partial) ======================
+
+    [HttpGet]
+    public async Task<IActionResult> FriendsListPartial(FriendSearchViewModel search, int page = 1)
+    {
+        var userId = _currentUserService.UserId!;
+
+        var pagedResult = await _friendshipService.GetFriendsAsync(
+            userId,
+            search.SearchText,
+            page,
+            20
+        );
+
+        var friendViewModels = pagedResult.Items.Select(MapToFriendListItem).ToList();
+
+        var vm = new FriendsListPartialViewModel
+        {
+            Search = search,
+            Friends = friendViewModels,
+            TotalCount = pagedResult.TotalCount,
+            CurrentPage = page
+        };
+
+        ViewBag.CurrentUserId = userId;
+        return PartialView("_FriendsListPartial", vm);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> SearchFriends(FriendSearchViewModel search, int page = 1)
+    {
+        var userId = _currentUserService.UserId!;
+
+        var pagedResult = await _friendshipService.GetFriendsAsync(
+            userId,
+            search.SearchText,
+            page,
+            20
+        );
+
+        var friendViewModels = pagedResult.Items.Select(MapToFriendListItem).ToList();
+
+        var vm = new FriendsListPartialViewModel
+        {
+            Search = search,
+            Friends = friendViewModels,
+            TotalCount = pagedResult.TotalCount,
+            CurrentPage = page
+        };
+
+        ViewBag.CurrentUserId = userId;
+        return PartialView("_FriendsListInner", vm);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> LoadMoreFriends(FriendSearchViewModel search, int page = 1)
+    {
+        var userId = _currentUserService.UserId!;
+
+        var pagedResult = await _friendshipService.GetFriendsAsync(
+            userId,
+            search.SearchText,
+            page,
+            20
+        );
+
+        var friendViewModels = pagedResult.Items.Select(MapToFriendListItem).ToList();
+
+        var vm = new FriendsListPartialViewModel
+        {
+            Search = search,
+            Friends = friendViewModels,
+            TotalCount = pagedResult.TotalCount,
+            CurrentPage = page
+        };
+
+        return PartialView("_FriendsListInner", vm);
     }
 
     // ====================== DETAIL (Perfil de amigo) ======================
@@ -115,7 +253,6 @@ public class FriendsController : BaseController
     {
         var userId = _currentUserService.UserId!;
 
-        // Obtener info de la amistad
         var friendshipResult = await _friendshipService.GetFriendshipAsync(userId, id);
         if (!friendshipResult.IsSuccess)
         {
@@ -123,11 +260,9 @@ public class FriendsController : BaseController
             return RedirectToAction(nameof(Index));
         }
 
-        // Obtener info del amigo (con amigos en común)
         var commonResult = await _friendshipService.GetCommonFriendsAsync(userId, id);
         var commonCount = commonResult.IsSuccess ? commonResult.Value!.Count : 0;
 
-        // Mapear amigo
         var friendship = friendshipResult.Value!;
         var friendUser = await _profileService.GetByIdAsync(id);
 
@@ -141,7 +276,6 @@ public class FriendsController : BaseController
             FriendshipCreatedAt = friendship.CreatedAt.UtcDateTime
         };
 
-        // Obtener posts del amigo
         var filterRequest = filter.Adapt<PostFilterRequest>();
         var postsResult = await _postService.GetUserPostsAsync(userId, id, filterRequest);
         var postViewModels = await MapToPostListItemsAsync(postsResult.Items);
@@ -165,22 +299,6 @@ public class FriendsController : BaseController
         return View(vm);
     }
 
-    // ====================== LOAD MORE POSTS (AJAX Infinite Scroll) ======================
-
-    [HttpGet]
-    public async Task<IActionResult> LoadMoreFriendPosts(PostFilterViewModel filter)
-    {
-        var userId = _currentUserService.UserId!;
-        var filterRequest = filter.Adapt<PostFilterRequest>();
-        var postsResult = await _postService.GetFriendsPostsAsync(userId, filterRequest);
-        if (postsResult.Items.Count == 0)
-            return Content("");
-
-        var postViewModels = await MapToPostListItemsAsync(postsResult.Items);
-        ViewBag.CurrentUserAvatar = _currentUserService.ProfilePicturePath;
-        return PartialView("_PostList", postViewModels);
-    }
-
     // ====================== SEARCH (AJAX) ======================
 
     [HttpGet]
@@ -189,7 +307,7 @@ public class FriendsController : BaseController
         var userId = _currentUserService.UserId!;
         var pagedResult = await _friendshipService.GetFriendsAsync(userId, query, 1, 50);
         var friends = pagedResult.Items.Select(MapToFriendListItem).ToList();
-        return PartialView("_FriendCard", friends);
+        return PartialView("_FriendCardList", friends);
     }
 
     // ====================== COMMON FRIENDS (Modal) ======================
@@ -243,7 +361,17 @@ public class FriendsController : BaseController
         return RedirectToAction(nameof(Index));
     }
 
-    // ====================== PRIVATE MAPPERS ======================
+    // ====================== PRIVATE HELPERS ======================
+
+    private async Task<List<object>> LoadAllFriendsForDropdownAsync(string userId)
+    {
+        var allFriends = await _friendshipService.GetFriendsAsync(userId, null, 1, 500);
+        return allFriends.Items.Select(f => new
+        {
+            f.FriendId,
+            Display = $"{f.FriendName} (@{f.FriendUserName})"
+        } as object).ToList();
+    }
 
     private FriendListItemViewModel MapToFriendListItem(LinkUpPro.Application.DTOs.Friendship.Responses.FriendListItemDto dto)
     {
@@ -257,17 +385,17 @@ public class FriendsController : BaseController
         };
     }
 
-    private async Task<List<PostListItemViewModel>> MapToPostListItemsAsync(IEnumerable<PostListItemDto> posts)
+    private async Task<List<PostListItemViewModel>> MapToPostListItemsAsync(IEnumerable<PostListItemDto> items)
     {
-        var items = posts.ToList();
-        if (items.Count == 0) return [];
+        var list = items.ToList();
+        if (list.Count == 0) return [];
 
         var userId = _currentUserService.UserId!;
-        var postIds = items.Select(p => p.Id).ToList();
+        var postIds = list.Select(p => p.Id).ToList();
         var userReactions = await _reactionService.GetUserReactionsAsync(userId, postIds);
 
-        var result = new List<PostListItemViewModel>(items.Count);
-        foreach (var dto in items)
+        var result = new List<PostListItemViewModel>(list.Count);
+        foreach (var dto in list)
         {
             result.Add(await MapToPostListItemAsync(dto, userId, userReactions));
         }
