@@ -414,6 +414,9 @@ public sealed class FriendRequestService : IFriendRequestService
         int pageSize = 20
     )
     {
+        if (string.IsNullOrWhiteSpace(search))
+            return new PagedResult<AvailableUserDto>([], 0, page, pageSize);
+
         var options = new QueryOptions<UserSearchResult>
         {
             Skip = (page - 1) * pageSize,

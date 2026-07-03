@@ -15,9 +15,18 @@
 
         <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 flex-wrap">
-                <a asp-controller="Profile" asp-action="Index" asp-route-id="@Model.AuthorId" class="font-bold text-gray-900 dark:text-gray-100 hover:text-indigo-600 truncate">
-                    @Model.AuthorName
-                </a>
+                @if (isOwn)
+                {
+                    <a asp-controller="Profile" asp-action="Index" class="font-bold text-gray-900 dark:text-gray-100 hover:text-indigo-600 truncate">
+                        @Model.AuthorName
+                    </a>
+                }
+                else
+                {
+                    <a asp-controller="Friends" asp-action="Detail" asp-route-id="@Model.AuthorId" class="font-bold text-gray-900 dark:text-gray-100 hover:text-indigo-600 truncate">
+                        @Model.AuthorName
+                    </a>
+                }
                 <span class="text-gray-400 text-xs" title="@Model.CreatedAt.ToString("dd MMM yyyy HH:mm")">
                     @Model.CreatedAt.ToString("dd MMM, HH:mm")
                 </span>
