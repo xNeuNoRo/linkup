@@ -11,4 +11,10 @@ public class MyPlacementBoardViewModel
     public long GameId { get; set; }
     public CellViewModel[,] Board { get; set; } = new CellViewModel[DomainConstants.BoardSize, DomainConstants.BoardSize];
     public List<PlacedShipViewModel> Ships { get; set; } = [];
+
+    /// <summary>
+    /// Tablero que muestra los ataques recibidos del oponente (aciertos y fallos).
+    /// Solo visible durante la fase de ataque, no en el resultado final.
+    /// </summary>
+    public CellViewModel[,]? ReceivedAttacksBoard { get; set; }
 }

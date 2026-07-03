@@ -24,14 +24,12 @@ public class UpdatePostViewModel
     [Display(Name = "Tipo de contenido")]
     public int? ContentType { get; set; }
 
-    [RequiredIf(nameof(ContentType), 1, ErrorMessage = "Debe seleccionar una imagen para la publicación.")]
     [ImageFileExtensions(ErrorMessage = "El archivo seleccionado no tiene un formato de imagen válido.")]
     [MaxFileSize(5, ErrorMessage = "La imagen seleccionada no puede superar los 5 MB.")]
     [MutuallyExclusiveWith(nameof(YouTubeUrl), ErrorMessage = "No debe completar ambos campos al mismo tiempo.")]
     [Display(Name = "Imagen")]
     public IFormFile? ImageFile { get; set; }
 
-    [RequiredIf(nameof(ContentType), 2, ErrorMessage = "Debe ingresar un enlace válido de YouTube.")]
     [YouTubeUrl(ErrorMessage = "Debe ingresar un enlace válido de YouTube.")]
     [MutuallyExclusiveWith(nameof(ImageFile), ErrorMessage = "No debe completar ambos campos al mismo tiempo.")]
     [Display(Name = "Enlace de YouTube")]

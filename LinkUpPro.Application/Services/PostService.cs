@@ -151,7 +151,7 @@ public sealed class PostService : IPostService
             );
 
         // Validación defensiva: no permitir imagen y YouTube simultáneamente
-        if (request.ImageFile is not null && !string.IsNullOrEmpty(request.YouTubeUrl))
+        if (request.ImageFile is not null && request.ImageFile.Length > 0 && !string.IsNullOrEmpty(request.YouTubeUrl))
             return Result<PostResponseDto>.Failure(
                 new DomainError(
                     "Post.MediaConflict",
@@ -164,22 +164,70 @@ public sealed class PostService : IPostService
             ? (PostContentType)request.ContentType.Value
             : post.ContentType;
 
+        var isContentTypeChanged = request.ContentType.HasValue && (int)post.ContentType != request.ContentType.Value;
+        var oldMediaPath = post.MediaPath;
+        var oldContentType = post.ContentType;
+
         string mediaPath;
         try
         {
-            mediaPath = contentType switch
+            if (contentType == PostContentType.YouTubeVideo)
             {
-                PostContentType.YouTubeVideo => YouTubeVideoId
-                    .Create(request.YouTubeUrl ?? post.MediaPath)
-                    .Value,
-                PostContentType.Image => request.ImageFile is not null
-                    ? await ValidateAndUploadImageAsync(request.ImageFile)
-                    : post.MediaPath,
-                _ => throw new DomainException(
-                    "Post.InvalidContentType",
-                    "El tipo de contenido seleccionado no es valido."
-                ),
-            };
+                if (!string.IsNullOrWhiteSpace(request.YouTubeUrl))
+                {
+                    mediaPath = YouTubeVideoId.Create(request.YouTubeUrl).Value;
+                }
+                else if (isContentTypeChanged)
+                {
+                    return Result<PostResponseDto>.Failure(
+                        new DomainError("Post.YouTubeUrlRequired", "Debe ingresar un enlace valido de YouTube.")
+                    );
+                }
+                else
+                {
+                    // Mismo tipo YouTube, conservar URL actual
+                    mediaPath = post.MediaPath;
+                }
+            }
+            else if (contentType == PostContentType.Image)
+            {
+                if (request.ImageFile is not null && request.ImageFile.Length > 0)
+                {
+                    mediaPath = await ValidateAndUploadImageAsync(request.ImageFile);
+                }
+                else if (isContentTypeChanged)
+                {
+                    return Result<PostResponseDto>.Failure(
+                        new DomainError("Post.ImageRequired", "Debe seleccionar una imagen para la publicacion.")
+                    );
+                }
+                else
+                {
+                    // Mismo tipo Image, conservar imagen actual
+                    mediaPath = post.MediaPath;
+                }
+            }
+            else
+            {
+                return Result<PostResponseDto>.Failure(
+                    new DomainError("Post.InvalidContentType", "El tipo de contenido seleccionado no es valido.")
+                );
+            }
+
+            // Limpiar media anterior cuando corresponde
+            var hasNewFile = request.ImageFile is not null && request.ImageFile.Length > 0;
+            var hasNewYouTubeUrl = !string.IsNullOrWhiteSpace(request.YouTubeUrl);
+
+            if (isContentTypeChanged && oldContentType == PostContentType.Image && !string.IsNullOrEmpty(oldMediaPath))
+            {
+                // Cambio de Image → YouTube: eliminar imagen anterior del disco
+                await _fileService.DeleteFileAsync(oldMediaPath);
+            }
+            else if (!isContentTypeChanged && contentType == PostContentType.Image && hasNewFile && !string.IsNullOrEmpty(oldMediaPath))
+            {
+                // Mismo Image pero nueva imagen: eliminar anterior del disco
+                await _fileService.DeleteFileAsync(oldMediaPath);
+            }
         }
         catch (DomainException ex)
         {

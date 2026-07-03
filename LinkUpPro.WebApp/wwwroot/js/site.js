@@ -414,6 +414,26 @@
         const btnNext = document.getElementById('btn-next');
         const btnSubmit = document.getElementById('btn-submit');
 
+        // Phone input mask for step 2
+        function initPhoneMask(container) {
+            container.querySelectorAll('[data-phone-mask]').forEach(input => {
+                input.addEventListener('input', function () {
+                    var val = this.value.replace(/\D/g, '').slice(0, 10);
+                    var formatted = '';
+                    if (val.length > 0) formatted = val.slice(0, 3);
+                    if (val.length > 3) formatted += '-' + val.slice(3, 6);
+                    if (val.length > 6) formatted += '-' + val.slice(6, 10);
+                    this.value = formatted;
+                });
+            });
+        }
+
+        function updateButtonVisibility(step) {
+            btnPrev.classList.toggle('hidden', step === 1);
+            btnNext.classList.toggle('hidden', step === totalSteps);
+            btnSubmit.classList.toggle('hidden', step !== totalSteps);
+        }
+
         function showStep(step) {
             currentStep = step;
             panels.forEach(p => {
@@ -442,9 +462,7 @@
                 line.classList.toggle('bg-gray-200', i + 1 >= step);
                 line.classList.toggle('dark:bg-gray-700', i + 1 >= step);
             });
-            btnPrev.classList.toggle('hidden', step === 1);
-            btnNext.classList.toggle('hidden', step === totalSteps);
-            btnSubmit.classList.toggle('hidden', step !== totalSteps);
+            updateButtonVisibility(step);
             if (window.lucide) window.lucide.createIcons();
         }
 
@@ -452,11 +470,23 @@
             const panel = form.querySelector(`[data-step-panel="${step}"]`);
             if (!panel) return true;
             let valid = true;
+            let firstInvalid = null;
             panel.querySelectorAll('[data-step-input]').forEach(input => {
-                if (!input.value.trim()) valid = false;
+                if (input.type === 'file') {
+                    if (!input.files || input.files.length === 0) {
+                        valid = false;
+                        if (!firstInvalid) firstInvalid = input;
+                    }
+                } else if (!input.value.trim()) {
+                    valid = false;
+                    if (!firstInvalid) firstInvalid = input;
+                }
             });
             if (!valid) {
-                Toast.warning('Por favor complete todos los campos antes de continuar');
+                Toast.warning(step === totalSteps
+                    ? 'Debe seleccionar una foto de perfil para continuar.'
+                    : 'Por favor complete todos los campos antes de continuar.');
+                if (firstInvalid) firstInvalid.focus();
             }
             return valid;
         }
@@ -469,6 +499,18 @@
         btnPrev && btnPrev.addEventListener('click', function () {
             if (currentStep > 1) showStep(currentStep - 1);
         });
+        form.addEventListener('submit', function () {
+            btnPrev.disabled = true;
+            btnNext.disabled = true;
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<i data-lucide="loader-circle" class="w-4 h-4 animate-spin"></i> Registrando...';
+            if (window.lucide) lucide.createIcons();
+        });
+
+        // Init phone mask on step 2 panel
+        const step2 = form.querySelector('[data-step-panel="2"]');
+        if (step2) initPhoneMask(step2);
+
         showStep(1);
     }
 
@@ -1166,12 +1208,8 @@
 
                     const x = cell.dataset.x;
                     const y = cell.dataset.y;
-                    const label = String.fromCharCode(65 + parseInt(x, 10)) + (parseInt(y, 10) + 1);
-                    confirmAction('¿Confirmas el ataque?', 'Celda ' + label, 'Atacar').then(function (ok) {
-                        if (!ok) return;
-                        const action = attackBoard.dataset.attackUrl + '&targetX=' + encodeURIComponent(x) + '&targetY=' + encodeURIComponent(y);
-                        submitDynamicPost(action, {});
-                    });
+                    const action = attackBoard.dataset.attackUrl + '&targetX=' + encodeURIComponent(x) + '&targetY=' + encodeURIComponent(y);
+                    submitDynamicPost(action, {});
                 });
             });
         }

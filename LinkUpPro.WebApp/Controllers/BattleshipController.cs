@@ -111,7 +111,7 @@ public class BattleshipController : BaseController
     {
         if (string.IsNullOrEmpty(model.SelectedOpponentId))
         {
-            ShowError("Debe seleccionar un amigo para iniciar la partida.");
+            ModelState.AddModelError(string.Empty, "Debe seleccionar un amigo para iniciar la partida.");
             return await CreateGame(model.SearchText);
         }
 
@@ -433,21 +433,23 @@ public class BattleshipController : BaseController
             }
         }
 
-        // Marcar hits en mi tablero
-        if (attack != null)
+        // Construir tablero de ataques recibidos del oponente
+        CellViewModel[,]? receivedAttacks = null;
+        var opponentAttacksResult = await _battleshipService.GetOpponentAttackBoardAsync(userId, gameId);
+        if (opponentAttacksResult.IsSuccess)
         {
+            var opponentAttacks = opponentAttacksResult.Value!;
+            receivedAttacks = new CellViewModel[12, 12];
             for (var r = 0; r < 12; r++)
             for (var c = 0; c < 12; c++)
-            {
-                if (attack.Grid[c, r] == BoardCellState.Hit || attack.Grid[c, r] == BoardCellState.Sunk)
-                    board[r, c].State = attack.Grid[c, r];
-            }
+                receivedAttacks[r, c] = new CellViewModel { X = c, Y = r, State = opponentAttacks.Grid[c, r] };
         }
 
         var vm = new MyPlacementBoardViewModel
         {
             GameId = gameId,
-            Board = board
+            Board = board,
+            ReceivedAttacksBoard = receivedAttacks
         };
 
         return View("Attack/MyBoard", vm);

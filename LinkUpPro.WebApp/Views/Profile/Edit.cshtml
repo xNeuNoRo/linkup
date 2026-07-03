@@ -25,10 +25,10 @@
 
         <!-- Foto nueva -->
         <div>
-            <label asp-for="UpdateProfile.ProfilePictureFile" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"></label>
-            <input asp-for="UpdateProfile.ProfilePictureFile" type="file" accept=".jpg,.jpeg,.png,.webp" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-900/30 dark:file:text-indigo-300" />
+            <label asp-for="ProfilePictureFile" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"></label>
+            <input asp-for="ProfilePictureFile" type="file" accept=".jpg,.jpeg,.png,.webp" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-900/30 dark:file:text-indigo-300" />
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Formatos: JPG, PNG, WEBP. Máximo 5 MB.</p>
-            <span asp-validation-for="UpdateProfile.ProfilePictureFile" class="text-red-500 text-xs mt-1 block"></span>
+            <span asp-validation-for="ProfilePictureFile" class="text-red-500 text-xs mt-1 block"></span>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -46,7 +46,7 @@
 
         <div>
             <label asp-for="UpdateProfile.PhoneNumber" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"></label>
-            <input asp-for="UpdateProfile.PhoneNumber" placeholder="809-555-1234" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <input asp-for="UpdateProfile.PhoneNumber" type="tel" placeholder="809-555-1234" data-phone-mask class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             <span asp-validation-for="UpdateProfile.PhoneNumber" class="text-red-500 text-xs mt-1 block"></span>
         </div>
 
@@ -67,16 +67,18 @@
         lucide.createIcons();
 
         // Phone input mask: 809-555-1234
-        var phoneInput = document.getElementById('@Html.IdFor(m => m.UpdateProfile.PhoneNumber)');
-        if (phoneInput) {
-            phoneInput.addEventListener('input', function () {
-                var val = this.value.replace(/\D/g, '').slice(0, 10);
-                var formatted = '';
-                if (val.length > 0) formatted = val.slice(0, 3);
-                if (val.length > 3) formatted += '-' + val.slice(3, 6);
-                if (val.length > 6) formatted += '-' + val.slice(6, 10);
-                this.value = formatted;
+        function initPhoneMask(container) {
+            container.querySelectorAll('[data-phone-mask]').forEach(input => {
+                input.addEventListener('input', function () {
+                    var val = this.value.replace(/\D/g, '').slice(0, 10);
+                    var formatted = '';
+                    if (val.length > 0) formatted = val.slice(0, 3);
+                    if (val.length > 3) formatted += '-' + val.slice(3, 6);
+                    if (val.length > 6) formatted += '-' + val.slice(6, 10);
+                    this.value = formatted;
+                });
             });
         }
+        initPhoneMask(document);
     </script>
 }

@@ -110,7 +110,6 @@ public sealed class FriendRequestService : IFriendRequestService
         var total = await _friendRequestRepository.CountAsync(r =>
             r.SenderId == userId
             && r.IsVisibleForSender
-            && r.Status != FriendRequestStatus.Pending
             && r.Status != FriendRequestStatus.Canceled
         );
 

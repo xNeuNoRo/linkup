@@ -7,6 +7,7 @@ using LinkUpPro.Infrastructure.Identity.Services;
 using LinkUpPro.Tests.Base;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace LinkUpPro.Tests.Application.Services;
@@ -36,7 +37,8 @@ public class ProfileServiceTests : InMemoryTestBase
             CreateSignInManager().Object,
             _fileServiceMock.Object,
             _unitOfWorkMock.Object,
-            new Mock<IHttpContextAccessor>().Object
+            new Mock<IHttpContextAccessor>().Object,
+            new Mock<ILogger<ProfileService>>().Object
         );
     }
 

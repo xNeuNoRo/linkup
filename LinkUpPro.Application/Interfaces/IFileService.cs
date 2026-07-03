@@ -13,4 +13,6 @@ public interface IFileService
     bool IsImageValid(IFormFile file);
 
     void DeleteFile(string filePath);
+
+    Task DeleteFileAsync(string filePath);
 }

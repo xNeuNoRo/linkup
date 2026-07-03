@@ -22,7 +22,7 @@ public sealed class ImageFileExtensionsAttribute : ValidationAttribute
         if (value is null) return true;
         if (value is IFormFile file)
         {
-            if (file.Length == 0) return true;
+            if (file.Length == 0) return false;
             var ext = Path.GetExtension(file.FileName);
             return AllowedExtensions.Contains(ext);
         }

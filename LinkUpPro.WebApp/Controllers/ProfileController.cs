@@ -114,8 +114,7 @@ public class ProfileController : BaseController
                 LastName = dto.LastName,
                 PhoneNumber = dto.PhoneNumber,
                 CurrentProfilePicturePath = dto.ProfilePicturePath
-            },
-            ChangePassword = new ChangePasswordViewModel()
+            }
         };
 
         await this.PopulateMenuCountersAsync(_currentUserService, _friendRequestService, _notificationService);
@@ -138,13 +137,13 @@ public class ProfileController : BaseController
                 model.UpdateProfile.FirstName,
                 model.UpdateProfile.LastName,
                 model.UpdateProfile.PhoneNumber,
-                model.UpdateProfile.ProfilePictureFile
+                model.ProfilePictureFile
             );
 
             var result = await _profileService.UpdateProfileAsync(_currentUserService.UserId!, request);
             if (!result.IsSuccess)
             {
-                ShowError(result.Error?.Message ?? "No se pudo actualizar el perfil.");
+                ModelState.AddModelError(string.Empty, result.Error?.Message ?? "No se pudo actualizar el perfil.");
                 await this.PopulateMenuCountersAsync(_currentUserService, _friendRequestService, _notificationService);
                 return View(model);
             }
@@ -155,7 +154,7 @@ public class ProfileController : BaseController
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Error actualizando perfil");
-            ShowError("No se pudo actualizar el perfil.");
+            ModelState.AddModelError(string.Empty, "No se pudo actualizar el perfil.");
             await this.PopulateMenuCountersAsync(_currentUserService, _friendRequestService, _notificationService);
             return View(model);
         }
