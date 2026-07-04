@@ -429,9 +429,9 @@
         }
 
         function updateButtonVisibility(step) {
-            btnPrev.classList.toggle('hidden', step === 1);
-            btnNext.classList.toggle('hidden', step === totalSteps);
-            btnSubmit.classList.toggle('hidden', step !== totalSteps);
+            btnPrev.style.display = step === 1 ? 'none' : 'inline-flex';
+            btnNext.style.display = step === totalSteps ? 'none' : 'inline-flex';
+            btnSubmit.style.display = step !== totalSteps ? 'none' : 'inline-flex';
         }
 
         function showStep(step) {
