@@ -1214,25 +1214,7 @@
             });
         }
 
-        const placementBoard = document.getElementById('placement-board');
-        if (placementBoard && !placementBoard.dataset.bound) {
-            placementBoard.dataset.bound = '1';
-            placementBoard.querySelectorAll('.battleship-cell:not(.disabled)').forEach(function (cell) {
-                cell.addEventListener('click', function () {
-                    placementBoard.querySelectorAll('.battleship-cell').forEach(function (c) {
-                        c.classList.remove('ring-2', 'ring-indigo-500');
-                    });
-                    cell.classList.add('ring-2', 'ring-indigo-500');
-
-                    const url = placementBoard.dataset.selectDirectionUrl
-                        + '?gameId=' + encodeURIComponent(placementBoard.dataset.gameId)
-                        + '&shipSize=' + encodeURIComponent(placementBoard.dataset.shipSize)
-                        + '&startX=' + encodeURIComponent(cell.dataset.x)
-                        + '&startY=' + encodeURIComponent(cell.dataset.y);
-                    window.location.href = url;
-                });
-            });
-        }
+        // ponytail: removed old placement board navigation - replaced by unified Placement/Index.cshtml
     }
 
     function initCreateGameSelection() {

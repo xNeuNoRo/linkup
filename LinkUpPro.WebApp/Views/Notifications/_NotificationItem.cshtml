@@ -49,22 +49,25 @@
     </div>
 
     <!-- Actions -->
-    <div class="flex flex-col items-end gap-1 shrink-0">
+    <div class="flex items-center gap-1 shrink-0">
         @if (isUnread)
         {
-            <form asp-action="MarkAsRead" asp-route-id="@Model.Id" method="post">
+            <form asp-action="MarkAsRead" asp-route-id="@Model.Id" method="post" class="contents">
                 @Html.AntiForgeryToken()
-                <button type="submit" class="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors" title="Marcar como leída">
+                <button type="submit" class="btn-icon" title="Marcar como leída">
                     <i data-lucide="check" class="w-4 h-4"></i>
                 </button>
             </form>
-            <span class="w-2 h-2 bg-indigo-500 rounded-full"></span>
         }
         @if (!string.IsNullOrEmpty(Model.ActionUrl))
         {
-            <a asp-action="Navigate" asp-route-id="@Model.Id" class="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors" title="Ver contenido">
+            <a asp-action="Navigate" asp-route-id="@Model.Id" class="btn-icon" title="Ver contenido">
                 <i data-lucide="external-link" class="w-4 h-4"></i>
             </a>
         }
     </div>
+    @if (isUnread)
+    {
+        <span class="w-2 h-2 bg-indigo-500 rounded-full shrink-0 mt-0.5"></span>
+    }
 </div>

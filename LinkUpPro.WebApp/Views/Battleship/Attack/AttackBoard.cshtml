@@ -1,81 +1,66 @@
 @model LinkUpPro.Application.ViewModels.BattleshipViewModels.AttackBoardViewModel
+@using LinkUpPro.Domain.Enums
 @{
     ViewData["Title"] = "Partida con " + Model.OpponentName;
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
-
-<div class="max-w-4xl mx-auto space-y-6">
+<div class="max-w-5xl mx-auto space-y-6" id="attack-page">
     @Html.AntiForgeryToken()
 
-    <!-- Header: Opponent + Turn Indicator + Actions -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div class="flex items-center gap-4">
-            <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-violet-500 rounded-2xl flex items-center justify-center text-white font-bold">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-500 rounded-xl flex items-center justify-center text-white font-bold text-sm">
                 @(Model.OpponentName.Length > 0 ? Model.OpponentName[0].ToString().ToUpper() : "O")
             </div>
             <div>
-                <h2 class="text-xl font-black text-gray-900 dark:text-gray-100">@Model.OpponentName</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400">
-                    Turno: <span class="font-bold @(Model.IsMyTurn ? "text-green-600" : "text-amber-600")">
-                        @(Model.IsMyTurn ? "TU TURNO" : "TURNO DE " + Model.OpponentName.ToUpper())
-                    </span>
+                <h2 class="text-lg font-black text-gray-900 dark:text-gray-100">@Model.OpponentName</h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                    <span class="inline-block w-2 h-2 rounded-full @(Model.IsMyTurn ? "bg-green-500" : "bg-amber-500")" id="turn-dot"></span>
+                    <span id="turn-message">@Model.TurnMessage</span>
                 </p>
             </div>
         </div>
-
-        <div class="flex items-center gap-2 flex-wrap w-full md:w-auto">
-            <a asp-action="Index" class="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm flex items-center gap-1.5">
+        <div class="flex items-center gap-2 flex-wrap">
+            <a asp-action="Index" class="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-1">
                 <i data-lucide="arrow-left" class="w-4 h-4"></i> Volver
             </a>
-            <a asp-action="RefreshTurn" asp-route-gameId="@Model.GameId" class="px-3 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors text-sm flex items-center gap-1.5" title="Refrescar pantalla">
-                <i data-lucide="refresh-cw" class="w-4 h-4"></i> Refrescar
-            </a>
-            <a asp-action="MyBoard" asp-route-gameId="@Model.GameId" class="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm flex items-center gap-1.5">
-                <i data-lucide="grid" class="w-4 h-4"></i> Ver mi tablero
-            </a>
+            <button type="button" id="toggle-my-board" class="px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-bold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex items-center gap-1">
+                <i data-lucide="grid" class="w-4 h-4"></i> <span id="toggle-board-label">Mis barcos</span>
+            </button>
+            <button type="button" id="refresh-btn"
+                    data-game-id="@Model.GameId"
+                    data-is-my-turn="@(Model.IsMyTurn ? "true" : "false")"
+                    data-is-game-over="@(Model.IsGameOver ? "true" : "false")"
+                    class="px-3 py-1.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-colors flex items-center gap-1">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i> <span id="refresh-text">Refrescar</span>
+            </button>
             @if (!Model.IsGameOver)
             {
-                <a asp-action="Surrender" asp-route-gameId="@Model.GameId" class="px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-bold rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-sm flex items-center gap-1.5">
+                <a asp-action="Surrender" asp-route-gameId="@Model.GameId" class="px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-bold rounded-xl hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center gap-1">
                     <i data-lucide="flag" class="w-4 h-4"></i> Rendirse
                 </a>
             }
         </div>
     </div>
 
-    <!-- Turn Message -->
-    @if (!string.IsNullOrEmpty(Model.TurnMessage))
-    {
-        <div class="@(Model.IsMyTurn ? "bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300" : "bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300") border rounded-xl p-3 text-center text-sm font-medium flex items-center justify-center gap-2">
-            <i data-lucide="@(Model.IsMyTurn ? "crosshair" : "clock")" class="w-4 h-4"></i>
-            @Model.TurnMessage
+    <div id="game-over-banner" class="@(Model.IsGameOver ? "" : "hidden")">
+        <div class="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-xl p-4 text-center">
+            <i data-lucide="trophy" class="w-8 h-8 text-indigo-600 dark:text-indigo-400 mx-auto mb-2"></i>
+            <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1" id="game-over-title">Partida finalizada</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3" id="game-over-text">Ganador: <strong>@(Model.WinnerId == Model.CurrentUserId ? "Tú" : Model.OpponentName)</strong></p>
+            <a asp-action="Result" asp-route-gameId="@Model.GameId" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700">
+                <i data-lucide="eye" class="w-4 h-4"></i> Ver resultado
+            </a>
         </div>
-    }
+    </div>
 
-    <!-- Waiting Banner (when NOT your turn) -->
-    @if (!Model.IsMyTurn && !Model.IsGameOver)
-    {
-        <div class="bg-amber-50 dark:bg-amber-900/30 border-2 border-amber-300 dark:border-amber-700 rounded-2xl p-5 text-center shadow-lg" role="alert" aria-live="polite">
-            <div class="flex items-center justify-center gap-3 mb-2">
-                <div class="w-10 h-10 bg-amber-100 dark:bg-amber-800 rounded-full flex items-center justify-center shrink-0">
-                    <i data-lucide="clock" class="w-6 h-6 text-amber-600 dark:text-amber-400"></i>
-                </div>
-                <div class="text-left">
-                    <p class="text-lg font-black text-amber-800 dark:text-amber-200">@Model.TurnMessage</p>
-                    <p class="text-sm text-amber-600 dark:text-amber-400">Presiona <strong>Refrescar</strong> para verificar si ya es tu turno.</p>
-                </div>
-            </div>
-            <div class="flex items-center justify-center gap-2 mt-2">
-                <div class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
-                <span class="text-xs text-amber-600 dark:text-amber-400 font-medium">Esperando turno del oponente...</span>
-                <div class="w-2 h-2 bg-amber-500 rounded-full animate-pulse" style="animation-delay: 0.3s"></div>
-            </div>
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 lg:p-6" id="attack-board-panel">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100">Tablero de ataque</h3>
+            <span class="text-xs text-gray-500 dark:text-gray-400" id="last-attack-info"></span>
         </div>
-    }
-
-    <!-- Attack Board -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
         <div class="overflow-x-auto">
-            <div class="battleship-board" id="attack-board" data-attack-url="@Url.Action("ExecuteAttack", "Battleship", new { gameId = Model.GameId })">
+            <div class="battleship-board min-w-[360px]" id="attack-board" data-bound="1" data-attack-url="@Url.Action("ExecuteAttack", "Battleship", new { gameId = Model.GameId })">
                 <div class="battleship-label"></div>
                 @for (int c = 0; c < 12; c++)
                 {
@@ -87,25 +72,24 @@
                     @for (int c = 0; c < 12; c++)
                     {
                         var cell = Model.Board[r, c];
-                        var css = "battleship-cell";
-                        if (cell.State == LinkUpPro.Domain.Enums.BoardCellState.Hit) css += " hit";
-                        else if (cell.State == LinkUpPro.Domain.Enums.BoardCellState.Miss) css += " miss";
-                        else if (cell.State == LinkUpPro.Domain.Enums.BoardCellState.Sunk) css += " sunk";
-                        var isEmpty = cell.State == LinkUpPro.Domain.Enums.BoardCellState.Empty;
+                        var css = "battleship-cell attack-cell";
+                        var isEmpty = true;
+                        if (cell.State == BoardCellState.Hit) { css += " hit"; isEmpty = false; }
+                        else if (cell.State == BoardCellState.Miss) { css += " miss"; isEmpty = false; }
+                        else if (cell.State == BoardCellState.Sunk) { css += " sunk"; isEmpty = false; }
                         var canClick = Model.IsMyTurn && isEmpty && !Model.IsGameOver;
-                        var isDisabled = !canClick || !isEmpty || Model.IsGameOver;
-                        <button type="button" class="@css @(isDisabled ? "disabled opacity-50 cursor-not-allowed" : "")" @(isDisabled ? "disabled" : "") data-x="@c" data-y="@r">
-                            @switch (cell.State)
+                        <button type="button"
+                                class="@css @(!canClick ? "disabled" : "")"
+                                data-x="@c" data-y="@r"
+                                @(!canClick ? "disabled" : "")
+                                title="@((char)('A' + c))@(r + 1)">
+                            @if (cell.State == BoardCellState.Hit || cell.State == BoardCellState.Sunk)
                             {
-                                case LinkUpPro.Domain.Enums.BoardCellState.Hit:
-                                    <i data-lucide="x" class="w-5 h-5 text-red-600"></i>
-                                    break;
-                                case LinkUpPro.Domain.Enums.BoardCellState.Miss:
-                                    <div class="w-2 h-2 rounded-full bg-green-600"></div>
-                                    break;
-                                case LinkUpPro.Domain.Enums.BoardCellState.Sunk:
-                                    <i data-lucide="x" class="w-5 h-5 text-red-800"></i>
-                                    break;
+                                <i data-lucide="x" class="w-4 h-4 text-red-600"></i>
+                            }
+                            else if (cell.State == BoardCellState.Miss)
+                            {
+                                <div class="w-2 h-2 rounded-full bg-green-600"></div>
                             }
                         </button>
                     }
@@ -113,16 +97,149 @@
             </div>
         </div>
     </div>
-
-    @if (Model.IsGameOver)
-    {
-        <div class="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-xl p-4 text-center">
-            <i data-lucide="trophy" class="w-8 h-8 text-indigo-600 dark:text-indigo-400 mx-auto mb-2"></i>
-            <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">Partida finalizada</h3>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Ganador: <strong>@(Model.WinnerId == Model.CurrentUserId ? "Tú" : Model.OpponentName)</strong></p>
-            <a asp-action="Result" asp-route-gameId="@Model.GameId" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700">
-                <i data-lucide="eye" class="w-4 h-4"></i> Ver resultado
-            </a>
-        </div>
-    }
 </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 lg:p-6 hidden" id="my-placement-panel">
+        <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3">Mis barcos</h3>
+        <div class="overflow-x-auto">
+            <div class="battleship-board min-w-[360px]">
+                <div class="battleship-label"></div>
+                @for (int c = 0; c < 12; c++) { <div class="battleship-label">@((char)('A' + c))</div> }
+                @for (int r = 0; r < 12; r++)
+                {
+                    <div class="battleship-label">@(r + 1)</div>
+                    @for (int c = 0; c < 12; c++)
+                    {
+                        var cell = Model.MyPlacementBoard[r, c];
+                        var css = "battleship-cell";
+                        if (cell.State == BoardCellState.Hit) css += " hit"; else if (cell.State == BoardCellState.Miss) css += " miss"; else if (cell.State == BoardCellState.Ship) css += " ship"; else if (cell.State == BoardCellState.Sunk) css += " ship sunk";
+                        <div class="@css">
+                            @if (cell.State == BoardCellState.Hit || cell.State == BoardCellState.Sunk) { <i data-lucide="x" class="w-4 h-4 text-red-600"></i> }
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        lucide.createIcons();
+
+        (function() {
+            var gameId = @Model.GameId;
+            var userId = '@Model.CurrentUserId';
+            var isMyTurn = @(Model.IsMyTurn ? "true" : "false");
+            var isGameOver = @(Model.IsGameOver ? "true" : "false");
+            var busy = false;
+
+            // Cell click → AJAX attack
+            document.getElementById('attack-board').addEventListener('click', function(e) {
+                var cell = e.target.closest('.attack-cell');
+                if (!cell || cell.disabled || busy || !isMyTurn || isGameOver) return;
+                busy = true;
+                var x = parseInt(cell.dataset.x);
+                var y = parseInt(cell.dataset.y);
+                var token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+                cell.innerHTML = '<i data-lucide="loader-circle" class="w-4 h-4 animate-spin text-indigo-600"></i>';
+                cell.disabled = true;
+                cell.classList.add('disabled');
+                if (window.lucide) lucide.createIcons();
+
+                fetch('@Url.Action("ExecuteAttack", "Battleship")?gameId=' + gameId + '&targetX=' + x + '&targetY=' + y, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'RequestVerificationToken': token
+                    }
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        cell.classList.remove('disabled');
+                        if (data.isHit) {
+                            cell.classList.add('hit');
+                            cell.innerHTML = '<i data-lucide="x" class="w-4 h-4 text-red-600 animate__animated animate__zoomIn"></i>';
+                            document.getElementById('last-attack-info').textContent = data.isSunk ? '¡Barco hundido!' : '¡Acierto!';
+                        } else {
+                            cell.classList.add('miss');
+                            cell.innerHTML = '<div class="w-2 h-2 rounded-full bg-green-600 animate__animated animate__zoomIn"></div>';
+                            document.getElementById('last-attack-info').textContent = 'Agua';
+                        }
+                        if (window.lucide) lucide.createIcons();
+                        isMyTurn = false;
+                        isGameOver = data.isGameOver;
+                        if (data.isGameOver) {
+                            document.getElementById('game-over-banner').classList.remove('hidden');
+                            var winnerText = data.winnerId === userId ? 'Tú' : '@Model.OpponentName';
+                            document.getElementById('game-over-title').textContent = data.isHit ? '¡Victoria!' : 'Derrota';
+                            document.getElementById('game-over-text').innerHTML = 'Ganador: <strong>' + winnerText + '</strong>';
+                            document.getElementById('turn-message').textContent = 'Partida finalizada';
+                            document.getElementById('turn-dot').className = 'inline-block w-2 h-2 rounded-full bg-gray-500';
+                        } else {
+                            document.getElementById('turn-message').textContent = 'Esperando turno del oponente...';
+                            document.getElementById('turn-dot').className = 'inline-block w-2 h-2 rounded-full bg-amber-500';
+                        }
+                        if (window.lucide) lucide.createIcons();
+                    } else {
+                        cell.disabled = false;
+                        cell.classList.remove('disabled');
+                        if (window.lucide) lucide.createIcons();
+                        if (data.message) alert(data.message);
+                    }
+                    busy = false;
+                })
+                .catch(function() {
+                    busy = false;
+                    window.location.reload();
+                });
+            });
+
+            // Refresh button → AJAX, no full reload
+            document.getElementById('refresh-btn')?.addEventListener('click', function() {
+                if (isGameOver) return;
+                var refreshBtn = this;
+                refreshBtn.disabled = true;
+                document.getElementById('refresh-text').textContent = 'Actualizando...';
+                fetch('@Url.Action("GetGameState", "Battleship")?gameId=' + gameId, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.isGameOver) {
+                        isGameOver = true;
+                        window.location.reload();
+                    } else if (data.isMyTurn !== isMyTurn) {
+                        window.location.reload();
+                    } else {
+                        document.getElementById('turn-dot').className = data.isMyTurn
+                            ? 'inline-block w-2 h-2 rounded-full bg-green-500'
+                            : 'inline-block w-2 h-2 rounded-full bg-amber-500';
+                        document.getElementById('turn-message').textContent = data.turnMessage;
+                    }
+                    refreshBtn.disabled = false;
+                    document.getElementById('refresh-text').textContent = 'Refrescar';
+                })
+                .catch(function() {
+                    refreshBtn.disabled = false;
+                    document.getElementById('refresh-text').textContent = 'Refrescar';
+                });
+            });
+
+            // Toggle my board inline
+            document.getElementById('toggle-my-board')?.addEventListener('click', function() {
+                var panel = document.getElementById('my-placement-panel');
+                var attackPanel = document.getElementById('attack-board-panel');
+                var label = document.getElementById('toggle-board-label');
+                if (!panel) return;
+                var isHidden = panel.classList.contains('hidden');
+                panel.classList.toggle('hidden', !isHidden);
+                attackPanel.classList.toggle('hidden', isHidden);
+                label.textContent = isHidden ? 'Ataques' : 'Mis barcos';
+                if (window.lucide) lucide.createIcons();
+            });
+        })();
+    </script>
+}

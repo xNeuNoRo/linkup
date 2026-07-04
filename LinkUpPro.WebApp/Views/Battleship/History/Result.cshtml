@@ -1,44 +1,44 @@
 @model LinkUpPro.Application.ViewModels.BattleshipViewModels.GameResultViewModel
+@using LinkUpPro.Domain.Enums
 @{
     ViewData["Title"] = "Resultado de partida";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
-
 <div class="max-w-4xl mx-auto space-y-6">
-    <!-- Resultado Header -->
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
-        <div class="w-20 h-20 @(Model.Result == "Ganada" ? "bg-green-100 dark:bg-green-900/30" : "bg-red-100 dark:bg-red-900/30") rounded-full flex items-center justify-center mx-auto mb-4">
-            <i data-lucide="@(Model.Result == "Ganada" ? "trophy" : "x-octagon")" class="w-10 h-10 @(Model.Result == "Ganada" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")"></i>
+        <div class="w-16 h-16 @(Model.IsWon ? "bg-green-100 dark:bg-green-900/30" : "bg-red-100 dark:bg-red-900/30") rounded-full flex items-center justify-center mx-auto mb-3">
+            <i data-lucide="@(Model.IsWon ? "trophy" : "x-octagon")" class="w-8 h-8 @(Model.IsWon ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")"></i>
         </div>
-        <h1 class="text-3xl font-black text-gray-900 dark:text-gray-100 mb-1">@Model.Result</h1>
-        <p class="text-gray-500 dark:text-gray-400">
-            Contra <strong>@Model.OpponentName</strong> · Duración: @Model.DurationHours.ToString("F1") horas
+        <h1 class="text-2xl font-black text-gray-900 dark:text-gray-100 mb-1">@(Model.IsWon ? "¡Victoria!" : "Derrota")</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+            Contra <strong>@Model.OpponentName</strong> · @Model.DurationHours.ToString("F1") horas
         </p>
     </div>
 
-    <!-- Action buttons -->
-    <div class="flex flex-wrap items-center justify-center gap-3">
-        <a asp-action="MyPlacementBoard" asp-route-gameId="@Model.GameId" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors">
-            <i data-lucide="grid" class="w-4 h-4"></i> Ver mi posicionamiento
-        </a>
-        <a asp-action="OpponentBoard" asp-route-gameId="@Model.GameId" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-            <i data-lucide="eye" class="w-4 h-4"></i> Ver tablero del otro jugador
-        </a>
-        <a asp-action="History" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-            <i data-lucide="arrow-left" class="w-4 h-4"></i> Volver al historial
-        </a>
-    </div>
+    <nav class="flex gap-1 bg-gray-100 dark:bg-gray-700/50 rounded-xl p-1" role="tablist">
+        <button class="tab-btn flex-1 py-2.5 px-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 bg-white dark:bg-gray-800 shadow-sm text-indigo-600 dark:text-indigo-400"
+                data-board-tab="my-attack" role="tab" aria-selected="true">
+            <i data-lucide="crosshair" class="w-4 h-4"></i> Mis ataques
+        </button>
+        <button class="tab-btn flex-1 py-2.5 px-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 text-gray-600 dark:text-gray-400"
+                data-board-tab="opponent-attack" role="tab" aria-selected="false">
+            <i data-lucide="eye" class="w-4 h-4"></i> Ataques @Model.OpponentName
+        </button>
+        <button class="tab-btn flex-1 py-2.5 px-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 text-gray-600 dark:text-gray-400"
+                data-board-tab="my-placement" role="tab" aria-selected="false">
+            <i data-lucide="grid" class="w-4 h-4"></i> Mis barcos
+        </button>
+    </nav>
 
-    <!-- Mi tablero de ataque -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Mi tablero de ataque</h2>
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 lg:p-6 board-tab" id="tab-my-attack">
+        <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-1.5">
+            <i data-lucide="crosshair" class="w-4 h-4 text-indigo-600"></i>
+            Tus ataques contra @Model.OpponentName
+        </h2>
         <div class="overflow-x-auto">
-            <div class="battleship-board">
+            <div class="battleship-board min-w-[360px]">
                 <div class="battleship-label"></div>
-                @for (int c = 0; c < 12; c++)
-                {
-                    <div class="battleship-label">@((char)('A' + c))</div>
-                }
+                @for (int c = 0; c < 12; c++) { <div class="battleship-label">@((char)('A' + c))</div> }
                 @for (int r = 0; r < 12; r++)
                 {
                     <div class="battleship-label">@(r + 1)</div>
@@ -46,28 +46,95 @@
                     {
                         var cell = Model.MyAttackBoard[r, c];
                         var css = "battleship-cell";
-                        if (cell.State == LinkUpPro.Domain.Enums.BoardCellState.Hit) css += " hit";
-                        else if (cell.State == LinkUpPro.Domain.Enums.BoardCellState.Miss) css += " miss";
-                        else if (cell.State == LinkUpPro.Domain.Enums.BoardCellState.Sunk) css += " sunk";
+                        if (cell.State == BoardCellState.Hit) css += " hit"; else if (cell.State == BoardCellState.Miss) css += " miss"; else if (cell.State == BoardCellState.Sunk) css += " sunk";
                         <div class="@css">
-                            @switch (cell.State)
-                            {
-                                case LinkUpPro.Domain.Enums.BoardCellState.Hit:
-                                    <i data-lucide="x" class="w-5 h-5 text-red-600"></i>
-                                    break;
-                                case LinkUpPro.Domain.Enums.BoardCellState.Miss:
-                                    <div class="w-2 h-2 rounded-full bg-green-600"></div>
-                                    break;
-                                case LinkUpPro.Domain.Enums.BoardCellState.Sunk:
-                                    <i data-lucide="x" class="w-5 h-5 text-red-800"></i>
-                                    break;
-                            }
+                            @if (cell.State == BoardCellState.Hit || cell.State == BoardCellState.Sunk) { <i data-lucide="x" class="w-4 h-4 text-red-600"></i> }
+                            else if (cell.State == BoardCellState.Miss) { <div class="w-2 h-2 rounded-full bg-green-600"></div> }
                         </div>
                     }
                 }
             </div>
         </div>
     </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 lg:p-6 board-tab hidden" id="tab-opponent-attack">
+        <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-1.5">
+            <i data-lucide="eye" class="w-4 h-4 text-indigo-600"></i>
+            Ataques de @Model.OpponentName contra ti
+        </h2>
+        <div class="overflow-x-auto">
+            <div class="battleship-board min-w-[360px]">
+                <div class="battleship-label"></div>
+                @for (int c = 0; c < 12; c++) { <div class="battleship-label">@((char)('A' + c))</div> }
+                @for (int r = 0; r < 12; r++)
+                {
+                    <div class="battleship-label">@(r + 1)</div>
+                    @for (int c = 0; c < 12; c++)
+                    {
+                        var cell = Model.OpponentAttackBoard[r, c];
+                        var css = "battleship-cell";
+                        if (cell.State == BoardCellState.Hit) css += " hit"; else if (cell.State == BoardCellState.Miss) css += " miss"; else if (cell.State == BoardCellState.Sunk) css += " sunk";
+                        <div class="@css">
+                            @if (cell.State == BoardCellState.Hit || cell.State == BoardCellState.Sunk) { <i data-lucide="x" class="w-4 h-4 text-red-600"></i> }
+                            else if (cell.State == BoardCellState.Miss) { <div class="w-2 h-2 rounded-full bg-green-600"></div> }
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 lg:p-6 board-tab hidden" id="tab-my-placement">
+        <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-1.5">
+            <i data-lucide="grid" class="w-4 h-4 text-indigo-600"></i>
+            Cómo posicionaste tus barcos
+        </h2>
+        <div class="overflow-x-auto">
+            <div class="battleship-board min-w-[360px]">
+                <div class="battleship-label"></div>
+                @for (int c = 0; c < 12; c++) { <div class="battleship-label">@((char)('A' + c))</div> }
+                @for (int r = 0; r < 12; r++)
+                {
+                    <div class="battleship-label">@(r + 1)</div>
+                    @for (int c = 0; c < 12; c++)
+                    {
+                        var cell = Model.MyPlacementBoard[r, c];
+                        var css = "battleship-cell";
+                        if (cell.State == BoardCellState.Hit) css += " hit"; else if (cell.State == BoardCellState.Miss) css += " miss"; else if (cell.State == BoardCellState.Ship) css += " ship"; else if (cell.State == BoardCellState.Sunk) css += " ship sunk";
+                        <div class="@css">
+                            @if (cell.State == BoardCellState.Hit || cell.State == BoardCellState.Sunk) { <i data-lucide="x" class="w-4 h-4 text-red-600"></i> }
+                            else if (cell.State == BoardCellState.Miss) { <div class="w-2 h-2 rounded-full bg-green-600"></div> }
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="flex justify-center">
+        <a asp-action="Index" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Volver al Battleship
+        </a>
+    </div>
 </div>
 
-@section Scripts { <script>lucide.createIcons();</script> }
+@section Scripts {
+    <script>
+        lucide.createIcons();
+        document.querySelectorAll('[data-board-tab]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('[data-board-tab]').forEach(function(b) {
+                    b.classList.remove('bg-white', 'dark:bg-gray-800', 'shadow-sm', 'text-indigo-600', 'dark:text-indigo-400');
+                    b.classList.add('text-gray-600', 'dark:text-gray-400');
+                    b.setAttribute('aria-selected', 'false');
+                });
+                btn.classList.add('bg-white', 'dark:bg-gray-800', 'shadow-sm', 'text-indigo-600', 'dark:text-indigo-400');
+                btn.classList.remove('text-gray-600', 'dark:text-gray-400');
+                btn.setAttribute('aria-selected', 'true');
+                document.querySelectorAll('.board-tab').forEach(function(t) { t.classList.add('hidden'); });
+                document.getElementById('tab-' + btn.dataset.boardTab)?.classList.remove('hidden');
+                if (window.lucide) lucide.createIcons();
+            });
+        });
+    </script>
+}

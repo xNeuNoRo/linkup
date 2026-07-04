@@ -103,6 +103,30 @@ public class BattleshipController : BaseController
         return View(vm);
     }
 
+    // ====================== SEARCH OPPONENTS (AJAX Partial) ======================
+
+    [HttpGet]
+    public async Task<IActionResult> SearchOpponents(string? search)
+    {
+        var userId = _currentUserService.UserId!;
+        var pagedResult = await _battleshipService.GetActiveGamesAsync(userId, 1, 50);
+        var activeOpponentIds = pagedResult.Items.Select(g => g.OpponentId).ToHashSet();
+        var allFriendsPaged = await GetAllFriendsAsync(userId);
+
+        var availableOpponents = allFriendsPaged
+            .Where(f => !activeOpponentIds.Contains(f.FriendId))
+            .Where(f => string.IsNullOrEmpty(search) || f.FriendUserName.Contains(search, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        var vm = new CreateGameViewModel
+        {
+            SearchText = search,
+            AvailableOpponents = availableOpponents.Select(MapToAvailableOpponent).ToList()
+        };
+
+        return PartialView("_OpponentList", vm);
+    }
+
     // ====================== CREATE GAME (POST) ======================
 
     [HttpPost]
@@ -139,7 +163,7 @@ public class BattleshipController : BaseController
         }
     }
 
-    // ====================== PLACEMENT (3 pasos en una sola vista con sub-vistas) ======================
+    // ====================== PLACEMENT (Unified: select ships + board + direction in one view) ======================
 
     [HttpGet]
     public async Task<IActionResult> Placement(long gameId)
@@ -155,34 +179,31 @@ public class BattleshipController : BaseController
 
         var detail = detailResult.Value!;
 
-        // Si la partida está en InProgress, redirigir al tablero de ataque
         if (detail.Status == GameStatus.InProgress)
             return RedirectToAction(nameof(AttackBoard), new { gameId });
 
-        // Si está finalizada, redirigir al resultado
         if (detail.Status == GameStatus.Finished_Winner || detail.Status == GameStatus.Finished_Abandoned)
             return RedirectToAction(nameof(Result), new { gameId });
 
-        // Configurar el modelo de placement
         var placementResult = await _battleshipService.GetMyPlacementBoardAsync(userId, gameId);
         var placement = placementResult.Value!;
 
-        // Construir ViewModel
+        var placedShips = placement.Ships.Select(MapToPlacedShip).ToList();
+        var board = BuildBoardFromPlacedShips(placedShips);
+
         var vm = new ShipPlacementViewModel
         {
             GameId = gameId,
             ShipsToPlace = BuildShipsToPlace(placement.Ships),
-            PlacedShips = placement.Ships.Select((ShipPlacementDto s) => MapToPlacedShip(s)).ToList(),
+            PlacedShips = placedShips,
+            Board = board,
             OpponentHasFinishedPlacement = false
         };
-
-        if (vm.AllShipsPlaced && !vm.OpponentHasFinishedPlacement)
-            vm.InfoMessage = "El otro jugador aún no termina de configurar sus barcos.";
 
         await this.PopulateMenuCountersAsync(_currentUserService, _friendRequestService, _notificationService);
         ViewBag.CurrentUserId = userId;
 
-        return View("Placement/SelectShips", vm);
+        return View("Placement/Index", vm);
     }
 
     [HttpPost]
@@ -204,7 +225,7 @@ public class BattleshipController : BaseController
                 !int.TryParse(Request.Form["StartY"], out var startY))
             {
                 ShowError("Debe seleccionar una celda y una dirección para posicionar el barco.");
-                return RedirectToAction(nameof(SelectCell), new { gameId = model.GameId, shipSize = model.SelectedShipSize.Value });
+                return RedirectToAction(nameof(Placement), new { gameId = model.GameId });
             }
 
             // View sends direction 0-3 (Up=0, Down=1, Left=2, Right=3);
@@ -223,13 +244,7 @@ public class BattleshipController : BaseController
             if (!result.IsSuccess)
             {
                 ShowError(result.Error?.Message ?? "No se pudo colocar el barco.");
-                return RedirectToAction(nameof(SelectDirection), new
-                {
-                    gameId = model.GameId,
-                    shipSize = model.SelectedShipSize.Value,
-                    startX,
-                    startY
-                });
+                return RedirectToAction(nameof(Placement), new { gameId = model.GameId });
             }
 
             ShowAlert("Barco posicionado correctamente.");
@@ -242,73 +257,6 @@ public class BattleshipController : BaseController
             ShowError("No se pudo colocar el barco.");
             return RedirectToAction(nameof(Placement), new { gameId = model.GameId });
         }
-    }
-
-    // ====================== SELECT CELL (GET) ======================
-
-    [HttpGet]
-    public async Task<IActionResult> SelectCell(long gameId, int shipSize)
-    {
-        var userId = _currentUserService.UserId!;
-        var detailResult = await _battleshipService.GetGameDetailAsync(userId, gameId);
-        var placementResult = await _battleshipService.GetMyPlacementBoardAsync(userId, gameId);
-
-        if (!detailResult.IsSuccess || !placementResult.IsSuccess)
-        {
-            ShowError("No se pudo cargar la partida.");
-            return RedirectToAction(nameof(Index));
-        }
-
-        var placement = placementResult.Value!;
-        var shipsToPlace = BuildShipsToPlace(placement.Ships);
-        var selectedShip = shipsToPlace.FirstOrDefault(s => s.Size == shipSize);
-
-        if (selectedShip == null)
-        {
-            ShowError("Tamaño de barco no válido.");
-            return RedirectToAction(nameof(Placement), new { gameId });
-        }
-
-        var vm = new ShipPlacementViewModel
-        {
-            GameId = gameId,
-            SelectedShipSize = shipSize,
-            ShipsToPlace = shipsToPlace,
-            PlacedShips = placement.Ships.Select(MapToPlacedShip).ToList(),
-            SelectedShipDisplayName = selectedShip.Label
-        };
-
-        return View("Placement/SelectCell", vm);
-    }
-
-    // ====================== SELECT DIRECTION (GET) ======================
-
-    [HttpGet]
-    public async Task<IActionResult> SelectDirection(long gameId, int shipSize, int startX, int startY)
-    {
-        var userId = _currentUserService.UserId!;
-        var placementResult = await _battleshipService.GetMyPlacementBoardAsync(userId, gameId);
-
-        if (!placementResult.IsSuccess)
-        {
-            ShowError("No se pudo cargar la partida.");
-            return RedirectToAction(nameof(Index));
-        }
-
-        var shipsToPlace = BuildShipsToPlace(placementResult.Value!.Ships);
-        var selectedShip = shipsToPlace.FirstOrDefault(s => s.Size == shipSize);
-
-        var vm = new ShipPlacementViewModel
-        {
-            GameId = gameId,
-            SelectedShipSize = shipSize,
-            StartX = startX,
-            StartY = startY,
-            StartCellLabel = $"{(char)('A' + startX)}{startY + 1}",
-            SelectedShipDisplayName = selectedShip?.Label ?? $"Barco de {shipSize}"
-        };
-
-        return View("Placement/SelectDirection", vm);
     }
 
     // ====================== ATTACK BOARD ======================
@@ -329,9 +277,17 @@ public class BattleshipController : BaseController
         var detailResult = await _battleshipService.GetGameDetailAsync(userId, gameId);
         var detail = detailResult.IsSuccess ? detailResult.Value : null;
 
-        // Obtener info del oponente
         var opponentId = detail?.OpponentId ?? "";
         var opponent = await _profileService.GetByIdAsync(opponentId);
+
+        // Load placement board for inline toggle
+        var placementResult = await _battleshipService.GetMyPlacementBoardAsync(userId, gameId);
+        CellViewModel[,]? placementBoard = null;
+        if (placementResult.IsSuccess)
+        {
+            var opponentAttacksResult = await _battleshipService.GetOpponentAttackBoardAsync(userId, gameId);
+            placementBoard = BuildFullPlacementBoard(placementResult.Value!, opponentAttacksResult.IsSuccess ? opponentAttacksResult.Value : null);
+        }
 
         var vm = new AttackBoardViewModel
         {
@@ -344,6 +300,7 @@ public class BattleshipController : BaseController
             CurrentTurnUserId = board.CurrentTurnUserId,
             CurrentUserId = userId,
             Board = ConvertToCellArray(board.Grid),
+            MyPlacementBoard = placementBoard ?? new CellViewModel[12, 12],
             TurnMessage = board.IsGameOver
                 ? "Partida finalizada"
                 : board.IsMyTurn
@@ -361,6 +318,8 @@ public class BattleshipController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ExecuteAttack(long gameId, int targetX, int targetY)
     {
+        var isAjax = Request.Headers.XRequestedWith == "XMLHttpRequest";
+
         try
         {
             var result = await _battleshipService.AttackAsync(
@@ -369,14 +328,30 @@ public class BattleshipController : BaseController
                 new AttackRequest(targetX, targetY)
             );
 
-            if (!result.IsSuccess)
+            if (isAjax)
             {
-                ShowError(result.Error?.Message ?? "No se pudo realizar el ataque.");
+                if (!result.IsSuccess)
+                    return Json(new { success = false, message = result.Error?.Message ?? "No se pudo realizar el ataque." });
+
+                return Json(new
+                {
+                    success = true,
+                    isHit = result.Value!.IsHit,
+                    isSunk = result.Value.IsSunk,
+                    isGameOver = result.Value.IsGameOver,
+                    winnerId = result.Value.WinnerId,
+                    message = result.Value.IsHit ? "¡Acierto!" : "Agua"
+                });
             }
+
+            if (!result.IsSuccess)
+                ShowError(result.Error?.Message ?? "No se pudo realizar el ataque.");
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Error ejecutando ataque");
+            if (isAjax)
+                return Json(new { success = false, message = "Error al procesar el ataque." });
             ShowError("No se pudo realizar el ataque.");
         }
 
@@ -389,6 +364,36 @@ public class BattleshipController : BaseController
     public async Task<IActionResult> RefreshTurn(long gameId)
     {
         return await AttackBoard(gameId);
+    }
+
+    // ====================== GAME STATE (JSON for AJAX polling) ======================
+
+    [HttpGet]
+    public async Task<IActionResult> GetGameState(long gameId)
+    {
+        var userId = _currentUserService.UserId!;
+        var boardResult = await _battleshipService.GetMyAttackBoardAsync(userId, gameId);
+        if (!boardResult.IsSuccess)
+            return Json(new { error = "No se pudo cargar el estado." });
+
+        var board = boardResult.Value!;
+        var detailResult = await _battleshipService.GetGameDetailAsync(userId, gameId);
+        var detail = detailResult.IsSuccess ? detailResult.Value : null;
+        var opponentId = detail?.OpponentId ?? "";
+        var opponent = await _profileService.GetByIdAsync(opponentId);
+
+        return Json(new
+        {
+            isMyTurn = board.IsMyTurn,
+            isGameOver = board.IsGameOver,
+            winnerId = board.WinnerId,
+            currentTurnUserId = board.CurrentTurnUserId,
+            turnMessage = board.IsGameOver
+                ? "Partida finalizada"
+                : board.IsMyTurn
+                    ? "Es tu turno de atacar"
+                    : $"Es turno de {(opponent != null ? opponent.UserName : "oponente")} de atacar"
+        });
     }
 
     // ====================== MY BOARD ======================
@@ -728,17 +733,58 @@ public class BattleshipController : BaseController
             for (var i = 1; i <= totalCount; i++)
             {
                 var isPlaced = i <= placedCount;
+                var name = ShipToPlaceViewModel.GetName(size, i);
                 result.Add(new ShipToPlaceViewModel
                 {
                     Size = size,
                     Index = i,
-                    Label = totalCount > 1 ? $"Barco de {size} ({i})" : $"Barco de {size}",
+                    Label = totalCount > 1 ? $"{name} {i}" : name,
+                    DisplayName = name,
                     IsPlaced = isPlaced
                 });
             }
         }
 
         return result.Where(s => !s.IsPlaced).ToList();
+    }
+
+    private static CellViewModel[,] BuildBoardFromPlacedShips(List<PlacedShipViewModel> placedShips)
+    {
+        var board = new CellViewModel[12, 12];
+        for (var r = 0; r < 12; r++)
+        for (var c = 0; c < 12; c++)
+            board[r, c] = new CellViewModel { X = c, Y = r, State = BoardCellState.Empty };
+
+        foreach (var ship in placedShips)
+        {
+            foreach (var cell in ship.OccupiedCells)
+            {
+                if (cell.X >= 0 && cell.X < 12 && cell.Y >= 0 && cell.Y < 12)
+                    board[cell.Y, cell.X] = new CellViewModel
+                    {
+                        X = cell.X,
+                        Y = cell.Y,
+                        State = BoardCellState.Ship,
+                        ShipId = ship.ShipId,
+                        ShipSize = ship.Size
+                    };
+            }
+        }
+        return board;
+    }
+
+    private static CellViewModel[,] BuildFullPlacementBoard(PlacementBoardDto placement, AttackBoardDto? opponentAttacks)
+    {
+        var board = BuildBoardFromPlacedShips(placement.Ships.Select(MapToPlacedShip).ToList());
+        if (opponentAttacks is null) return board;
+        for (var r = 0; r < 12; r++)
+        for (var c = 0; c < 12; c++)
+        {
+            if (opponentAttacks.Grid[c, r] == BoardCellState.Hit ||
+                opponentAttacks.Grid[c, r] == BoardCellState.Sunk)
+                board[r, c].State = opponentAttacks.Grid[c, r];
+        }
+        return board;
     }
 
     private static PlacedShipViewModel MapToPlacedShip(ShipPlacementDto dto)
