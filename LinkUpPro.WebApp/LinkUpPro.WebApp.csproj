@@ -13,12 +13,6 @@
     </PackageReference>
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Update="Templates/**/*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>

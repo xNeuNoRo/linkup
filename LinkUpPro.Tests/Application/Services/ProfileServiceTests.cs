@@ -18,6 +18,7 @@ public class ProfileServiceTests : InMemoryTestBase
     private IProfileService? _service;
     private Mock<UserManager<AppUser>> _userManagerMock = null!;
     private Mock<IFileService> _fileServiceMock = null!;
+    private Mock<IEmailService> _emailServiceMock = null!;
     private Mock<IUnitOfWork> _unitOfWorkMock = null!;
 
     public ProfileServiceTests() { }
@@ -27,6 +28,7 @@ public class ProfileServiceTests : InMemoryTestBase
         await base.InitializeAsync();
 
         _fileServiceMock = new Mock<IFileService>();
+        _emailServiceMock = new Mock<IEmailService>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _unitOfWorkMock
             .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
@@ -36,6 +38,7 @@ public class ProfileServiceTests : InMemoryTestBase
             CreateUserManager().Object,
             CreateSignInManager().Object,
             _fileServiceMock.Object,
+            _emailServiceMock.Object,
             _unitOfWorkMock.Object,
             new Mock<IHttpContextAccessor>().Object,
             new Mock<ILogger<ProfileService>>().Object

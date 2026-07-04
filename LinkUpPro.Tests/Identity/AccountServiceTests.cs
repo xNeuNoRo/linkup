@@ -22,6 +22,7 @@ public class AccountServiceTests
     private readonly Mock<IEmailService> _emailServiceMock;
     private readonly Mock<IFileService> _fileServiceMock;
     private readonly Mock<IProfileService> _profileServiceMock;
+    private readonly Mock<IHttpContextAccessor> _httpContextAccessorMock;
     private readonly Mock<ILogger<AccountService>> _loggerMock;
     private readonly AccountService _sut;
 
@@ -37,6 +38,7 @@ public class AccountServiceTests
         _emailServiceMock = new Mock<IEmailService>();
         _fileServiceMock = new Mock<IFileService>();
         _profileServiceMock = new Mock<IProfileService>();
+        _httpContextAccessorMock = new Mock<IHttpContextAccessor>();
         _loggerMock = new Mock<ILogger<AccountService>>();
 
         var configMock = new Mock<IConfiguration>();
@@ -48,6 +50,7 @@ public class AccountServiceTests
             _emailServiceMock.Object,
             _fileServiceMock.Object,
             _profileServiceMock.Object,
+            _httpContextAccessorMock.Object,
             _loggerMock.Object
         );
     }

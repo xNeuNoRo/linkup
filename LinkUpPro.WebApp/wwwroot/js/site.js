@@ -1213,8 +1213,6 @@
                 });
             });
         }
-
-        // ponytail: removed old placement board navigation - replaced by unified Placement/Index.cshtml
     }
 
     function initCreateGameSelection() {

@@ -2,6 +2,7 @@ using LinkUpPro.Application.DTOs.Profile.Requests;
 using LinkUpPro.Application.DTOs.Profile.Responses;
 using LinkUpPro.Application.Interfaces;
 using LinkUpPro.Application.Interfaces.Services;
+using LinkUpPro.Application.Models.Emails;
 using LinkUpPro.Domain.Common;
 using LinkUpPro.Domain.Interfaces.Persistence;
 using LinkUpPro.Domain.ValueObjects;
@@ -18,6 +19,7 @@ public sealed class ProfileService : IProfileService
     private readonly UserManager<AppUser> _userManager;
     private readonly SignInManager<AppUser> _signInManager;
     private readonly IFileService _fileService;
+    private readonly IEmailService _emailService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<ProfileService> _logger;
@@ -26,6 +28,7 @@ public sealed class ProfileService : IProfileService
         UserManager<AppUser> userManager,
         SignInManager<AppUser> signInManager,
         IFileService fileService,
+        IEmailService emailService,
         IUnitOfWork unitOfWork,
         IHttpContextAccessor httpContextAccessor,
         ILogger<ProfileService> logger
@@ -34,6 +37,7 @@ public sealed class ProfileService : IProfileService
         _userManager = userManager;
         _signInManager = signInManager;
         _fileService = fileService;
+        _emailService = emailService;
         _unitOfWork = unitOfWork;
         _httpContextAccessor = httpContextAccessor;
         _logger = logger;
@@ -73,6 +77,12 @@ public sealed class ProfileService : IProfileService
 
         var oldPhoto = user.ProfilePicturePath;
 
+        // ponytail: track changes for notification email — simple before/after diff
+        var changes = new List<string>();
+        var oldFirstName = user.FirstName ?? string.Empty;
+        var oldLastName = user.LastName ?? string.Empty;
+        var oldPhone = user.PhoneNumber ?? string.Empty;
+
         var firstName = request.FirstName?.Trim() ?? string.Empty;
         var lastName = request.LastName?.Trim() ?? string.Empty;
 
@@ -85,6 +95,13 @@ public sealed class ProfileService : IProfileService
             return Result<EditProfileResponseDto>.Failure(
                 new DomainError("Profile.LastNameRequired", "El apellido es requerido y no puede contener solo espacios.")
             );
+
+        if (firstName != oldFirstName)
+            changes.Add("Nombre actualizado");
+        if (lastName != oldLastName)
+            changes.Add("Apellido actualizado");
+        if (request.PhoneNumber != oldPhone)
+            changes.Add("Teléfono actualizado");
 
         user.FirstName = firstName;
         user.LastName = lastName;
@@ -106,6 +123,7 @@ public sealed class ProfileService : IProfileService
                     request.ProfilePictureFile,
                     "profiles"
                 );
+                changes.Add("Foto de perfil actualizada");
             }
             catch (Exception)
             {
@@ -141,6 +159,18 @@ public sealed class ProfileService : IProfileService
 
         // Refrescar la cookie con los nuevos claims (FirstName, LastName, ProfilePicturePath)
         await RefreshSignInCookieAsync(user);
+
+        // ponytail: fire-and-forget notification email, only if something changed
+        if (changes.Count > 0)
+        {
+            var profileUrl = GetOrigin() + "/Profile";
+            await _emailService.SendEmailAsync(
+                user.Email!,
+                "Perfil actualizado - LinkUp Pro",
+                "ProfileUpdated",
+                new ProfileUpdatedModel(user.UserName!, changes, profileUrl)
+            );
+        }
 
         return Result<EditProfileResponseDto>.Success(MapToEditDto(user));
     }
@@ -262,6 +292,15 @@ public sealed class ProfileService : IProfileService
         await _signInManager.SignOutAsync();
         await _unitOfWork.SaveChangesAsync();
 
+        // ponytail: fire-and-forget security notification, same sync pattern as AccountService
+        var loginUrl = GetOrigin() + "/Auth/Login";
+        await _emailService.SendEmailAsync(
+            user.Email!,
+            "Contraseña actualizada - LinkUp Pro",
+            "PasswordChanged",
+            new PasswordChangedModel(user.UserName!, loginUrl, DateTime.UtcNow)
+        );
+
         return Result<EditProfileResponseDto>.Success(
             MapToEditDto(user) with
             {
@@ -354,4 +393,12 @@ public sealed class ProfileService : IProfileService
             user.IsActive,
             user.EmailConfirmed
         );
+
+    private string GetOrigin()
+    {
+        var request = _httpContextAccessor.HttpContext?.Request;
+        return request != null
+            ? $"{request.Scheme}://{request.Host.Value}"
+            : "https://localhost";
+    }
 }

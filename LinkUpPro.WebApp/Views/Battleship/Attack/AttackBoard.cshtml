@@ -177,6 +177,8 @@
                                 toast: true,
                                 position: 'top-end'
                             });
+                            cell.classList.add('sunk');
+                            cell.innerHTML = '<i data-lucide="x" class="w-4 h-4 animate__animated animate__zoomIn"></i>';
                             cell.classList.add('animate__animated', 'animate__flash');
                         }
                         } else {

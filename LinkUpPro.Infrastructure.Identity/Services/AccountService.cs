@@ -9,6 +9,7 @@ using LinkUpPro.Domain.Common;
 using LinkUpPro.Domain.Exceptions;
 using LinkUpPro.Infrastructure.Identity.Entities;
 using Mapster;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
@@ -22,6 +23,7 @@ public class AccountService : IAccountService
     private readonly IEmailService _emailService;
     private readonly IFileService _fileService;
     private readonly IProfileService _profileService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<AccountService> _logger;
 
     public AccountService(
@@ -30,6 +32,7 @@ public class AccountService : IAccountService
         IEmailService emailService,
         IFileService fileService,
         IProfileService profileService,
+        IHttpContextAccessor httpContextAccessor,
         ILogger<AccountService> logger
     )
     {
@@ -38,6 +41,7 @@ public class AccountService : IAccountService
         _emailService = emailService;
         _fileService = fileService;
         _profileService = profileService;
+        _httpContextAccessor = httpContextAccessor;
         _logger = logger;
     }
 
@@ -219,6 +223,14 @@ public class AccountService : IAccountService
         user.IsActive = true;
         await _userManager.UpdateAsync(user);
 
+        var loginUrl = GetOrigin() + "/Auth/Login";
+        await _emailService.SendEmailAsync(
+            user.Email!,
+            "Bienvenido a LinkUp Pro",
+            "Welcome",
+            new WelcomeModel(user.UserName!, loginUrl)
+        );
+
         return user.Adapt<AuthResponseDto>();
     }
 
@@ -336,5 +348,13 @@ public class AccountService : IAccountService
         var uri = QueryHelpers.AddQueryString(route, "userId", user.Id);
         uri = QueryHelpers.AddQueryString(uri, "token", encodedToken);
         return uri;
+    }
+
+    private string GetOrigin()
+    {
+        var request = _httpContextAccessor.HttpContext?.Request;
+        return request != null
+            ? $"{request.Scheme}://{request.Host.Value}"
+            : "https://localhost";
     }
 }
