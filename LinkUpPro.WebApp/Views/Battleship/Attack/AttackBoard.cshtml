@@ -82,10 +82,14 @@
                                 class="@css @(!canClick ? "disabled" : "")"
                                 data-x="@c" data-y="@r"
                                 @(!canClick ? "disabled" : "")
-                                title="@((char)('A' + c))@(r + 1)">
-                            @if (cell.State == BoardCellState.Hit || cell.State == BoardCellState.Sunk)
+                                title="@(cell.State == BoardCellState.Sunk ? "Barco hundido" : (cell.State == BoardCellState.Hit ? "Acierto" : (cell.State == BoardCellState.Miss ? "Agua" : $"{((char)('A' + c))}{r + 1}")))">
+                            @if (cell.State == BoardCellState.Hit)
                             {
                                 <i data-lucide="x" class="w-4 h-4 text-red-600"></i>
+                            }
+                            else if (cell.State == BoardCellState.Sunk)
+                            {
+                                <i data-lucide="x" class="w-4 h-4 text-white"></i>
                             }
                             else if (cell.State == BoardCellState.Miss)
                             {
@@ -161,8 +165,20 @@
                         cell.classList.remove('disabled');
                         if (data.isHit) {
                             cell.classList.add('hit');
-                            cell.innerHTML = '<i data-lucide="x" class="w-4 h-4 text-red-600 animate__animated animate__zoomIn"></i>';
-                            document.getElementById('last-attack-info').textContent = data.isSunk ? '¡Barco hundido!' : '¡Acierto!';
+                        cell.innerHTML = '<i data-lucide="x" class="w-4 h-4 text-red-600 animate__animated animate__zoomIn"></i>';
+                        document.getElementById('last-attack-info').textContent = data.isSunk ? '¡Barco hundido!' : '¡Acierto!';
+                        if (data.isSunk && window.Swal) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: '¡Barco hundido!',
+                                text: 'Has derribado un barco enemigo.',
+                                timer: 2000,
+                                showConfirmButton: false,
+                                toast: true,
+                                position: 'top-end'
+                            });
+                            cell.classList.add('animate__animated', 'animate__flash');
+                        }
                         } else {
                             cell.classList.add('miss');
                             cell.innerHTML = '<div class="w-2 h-2 rounded-full bg-green-600 animate__animated animate__zoomIn"></div>';

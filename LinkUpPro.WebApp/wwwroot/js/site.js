@@ -1239,33 +1239,31 @@
     }
 
     function initCommonFriendsButtons() {
-        document.querySelectorAll('[data-common-friends-id]').forEach(function (btn) {
-            if (btn.dataset.bound) return;
-            btn.dataset.bound = '1';
+        document.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-common-friends-id]');
+            if (!btn) return;
 
-            btn.addEventListener('click', function () {
-                const friendId = btn.dataset.commonFriendsId;
-                const friendName = btn.dataset.commonFriendsName || 'este usuario';
+            var friendId = btn.dataset.commonFriendsId;
+            var friendName = btn.dataset.commonFriendsName || 'este usuario';
 
-                fetch('/Friends/CommonFriends?id=' + encodeURIComponent(friendId), {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            fetch('/Friends/CommonFriends?id=' + encodeURIComponent(friendId), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(function (response) { return response.text(); })
+                .then(function (html) {
+                    if (window.Swal) {
+                        Swal.fire({
+                            title: 'Amigos en común con ' + friendName,
+                            html: html,
+                            showConfirmButton: false,
+                            showCloseButton: true,
+                            width: '500px',
+                            customClass: { popup: 'animate__animated animate__zoomIn animate__faster' }
+                        });
+                        setTimeout(function () { if (window.lucide) window.lucide.createIcons(); }, 50);
+                    }
                 })
-                    .then(function (response) { return response.text(); })
-                    .then(function (html) {
-                        if (window.Swal) {
-                            Swal.fire({
-                                title: 'Amigos en común con ' + friendName,
-                                html: html,
-                                showConfirmButton: false,
-                                showCloseButton: true,
-                                width: '500px',
-                                customClass: { popup: 'animate__animated animate__zoomIn animate__faster' }
-                            });
-                            setTimeout(function () { if (window.lucide) window.lucide.createIcons(); }, 50);
-                        }
-                    })
-                    .catch(function () { Toast.error('No se pudieron cargar los amigos en común.'); });
-            });
+                .catch(function () { Toast.error('No se pudieron cargar los amigos en común.'); });
         });
     }
 

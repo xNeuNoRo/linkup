@@ -166,6 +166,7 @@ public class BattleshipController : BaseController
     // ====================== PLACEMENT (Unified: select ships + board + direction in one view) ======================
 
     [HttpGet]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     public async Task<IActionResult> Placement(long gameId)
     {
         var userId = _currentUserService.UserId!;
@@ -723,26 +724,28 @@ public class BattleshipController : BaseController
     private static List<ShipToPlaceViewModel> BuildShipsToPlace(ShipPlacementDto[] placedShips)
     {
         var required = new[] { 5, 4, 3, 3, 2 };
-        var placedSizes = placedShips.Select(s => (int)s.Size).ToList();
+        var placedPlacedSizes = placedShips.Select(s => (int)s.Size).ToList();
 
         var result = new List<ShipToPlaceViewModel>();
+        var sizeIndex = new Dictionary<int, int>();
+
         foreach (var size in required)
         {
-            var placedCount = placedSizes.Count(s => s == size);
-            var totalCount = required.Count(s => s == size);
-            for (var i = 1; i <= totalCount; i++)
+            var idx = sizeIndex.GetValueOrDefault(size) + 1;
+            sizeIndex[size] = idx;
+
+            var placedCount = placedPlacedSizes.Count(s => s == size);
+            var isPlaced = idx <= placedCount;
+            var name = ShipToPlaceViewModel.GetName(size, idx);
+
+            result.Add(new ShipToPlaceViewModel
             {
-                var isPlaced = i <= placedCount;
-                var name = ShipToPlaceViewModel.GetName(size, i);
-                result.Add(new ShipToPlaceViewModel
-                {
-                    Size = size,
-                    Index = i,
-                    Label = totalCount > 1 ? $"{name} {i}" : name,
-                    DisplayName = name,
-                    IsPlaced = isPlaced
-                });
-            }
+                Size = size,
+                Index = idx,
+                Label = required.Count(s => s == size) > 1 ? $"{name}" : name,
+                DisplayName = name,
+                IsPlaced = isPlaced
+            });
         }
 
         return result.Where(s => !s.IsPlaced).ToList();

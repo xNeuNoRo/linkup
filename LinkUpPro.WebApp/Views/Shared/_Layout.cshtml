@@ -193,11 +193,29 @@
             background: linear-gradient(135deg, #3730a3 0%, #312e81 100%) !important;
         }
         .battleship-cell.sunk {
-            background: linear-gradient(135deg, #fca5a5 0%, #f87171 100%) !important;
+            background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%) !important;
             cursor: not-allowed;
+            border: 1px solid rgba(255,255,255,0.2) !important;
+        }
+        .battleship-cell.sunk::after {
+            content: '';
+            display: block;
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 1px;
+            background: rgba(255,255,255,0.15);
+            rotate: 45deg;
+        }
+        .battleship-cell.sunk i {
+            position: absolute;
+            opacity: 0.9;
         }
         .dark .battleship-cell.sunk {
-            background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%) !important;
+            background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%) !important;
+            border-color: rgba(255,255,255,0.08) !important;
+        }
+        .dark .battleship-cell.sunk::after {
+            background: rgba(255,255,255,0.08);
         }
         .battleship-cell.placement-preview {
             background: linear-gradient(135deg, #a5b4fc 0%, #c7d2fe 100%) !important;
@@ -303,6 +321,12 @@
                     <i data-lucide="moon" id="dark-mode-icon" class="w-5 h-5 shrink-0"></i>
                     <span class="text-sm flex-1 text-left" id="dark-mode-text">Modo Oscuro</span>
                 </button>
+
+                <!-- Créditos -->
+                <a asp-controller="Credits" asp-action="Index" class="@GetActiveClass("Credits")" data-tooltip="Créditos">
+                    <i data-lucide="award" class="w-5 h-5 shrink-0"></i>
+                    <span class="text-sm flex-1">Créditos</span>
+                </a>
             </nav>
 
             <!-- Footer Sidebar: Status -->

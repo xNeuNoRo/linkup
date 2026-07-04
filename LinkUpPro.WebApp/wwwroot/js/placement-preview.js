@@ -208,11 +208,16 @@
                 body: formData.toString()
             })
             .then(function (r) {
-                if (r.redirected || r.ok) window.location.reload();
-                else throw new Error();
+                if (r.redirected) {
+                    window.location.href = r.url;
+                } else if (r.ok) {
+                    window.location.href = '/Battleship/Placement?gameId=' + gameId;
+                } else {
+                    throw new Error();
+                }
             })
             .catch(function () {
-                window.location.reload();
+                window.location.href = '/Battleship/Placement?gameId=' + gameId;
             });
         });
     }
