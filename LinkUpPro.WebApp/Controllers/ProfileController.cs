@@ -84,10 +84,14 @@ public class ProfileController : BaseController
             VideoPosts = stats?.VideoPosts ?? 0,
             FriendsOnlyPosts = stats?.FriendsOnlyPosts ?? 0,
             OnlyMePosts = stats?.OnlyMePosts ?? 0,
-            EditedPosts = stats?.EditedPosts ?? 0
+            EditedPosts = stats?.EditedPosts ?? 0,
         };
 
-        await this.PopulateMenuCountersAsync(_currentUserService, _friendRequestService, _notificationService);
+        await this.PopulateMenuCountersAsync(
+            _currentUserService,
+            _friendRequestService,
+            _notificationService
+        );
         return View(vm);
     }
 
@@ -113,11 +117,15 @@ public class ProfileController : BaseController
                 FirstName = dto.FirstName,
                 LastName = dto.LastName,
                 PhoneNumber = dto.PhoneNumber,
-                CurrentProfilePicturePath = dto.ProfilePicturePath
-            }
+                CurrentProfilePicturePath = dto.ProfilePicturePath,
+            },
         };
 
-        await this.PopulateMenuCountersAsync(_currentUserService, _friendRequestService, _notificationService);
+        await this.PopulateMenuCountersAsync(
+            _currentUserService,
+            _friendRequestService,
+            _notificationService
+        );
         return View(vm);
     }
 
@@ -127,7 +135,11 @@ public class ProfileController : BaseController
     {
         if (!ModelState.IsValid)
         {
-            await this.PopulateMenuCountersAsync(_currentUserService, _friendRequestService, _notificationService);
+            await this.PopulateMenuCountersAsync(
+                _currentUserService,
+                _friendRequestService,
+                _notificationService
+            );
             return View(model);
         }
 
@@ -140,11 +152,21 @@ public class ProfileController : BaseController
                 model.ProfilePictureFile
             );
 
-            var result = await _profileService.UpdateProfileAsync(_currentUserService.UserId!, request);
+            var result = await _profileService.UpdateProfileAsync(
+                _currentUserService.UserId!,
+                request
+            );
             if (!result.IsSuccess)
             {
-                ModelState.AddModelError(string.Empty, result.Error?.Message ?? "No se pudo actualizar el perfil.");
-                await this.PopulateMenuCountersAsync(_currentUserService, _friendRequestService, _notificationService);
+                ModelState.AddModelError(
+                    string.Empty,
+                    result.Error?.Message ?? "No se pudo actualizar el perfil."
+                );
+                await this.PopulateMenuCountersAsync(
+                    _currentUserService,
+                    _friendRequestService,
+                    _notificationService
+                );
                 return View(model);
             }
 
@@ -155,7 +177,11 @@ public class ProfileController : BaseController
         {
             _logger.LogWarning(ex, "Error actualizando perfil");
             ModelState.AddModelError(string.Empty, "No se pudo actualizar el perfil.");
-            await this.PopulateMenuCountersAsync(_currentUserService, _friendRequestService, _notificationService);
+            await this.PopulateMenuCountersAsync(
+                _currentUserService,
+                _friendRequestService,
+                _notificationService
+            );
             return View(model);
         }
     }
@@ -174,14 +200,18 @@ public class ProfileController : BaseController
     {
         if (!ModelState.IsValid)
         {
-            await this.PopulateMenuCountersAsync(_currentUserService, _friendRequestService, _notificationService);
+            await this.PopulateMenuCountersAsync(
+                _currentUserService,
+                _friendRequestService,
+                _notificationService
+            );
             return View(model);
         }
 
-        // Validar que los 3 campos estén llenos o ninguno
-        var anyField = !string.IsNullOrWhiteSpace(model.CurrentPassword) ||
-                       !string.IsNullOrWhiteSpace(model.NewPassword) ||
-                       !string.IsNullOrWhiteSpace(model.ConfirmPassword);
+        var anyField =
+            !string.IsNullOrWhiteSpace(model.CurrentPassword)
+            || !string.IsNullOrWhiteSpace(model.NewPassword)
+            || !string.IsNullOrWhiteSpace(model.ConfirmPassword);
 
         if (!anyField)
         {
@@ -197,17 +227,26 @@ public class ProfileController : BaseController
                 model.ConfirmPassword
             );
 
-            var result = await _profileService.ChangePasswordAsync(_currentUserService.UserId!, request);
+            var result = await _profileService.ChangePasswordAsync(
+                _currentUserService.UserId!,
+                request
+            );
             if (!result.IsSuccess)
             {
                 ShowError(result.Error?.Message ?? "No se pudo cambiar la contraseña.");
-                await this.PopulateMenuCountersAsync(_currentUserService, _friendRequestService, _notificationService);
+                await this.PopulateMenuCountersAsync(
+                    _currentUserService,
+                    _friendRequestService,
+                    _notificationService
+                );
                 return View(model);
             }
 
             if (result.Value!.RequiresReLogin)
             {
-                ShowAlert("Su perfil y contraseña fueron actualizados correctamente. Inicie sesión nuevamente.");
+                ShowAlert(
+                    "Su perfil y contraseña fueron actualizados correctamente. Inicie sesión nuevamente."
+                );
                 // El SignOut ya fue hecho en el servicio, solo redirigir al login
                 return RedirectToAction("Login", "Auth");
             }
@@ -228,19 +267,19 @@ public class ProfileController : BaseController
     [HttpGet]
     public async Task<IActionResult> ViewProfile(string id, PostFilterViewModel filter)
     {
-        // Si es el mismo usuario, redirigir a su propio perfil
         if (id == _currentUserService.UserId)
             return RedirectToAction(nameof(Index));
 
-        // Si no es amigo, mostrar error
-        var friendship = await _friendshipService.GetFriendshipAsync(_currentUserService.UserId!, id);
+        var friendship = await _friendshipService.GetFriendshipAsync(
+            _currentUserService.UserId!,
+            id
+        );
         if (!friendship.IsSuccess)
         {
             ShowError("No posee permisos para visualizar el perfil de este usuario.");
             return RedirectToAction("Index", "Friends");
         }
 
-        // Cargar perfil del amigo + posts
         var profileResult = await _profileService.GetByIdAsync(id);
         if (profileResult == null)
         {
@@ -248,36 +287,52 @@ public class ProfileController : BaseController
             return RedirectToAction("Index", "Friends");
         }
 
-        // Posts del amigo
         var filterRequest = new Application.DTOs.Post.Requests.PostFilterRequest(
-            null, null, null, null, null, 1, 20, null
+            null,
+            null,
+            null,
+            null,
+            null,
+            1,
+            20,
+            null
         );
-        var postsResult = await _postService.GetUserPostsAsync(_currentUserService.UserId!, id, filterRequest);
+        var postsResult = await _postService.GetUserPostsAsync(
+            _currentUserService.UserId!,
+            id,
+            filterRequest
+        );
         var postVms = new List<PostListItemViewModel>();
         foreach (var d in postsResult.Items)
         {
-            postVms.Add(new PostListItemViewModel
-            {
-                Id = d.Id,
-                AuthorId = d.AuthorId,
-                AuthorName = d.AuthorName,
-                AuthorUserName = d.AuthorUserName,
-                AuthorProfilePicture = d.AuthorProfilePicture,
-                Content = d.Content,
-                ContentType = d.ContentType,
-                MediaPath = d.ContentType == Domain.Enums.PostContentType.YouTubeVideo
-                    ? WebApp.Helpers.YouTubeHelper.ToEmbedUrl(d.MediaPath)
-                    : d.MediaPath,
-                Privacy = d.Privacy,
-                AllowComments = d.AllowComments,
-                IsEdited = d.IsEdited,
-                CreatedAt = d.CreatedAt.UtcDateTime,
-                LikesCount = d.LikesCount,
-                DislikesCount = d.DislikesCount,
-                CommentsCount = d.CommentsCount,
-                CurrentUserReaction = await _reactionService.GetUserReactionAsync(_currentUserService.UserId!, d.Id),
-                Comments = []
-            });
+            postVms.Add(
+                new PostListItemViewModel
+                {
+                    Id = d.Id,
+                    AuthorId = d.AuthorId,
+                    AuthorName = d.AuthorName,
+                    AuthorUserName = d.AuthorUserName,
+                    AuthorProfilePicture = d.AuthorProfilePicture,
+                    Content = d.Content,
+                    ContentType = d.ContentType,
+                    MediaPath =
+                        d.ContentType == Domain.Enums.PostContentType.YouTubeVideo
+                            ? WebApp.Helpers.YouTubeHelper.ToEmbedUrl(d.MediaPath)
+                            : d.MediaPath,
+                    Privacy = d.Privacy,
+                    AllowComments = d.AllowComments,
+                    IsEdited = d.IsEdited,
+                    CreatedAt = d.CreatedAt.UtcDateTime,
+                    LikesCount = d.LikesCount,
+                    DislikesCount = d.DislikesCount,
+                    CommentsCount = d.CommentsCount,
+                    CurrentUserReaction = await _reactionService.GetUserReactionAsync(
+                        _currentUserService.UserId!,
+                        d.Id
+                    ),
+                    Comments = [],
+                }
+            );
         }
 
         var friendVm = new FriendListItemViewModel
@@ -286,7 +341,7 @@ public class ProfileController : BaseController
             FriendName = $"{profileResult.FirstName} {profileResult.LastName}".Trim(),
             FriendUserName = profileResult.UserName,
             FriendProfilePicturePath = profileResult.ProfilePicturePath,
-            CommonFriendsCount = 0
+            CommonFriendsCount = 0,
         };
 
         var vm = new FriendDetailViewModel
@@ -297,11 +352,15 @@ public class ProfileController : BaseController
                 Items = postVms,
                 Page = postsResult.Page,
                 PageSize = postsResult.PageSize,
-                TotalItems = postsResult.TotalCount
-            }
+                TotalItems = postsResult.TotalCount,
+            },
         };
 
-        await this.PopulateMenuCountersAsync(_currentUserService, _friendRequestService, _notificationService);
+        await this.PopulateMenuCountersAsync(
+            _currentUserService,
+            _friendRequestService,
+            _notificationService
+        );
         ViewBag.CurrentUserId = _currentUserService.UserId;
         return View("~/Views/Friends/Detail.cshtml", vm);
     }

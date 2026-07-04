@@ -1,13 +1,12 @@
 using LinkUpPro.Application.DTOs.Comment.Responses;
 using LinkUpPro.Application.DTOs.Post.Requests;
 using LinkUpPro.Application.DTOs.Post.Responses;
-using LinkUpPro.Application.Interfaces;
 using LinkUpPro.Application.Interfaces.Services;
 using LinkUpPro.Application.ViewModels.CommentViewModels;
 using LinkUpPro.Application.ViewModels.FriendshipViewModels;
-using LinkUpPro.Domain.Enums;
 using LinkUpPro.Application.ViewModels.PostViewModels;
 using LinkUpPro.Application.ViewModels.Shared;
+using LinkUpPro.Domain.Enums;
 using LinkUpPro.WebApp.Extensions;
 using LinkUpPro.WebApp.Filters;
 using LinkUpPro.WebApp.Helpers;
@@ -66,17 +65,22 @@ public class FriendsController : BaseController
             Summary = new FriendshipSummaryViewModel
             {
                 TotalActiveFriends = totalActive,
-                AvailablePostsCount = availablePosts
-            }
+                AvailablePostsCount = availablePosts,
+            },
         };
 
-        await this.PopulateBaseViewModelAsync(vm, _currentUserService, _friendRequestService, _notificationService);
+        await this.PopulateBaseViewModelAsync(
+            vm,
+            _currentUserService,
+            _friendRequestService,
+            _notificationService
+        );
         ViewBag.CurrentUserId = userId;
 
         return View(vm);
     }
 
-    // ====================== FEED POSTS (AJAX Partial) ======================
+    // ====================== FEED POSTS ======================
 
     [HttpGet]
     public async Task<IActionResult> FeedPosts(PostFilterViewModel filter, int page = 1)
@@ -106,8 +110,8 @@ public class FriendsController : BaseController
                 Items = postViewModels,
                 Page = postsResult.Page,
                 PageSize = postsResult.PageSize,
-                TotalItems = postsResult.TotalCount
-            }
+                TotalItems = postsResult.TotalCount,
+            },
         };
 
         ViewBag.CurrentUserId = userId;
@@ -167,7 +171,7 @@ public class FriendsController : BaseController
         return PartialView("~/Views/Posts/_PostList.cshtml", postViewModels);
     }
 
-    // ====================== FRIENDS LIST (AJAX Partial) ======================
+    // ====================== FRIENDS LIST ======================
 
     [HttpGet]
     public async Task<IActionResult> FriendsListPartial(FriendSearchViewModel search, int page = 1)
@@ -188,7 +192,7 @@ public class FriendsController : BaseController
             Search = search,
             Friends = friendViewModels,
             TotalCount = pagedResult.TotalCount,
-            CurrentPage = page
+            CurrentPage = page,
         };
 
         ViewBag.CurrentUserId = userId;
@@ -214,7 +218,7 @@ public class FriendsController : BaseController
             Search = search,
             Friends = friendViewModels,
             TotalCount = pagedResult.TotalCount,
-            CurrentPage = page
+            CurrentPage = page,
         };
 
         ViewBag.CurrentUserId = userId;
@@ -240,7 +244,7 @@ public class FriendsController : BaseController
             Search = search,
             Friends = friendViewModels,
             TotalCount = pagedResult.TotalCount,
-            CurrentPage = page
+            CurrentPage = page,
         };
 
         return PartialView("_FriendsListInner", vm);
@@ -269,11 +273,14 @@ public class FriendsController : BaseController
         var friendVm = new FriendListItemViewModel
         {
             FriendId = id,
-            FriendName = friendUser != null ? $"{friendUser.FirstName} {friendUser.LastName}".Trim() : string.Empty,
+            FriendName =
+                friendUser != null
+                    ? $"{friendUser.FirstName} {friendUser.LastName}".Trim()
+                    : string.Empty,
             FriendUserName = friendUser?.UserName ?? string.Empty,
             FriendProfilePicturePath = friendUser?.ProfilePicturePath,
             CommonFriendsCount = commonCount,
-            FriendshipCreatedAt = friendship.CreatedAt.UtcDateTime
+            FriendshipCreatedAt = friendship.CreatedAt.UtcDateTime,
         };
 
         var filterRequest = filter.Adapt<PostFilterRequest>();
@@ -288,18 +295,23 @@ public class FriendsController : BaseController
                 Items = postViewModels,
                 Page = postsResult.Page,
                 PageSize = postsResult.PageSize,
-                TotalItems = postsResult.TotalCount
+                TotalItems = postsResult.TotalCount,
             },
-            Filters = filter
+            Filters = filter,
         };
 
-        await this.PopulateBaseViewModelAsync(vm, _currentUserService, _friendRequestService, _notificationService);
+        await this.PopulateBaseViewModelAsync(
+            vm,
+            _currentUserService,
+            _friendRequestService,
+            _notificationService
+        );
         ViewBag.CurrentUserId = userId;
 
         return View(vm);
     }
 
-    // ====================== SEARCH (AJAX) ======================
+    // ====================== SEARCH ======================
 
     [HttpGet]
     public async Task<IActionResult> Search(string query)
@@ -328,7 +340,7 @@ public class FriendsController : BaseController
         {
             User1Id = _currentUserService.UserId!,
             User2Id = id,
-            Friends = common.Friends.Select(MapToFriendListItem).ToList()
+            Friends = common.Friends.Select(MapToFriendListItem).ToList(),
         };
 
         return PartialView("_CommonFriendsModal", vm);
@@ -342,7 +354,10 @@ public class FriendsController : BaseController
     {
         try
         {
-            var result = await _friendshipService.DeleteAsync(_currentUserService.UserId!, friendId);
+            var result = await _friendshipService.DeleteAsync(
+                _currentUserService.UserId!,
+                friendId
+            );
             if (!result.IsSuccess)
             {
                 ShowError(result.Error?.Message ?? "No se pudo eliminar la amistad.");
@@ -366,14 +381,16 @@ public class FriendsController : BaseController
     private async Task<List<object>> LoadAllFriendsForDropdownAsync(string userId)
     {
         var allFriends = await _friendshipService.GetFriendsAsync(userId, null, 1, 500);
-        return allFriends.Items.Select(f => new
-        {
-            f.FriendId,
-            Display = $"{f.FriendName} (@{f.FriendUserName})"
-        } as object).ToList();
+        return allFriends
+            .Items.Select(f =>
+                new { f.FriendId, Display = $"{f.FriendName} (@{f.FriendUserName})" } as object
+            )
+            .ToList();
     }
 
-    private FriendListItemViewModel MapToFriendListItem(LinkUpPro.Application.DTOs.Friendship.Responses.FriendListItemDto dto)
+    private FriendListItemViewModel MapToFriendListItem(
+        LinkUpPro.Application.DTOs.Friendship.Responses.FriendListItemDto dto
+    )
     {
         return new FriendListItemViewModel
         {
@@ -381,14 +398,17 @@ public class FriendsController : BaseController
             FriendName = dto.FriendName,
             FriendUserName = dto.FriendUserName,
             FriendProfilePicturePath = dto.FriendProfilePicturePath,
-            CommonFriendsCount = dto.CommonFriendsCount
+            CommonFriendsCount = dto.CommonFriendsCount,
         };
     }
 
-    private async Task<List<PostListItemViewModel>> MapToPostListItemsAsync(IEnumerable<PostListItemDto> items)
+    private async Task<List<PostListItemViewModel>> MapToPostListItemsAsync(
+        IEnumerable<PostListItemDto> items
+    )
     {
         var list = items.ToList();
-        if (list.Count == 0) return [];
+        if (list.Count == 0)
+            return [];
 
         var userId = _currentUserService.UserId!;
         var postIds = list.Select(p => p.Id).ToList();
@@ -411,7 +431,9 @@ public class FriendsController : BaseController
     {
         var commentsResult = await _commentService.GetPostCommentsAsync(userId, dto.Id);
         var comments = commentsResult.Items.Any()
-            ? commentsResult.Items.Select(c => MapCommentTreeToViewModel(c, userId, dto.AllowComments)).ToList()
+            ? commentsResult
+                .Items.Select(c => MapCommentTreeToViewModel(c, userId, dto.AllowComments))
+                .ToList()
             : [];
 
         return new PostListItemViewModel
@@ -423,9 +445,10 @@ public class FriendsController : BaseController
             AuthorProfilePicture = dto.AuthorProfilePicture,
             Content = dto.Content,
             ContentType = dto.ContentType,
-            MediaPath = dto.ContentType == LinkUpPro.Domain.Enums.PostContentType.YouTubeVideo
-                ? YouTubeHelper.ToEmbedUrl(dto.MediaPath)
-                : dto.MediaPath,
+            MediaPath =
+                dto.ContentType == LinkUpPro.Domain.Enums.PostContentType.YouTubeVideo
+                    ? YouTubeHelper.ToEmbedUrl(dto.MediaPath)
+                    : dto.MediaPath,
             Privacy = dto.Privacy,
             AllowComments = dto.AllowComments,
             IsEdited = dto.IsEdited,
@@ -434,11 +457,15 @@ public class FriendsController : BaseController
             DislikesCount = dto.DislikesCount,
             CommentsCount = dto.CommentsCount,
             CurrentUserReaction = userReactions.GetValueOrDefault(dto.Id),
-            Comments = comments
+            Comments = comments,
         };
     }
 
-    private static CommentViewModel MapCommentTreeToViewModel(CommentTreeDto node, string currentUserId, bool canReply)
+    private static CommentViewModel MapCommentTreeToViewModel(
+        CommentTreeDto node,
+        string currentUserId,
+        bool canReply
+    )
     {
         var c = node.Comment;
         var vm = new CommentViewModel
@@ -459,10 +486,14 @@ public class FriendsController : BaseController
             IsTruncated = node.IsTruncated,
             ReplyingToUserName = node.ReplyingToUserName,
             ShowConnector = node.ShowConnector,
-            Replies = node.Replies.Select(r => MapCommentTreeToViewModel(r, currentUserId, canReply && !c.IsDeleted)).ToList(),
+            Replies = node
+                .Replies.Select(r =>
+                    MapCommentTreeToViewModel(r, currentUserId, canReply && !c.IsDeleted)
+                )
+                .ToList(),
             IsDeleted = c.IsDeleted,
             IsOwn = c.AuthorId == currentUserId,
-            CanReply = canReply && !c.IsDeleted
+            CanReply = canReply && !c.IsDeleted,
         };
         return vm;
     }

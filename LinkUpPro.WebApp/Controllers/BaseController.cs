@@ -28,6 +28,8 @@ public abstract class BaseController : Controller
     }
 
     protected void ShowError(string message) => ShowAlert(message, "error");
+
     protected void ShowWarning(string message) => ShowAlert(message, "warning");
+
     protected void ShowInfo(string message) => ShowAlert(message, "info");
 }

@@ -23,10 +23,7 @@ public class GlobalExceptionMiddleware
         _logger = logger;
     }
 
-    public async Task InvokeAsync(
-        HttpContext context,
-        ITempDataDictionaryFactory tempDataFactory
-    )
+    public async Task InvokeAsync(HttpContext context, ITempDataDictionaryFactory tempDataFactory)
     {
         try
         {
@@ -46,8 +43,7 @@ public class GlobalExceptionMiddleware
     )
     {
         int statusCode = (int)HttpStatusCode.InternalServerError;
-        string message =
-            "Ocurrió un error al procesar la solicitud. Inténtelo nuevamente.";
+        string message = "Ocurrió un error al procesar la solicitud. Inténtelo nuevamente.";
         string errorCode = "System.InternalError";
 
         // Excepciones específicas (DEBEN ir ANTES de DomainException porque heredan de él)
@@ -57,10 +53,7 @@ public class GlobalExceptionMiddleware
             // Concatenar los mensajes específicos de los errores de validación
             if (validationEx.ValidationErrors != null && validationEx.ValidationErrors.Count > 0)
             {
-                message = string.Join(
-                    " ",
-                    validationEx.ValidationErrors.Select(e => e.Message)
-                );
+                message = string.Join(" ", validationEx.ValidationErrors.Select(e => e.Message));
             }
             else
             {
@@ -130,7 +123,11 @@ public class GlobalExceptionMiddleware
             if (
                 !string.IsNullOrEmpty(referer)
                 && Uri.TryCreate(referer, UriKind.Absolute, out var refererUri)
-                && string.Equals(refererUri.Host, context.Request.Host.Host, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(
+                    refererUri.Host,
+                    context.Request.Host.Host,
+                    StringComparison.OrdinalIgnoreCase
+                )
                 && !referer.Contains("/Home/Error")
                 && !referer.Contains("/Auth/Login")
                 && !referer.Contains("/Auth/Register")
@@ -151,9 +148,7 @@ public class GlobalExceptionMiddleware
 /// </summary>
 public static class GlobalExceptionMiddlewareExtensions
 {
-    public static IApplicationBuilder UseGlobalExceptionMiddleware(
-        this IApplicationBuilder builder
-    )
+    public static IApplicationBuilder UseGlobalExceptionMiddleware(this IApplicationBuilder builder)
     {
         return builder.UseMiddleware<GlobalExceptionMiddleware>();
     }

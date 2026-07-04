@@ -63,10 +63,9 @@ public class SessionAuthorizeAttribute : Attribute, IAsyncAuthorizationFilter
             && bool.TryParse(rememberMeClaim, out var rememberMe)
         )
         {
-            var timeout =
-                rememberMe
-                    ? DomainConstants.PersistentSessionDuration
-                    : DomainConstants.SessionInactivityTimeout;
+            var timeout = rememberMe
+                ? DomainConstants.PersistentSessionDuration
+                : DomainConstants.SessionInactivityTimeout;
 
             if (DateTimeOffset.UtcNow - lastActivity > timeout)
             {

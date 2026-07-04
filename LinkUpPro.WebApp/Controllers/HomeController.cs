@@ -1,10 +1,10 @@
 using LinkUpPro.Application.DTOs.Post.Requests;
 using LinkUpPro.Application.DTOs.Post.Responses;
 using LinkUpPro.Application.Interfaces.Services;
-using LinkUpPro.Domain.Enums;
 using LinkUpPro.Application.ViewModels.CommentViewModels;
 using LinkUpPro.Application.ViewModels.PostViewModels;
 using LinkUpPro.Application.ViewModels.Shared;
+using LinkUpPro.Domain.Enums;
 using LinkUpPro.WebApp.Extensions;
 using LinkUpPro.WebApp.Filters;
 using Mapster;
@@ -67,16 +67,17 @@ public class HomeController : BaseController
             Items = postViewModels,
             Page = pagedResult.Page,
             PageSize = pagedResult.PageSize,
-            TotalItems = pagedResult.TotalCount
+            TotalItems = pagedResult.TotalCount,
         };
 
-        var homeVm = new HomeViewModel
-        {
-            Filters = filter,
-            Posts = pagedVm
-        };
+        var homeVm = new HomeViewModel { Filters = filter, Posts = pagedVm };
 
-        await this.PopulateBaseViewModelAsync(homeVm, _currentUserService, _friendRequestService, _notificationService);
+        await this.PopulateBaseViewModelAsync(
+            homeVm,
+            _currentUserService,
+            _friendRequestService,
+            _notificationService
+        );
 
         // ViewBag con datos del usuario para los partials
         ViewBag.CurrentUserId = userId;
@@ -137,19 +138,23 @@ public class HomeController : BaseController
         }
 
         var post = result.Value;
-        var youTubeUrl = post.ContentType == LinkUpPro.Domain.Enums.PostContentType.YouTubeVideo
-            ? $"https://www.youtube.com/watch?v={post.MediaPath}"
-            : null;
+        var youTubeUrl =
+            post.ContentType == LinkUpPro.Domain.Enums.PostContentType.YouTubeVideo
+                ? $"https://www.youtube.com/watch?v={post.MediaPath}"
+                : null;
         var editVm = new UpdatePostViewModel
         {
             PostId = post.Id,
             Content = post.Content,
             ContentType = (int)post.ContentType,
             YouTubeUrl = youTubeUrl,
-            CurrentImagePath = post.ContentType == LinkUpPro.Domain.Enums.PostContentType.Image ? post.MediaPath : null,
+            CurrentImagePath =
+                post.ContentType == LinkUpPro.Domain.Enums.PostContentType.Image
+                    ? post.MediaPath
+                    : null,
             CurrentYouTubeUrl = youTubeUrl,
             Privacy = (int)post.Privacy,
-            AllowComments = post.AllowComments
+            AllowComments = post.AllowComments,
         };
 
         return View(editVm);
@@ -167,11 +172,18 @@ public class HomeController : BaseController
         try
         {
             var request = model.Adapt<UpdatePostRequest>();
-            var result = await _postService.UpdateAsync(_currentUserService.UserId!, model.PostId, request);
+            var result = await _postService.UpdateAsync(
+                _currentUserService.UserId!,
+                model.PostId,
+                request
+            );
 
             if (!result.IsSuccess)
             {
-                ModelState.AddModelError(string.Empty, result.Error?.Message ?? "No se pudo actualizar la publicación.");
+                ModelState.AddModelError(
+                    string.Empty,
+                    result.Error?.Message ?? "No se pudo actualizar la publicación."
+                );
                 return View(model);
             }
 
@@ -213,7 +225,7 @@ public class HomeController : BaseController
         return RedirectToAction(nameof(Index));
     }
 
-    // ====================== LOAD MORE POSTS (AJAX Infinite Scroll) ======================
+    // ====================== LOAD MORE POSTS ======================
 
     [HttpGet]
     public async Task<IActionResult> LoadMorePosts(PostFilterViewModel filter)
@@ -230,7 +242,7 @@ public class HomeController : BaseController
         return PartialView("~/Views/Posts/_PostList.cshtml", postViewModels);
     }
 
-    // ====================== FILTER POSTS (AJAX) ======================
+    // ====================== FILTER POSTS ======================
 
     [HttpGet]
     public async Task<IActionResult> FilterPosts(PostFilterViewModel filter)
@@ -247,10 +259,13 @@ public class HomeController : BaseController
 
     // ====================== PRIVATE MAPPER ======================
 
-    private async Task<List<PostListItemViewModel>> MapToPostListItemViewModelsAsync(IEnumerable<PostListItemDto> posts)
+    private async Task<List<PostListItemViewModel>> MapToPostListItemViewModelsAsync(
+        IEnumerable<PostListItemDto> posts
+    )
     {
         var items = posts.ToList();
-        if (items.Count == 0) return [];
+        if (items.Count == 0)
+            return [];
 
         var userId = _currentUserService.UserId!;
         var postIds = items.Select(p => p.Id).ToList();
@@ -274,7 +289,9 @@ public class HomeController : BaseController
     {
         var commentsResult = await _commentService.GetPostCommentsAsync(userId, dto.Id);
         var comments = commentsResult.Items.Any()
-            ? commentsResult.Items.Select(c => MapCommentTreeToViewModel(c, userId, dto.AllowComments)).ToList()
+            ? commentsResult
+                .Items.Select(c => MapCommentTreeToViewModel(c, userId, dto.AllowComments))
+                .ToList()
             : [];
 
         return new PostListItemViewModel
@@ -286,9 +303,10 @@ public class HomeController : BaseController
             AuthorProfilePicture = dto.AuthorProfilePicture,
             Content = dto.Content,
             ContentType = dto.ContentType,
-            MediaPath = dto.ContentType == LinkUpPro.Domain.Enums.PostContentType.YouTubeVideo
-                ? LinkUpPro.WebApp.Helpers.YouTubeHelper.ToEmbedUrl(dto.MediaPath)
-                : dto.MediaPath,
+            MediaPath =
+                dto.ContentType == LinkUpPro.Domain.Enums.PostContentType.YouTubeVideo
+                    ? LinkUpPro.WebApp.Helpers.YouTubeHelper.ToEmbedUrl(dto.MediaPath)
+                    : dto.MediaPath,
             Privacy = dto.Privacy,
             AllowComments = dto.AllowComments,
             IsEdited = dto.IsEdited,
@@ -297,7 +315,7 @@ public class HomeController : BaseController
             DislikesCount = dto.DislikesCount,
             CommentsCount = dto.CommentsCount,
             CurrentUserReaction = userReactions.GetValueOrDefault(dto.Id),
-            Comments = comments
+            Comments = comments,
         };
     }
 
@@ -326,17 +344,22 @@ public class HomeController : BaseController
             IsTruncated = node.IsTruncated,
             ReplyingToUserName = node.ReplyingToUserName,
             ShowConnector = node.ShowConnector,
-            Replies = node.Replies.Select(r => MapCommentTreeToViewModel(r, currentUserId, canReply && !c.IsDeleted)).ToList(),
+            Replies = node
+                .Replies.Select(r =>
+                    MapCommentTreeToViewModel(r, currentUserId, canReply && !c.IsDeleted)
+                )
+                .ToList(),
             IsDeleted = c.IsDeleted,
             IsOwn = c.AuthorId == currentUserId,
-            CanReply = canReply && !c.IsDeleted
+            CanReply = canReply && !c.IsDeleted,
         };
         return vm;
     }
 
     private static void ApplyPreset(PostFilterViewModel filter)
     {
-        if (string.IsNullOrWhiteSpace(filter.Preset)) return;
+        if (string.IsNullOrWhiteSpace(filter.Preset))
+            return;
 
         var now = DateTime.UtcNow;
         filter.FromDate = filter.Preset switch
@@ -344,14 +367,14 @@ public class HomeController : BaseController
             "today" => now.Date,
             "week" => now.Date.AddDays(-(int)now.DayOfWeek),
             "month" => new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc),
-            _ => filter.FromDate
+            _ => filter.FromDate,
         };
         filter.ToDate = filter.Preset switch
         {
             "today" => now.Date.AddDays(1).AddTicks(-1),
             "week" => now.Date.AddDays(7 - (int)now.DayOfWeek).AddTicks(-1),
             "month" => now.Date.AddMonths(1).AddDays(-(now.Day)).AddTicks(-1),
-            _ => filter.ToDate
+            _ => filter.ToDate,
         };
         filter.Preset = null; // ya se aplicó
     }

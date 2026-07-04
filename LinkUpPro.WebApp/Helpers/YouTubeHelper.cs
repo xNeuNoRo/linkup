@@ -14,7 +14,9 @@ public static class YouTubeHelper
             return string.Empty;
 
         var videoId = ExtractVideoId(url);
-        return string.IsNullOrEmpty(videoId) ? string.Empty : $"https://www.youtube-nocookie.com/embed/{videoId}";
+        return string.IsNullOrEmpty(videoId)
+            ? string.Empty
+            : $"https://www.youtube-nocookie.com/embed/{videoId}";
     }
 
     /// <summary>
@@ -34,7 +36,7 @@ public static class YouTubeHelper
             @"(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})",
             @"(?:m\.youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})(?:[&#?].*)?",
             @"(?:youtube\.com\/v\/)([a-zA-Z0-9_-]{11})",
-            @"(?:youtube-nocookie\.com\/embed\/)([a-zA-Z0-9_-]{11})"
+            @"(?:youtube-nocookie\.com\/embed\/)([a-zA-Z0-9_-]{11})",
         };
 
         foreach (var pattern in patterns)

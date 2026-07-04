@@ -280,18 +280,11 @@ public class AuthController : BaseController
         return RedirectToAction(nameof(Login));
     }
 
-    // ====================== HELPERS ======================
-
     private string GetOrigin()
     {
         return $"{Request.Scheme}://{Request.Host.Value}";
     }
 
-    /// <summary>
-    /// Extrae el mensaje amigable para el usuario desde una excepción.
-    /// Las DomainException tienen un mensaje diseñado para mostrarse al usuario.
-    /// DomainValidationException expone múltiples errores específicos: se concatenan.
-    /// </summary>
     private static string GetUserMessage(Exception ex)
     {
         if (ex is DomainValidationException validationEx && validationEx.ValidationErrors.Count > 0)
