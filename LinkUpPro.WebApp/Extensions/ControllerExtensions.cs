@@ -12,7 +12,7 @@ namespace LinkUpPro.WebApp.Extensions;
 public static class ControllerExtensions
 {
     /// <summary>
-    /// Puebla el BaseViewModel con la información del usuario actual
+    /// Rellena el BaseViewModel con la información del usuario actual
     /// y los contadores del menú superior (solicitudes pendientes, notificaciones no leídas).
     /// </summary>
     public static async Task PopulateBaseViewModelAsync(
@@ -23,7 +23,8 @@ public static class ControllerExtensions
         INotificationService? notificationService = null
     )
     {
-        if (viewModel == null) return;
+        if (viewModel == null)
+            return;
 
         viewModel.CurrentUserId = currentUserService.UserId ?? string.Empty;
         viewModel.CurrentUserFullName = currentUserService.FullName ?? "Usuario";
@@ -50,7 +51,7 @@ public static class ControllerExtensions
     }
 
     /// <summary>
-    /// Puebla el ViewBag con los contadores del menú superior (legacy - solo para vistas que no usan BaseViewModel).
+    /// Rellena el ViewBag con los contadores del menú superior (legacy - solo para vistas que no usan BaseViewModel).
     /// </summary>
     public static async Task PopulateMenuCountersAsync(
         this Controller controller,

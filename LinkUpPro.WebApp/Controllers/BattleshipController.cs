@@ -3,7 +3,6 @@ using LinkUpPro.Application.DTOs.Battleship.Responses;
 using LinkUpPro.Application.Interfaces.Services;
 using LinkUpPro.Application.ViewModels.BattleshipViewModels;
 using LinkUpPro.Application.ViewModels.FriendshipViewModels;
-using LinkUpPro.Application.ViewModels.Shared;
 using LinkUpPro.Domain.Enums;
 using LinkUpPro.WebApp.Extensions;
 using LinkUpPro.WebApp.Filters;
@@ -43,8 +42,6 @@ public class BattleshipController : BaseController
         _logger = logger;
     }
 
-    // ====================== INDEX (Dashboard) ======================
-
     [HttpGet]
     public async Task<IActionResult> Index()
     {
@@ -57,22 +54,28 @@ public class BattleshipController : BaseController
         var activeList = activePaged.Items.ToList();
         var historyList = historyPaged.Items.ToList();
         var activeVm = new List<ActiveGameListItemViewModel>(activeList.Count);
-        foreach (var d in activeList) activeVm.Add(MapToActiveGameListItem(d, userId));
+        foreach (var d in activeList)
+            activeVm.Add(MapToActiveGameListItem(d, userId));
         var historyVm = new List<GameHistoryItemViewModel>(historyList.Count);
-        foreach (var d in historyList) historyVm.Add(MapToGameListItemToHistory(d, userId));
+        foreach (var d in historyList)
+            historyVm.Add(MapToGameListItemToHistory(d, userId));
 
         var vm = new GameDetailViewModel
         {
             ActiveGames = activeVm,
             History = historyVm,
-            Stats = statsResult.IsSuccess ? MapToGameStats(statsResult.Value!) : new GameStatsViewModel()
+            Stats = statsResult.IsSuccess
+                ? MapToGameStats(statsResult.Value!)
+                : new GameStatsViewModel(),
         };
 
-        await this.PopulateMenuCountersAsync(_currentUserService, _friendRequestService, _notificationService);
+        await this.PopulateMenuCountersAsync(
+            _currentUserService,
+            _friendRequestService,
+            _notificationService
+        );
         return View(vm);
     }
-
-    // ====================== CREATE GAME (GET) ======================
 
     [HttpGet]
     public async Task<IActionResult> CreateGame(string? search)
@@ -87,23 +90,28 @@ public class BattleshipController : BaseController
         // Filtrar los que NO tienen partida activa
         var availableOpponents = allFriendsPaged
             .Where(f => !activeOpponentIds.Contains(f.FriendId))
-            .Where(f => string.IsNullOrEmpty(search) || f.FriendUserName.Contains(search, StringComparison.OrdinalIgnoreCase))
+            .Where(f =>
+                string.IsNullOrEmpty(search)
+                || f.FriendUserName.Contains(search, StringComparison.OrdinalIgnoreCase)
+            )
             .ToList();
 
         var vm = new CreateGameViewModel
         {
             SearchText = search,
-            AvailableOpponents = availableOpponents.Select(MapToAvailableOpponent).ToList()
+            AvailableOpponents = availableOpponents.Select(MapToAvailableOpponent).ToList(),
         };
 
         var dashboardVm = new GameDetailViewModel();
-        await this.PopulateMenuCountersAsync(_currentUserService, _friendRequestService, _notificationService);
+        await this.PopulateMenuCountersAsync(
+            _currentUserService,
+            _friendRequestService,
+            _notificationService
+        );
         ViewBag.CurrentUserId = userId;
 
         return View(vm);
     }
-
-    // ====================== SEARCH OPPONENTS (AJAX Partial) ======================
 
     [HttpGet]
     public async Task<IActionResult> SearchOpponents(string? search)
@@ -115,19 +123,20 @@ public class BattleshipController : BaseController
 
         var availableOpponents = allFriendsPaged
             .Where(f => !activeOpponentIds.Contains(f.FriendId))
-            .Where(f => string.IsNullOrEmpty(search) || f.FriendUserName.Contains(search, StringComparison.OrdinalIgnoreCase))
+            .Where(f =>
+                string.IsNullOrEmpty(search)
+                || f.FriendUserName.Contains(search, StringComparison.OrdinalIgnoreCase)
+            )
             .ToList();
 
         var vm = new CreateGameViewModel
         {
             SearchText = search,
-            AvailableOpponents = availableOpponents.Select(MapToAvailableOpponent).ToList()
+            AvailableOpponents = availableOpponents.Select(MapToAvailableOpponent).ToList(),
         };
 
         return PartialView("_OpponentList", vm);
     }
-
-    // ====================== CREATE GAME (POST) ======================
 
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -135,7 +144,10 @@ public class BattleshipController : BaseController
     {
         if (string.IsNullOrEmpty(model.SelectedOpponentId))
         {
-            ModelState.AddModelError(string.Empty, "Debe seleccionar un amigo para iniciar la partida.");
+            ModelState.AddModelError(
+                string.Empty,
+                "Debe seleccionar un amigo para iniciar la partida."
+            );
             return await CreateGame(model.SearchText);
         }
 
@@ -163,8 +175,6 @@ public class BattleshipController : BaseController
         }
     }
 
-    // ====================== PLACEMENT (Unified: select ships + board + direction in one view) ======================
-
     [HttpGet]
     [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     public async Task<IActionResult> Placement(long gameId)
@@ -183,7 +193,10 @@ public class BattleshipController : BaseController
         if (detail.Status == GameStatus.InProgress)
             return RedirectToAction(nameof(AttackBoard), new { gameId });
 
-        if (detail.Status == GameStatus.Finished_Winner || detail.Status == GameStatus.Finished_Abandoned)
+        if (
+            detail.Status == GameStatus.Finished_Winner
+            || detail.Status == GameStatus.Finished_Abandoned
+        )
             return RedirectToAction(nameof(Result), new { gameId });
 
         var placementResult = await _battleshipService.GetMyPlacementBoardAsync(userId, gameId);
@@ -198,10 +211,14 @@ public class BattleshipController : BaseController
             ShipsToPlace = BuildShipsToPlace(placement.Ships),
             PlacedShips = placedShips,
             Board = board,
-            OpponentHasFinishedPlacement = false
+            OpponentHasFinishedPlacement = false,
         };
 
-        await this.PopulateMenuCountersAsync(_currentUserService, _friendRequestService, _notificationService);
+        await this.PopulateMenuCountersAsync(
+            _currentUserService,
+            _friendRequestService,
+            _notificationService
+        );
         ViewBag.CurrentUserId = userId;
 
         return View("Placement/Index", vm);
@@ -221,16 +238,16 @@ public class BattleshipController : BaseController
 
         try
         {
-            if (!int.TryParse(Request.Form["Direction"], out var direction) ||
-                !int.TryParse(Request.Form["StartX"], out var startX) ||
-                !int.TryParse(Request.Form["StartY"], out var startY))
+            if (
+                !int.TryParse(Request.Form["Direction"], out var direction)
+                || !int.TryParse(Request.Form["StartX"], out var startX)
+                || !int.TryParse(Request.Form["StartY"], out var startY)
+            )
             {
                 ShowError("Debe seleccionar una celda y una dirección para posicionar el barco.");
                 return RedirectToAction(nameof(Placement), new { gameId = model.GameId });
             }
 
-            // View sends direction 0-3 (Up=0, Down=1, Left=2, Right=3);
-            // ShipDirection enum is 1-4 (Up=1, Down=2, Left=3, Right=4).
             direction += 1;
 
             var request = new PlaceShipRequest(
@@ -260,8 +277,6 @@ public class BattleshipController : BaseController
         }
     }
 
-    // ====================== ATTACK BOARD ======================
-
     [HttpGet]
     public async Task<IActionResult> AttackBoard(long gameId)
     {
@@ -286,15 +301,22 @@ public class BattleshipController : BaseController
         CellViewModel[,]? placementBoard = null;
         if (placementResult.IsSuccess)
         {
-            var opponentAttacksResult = await _battleshipService.GetOpponentAttackBoardAsync(userId, gameId);
-            placementBoard = BuildFullPlacementBoard(placementResult.Value!, opponentAttacksResult.IsSuccess ? opponentAttacksResult.Value : null);
+            var opponentAttacksResult = await _battleshipService.GetOpponentAttackBoardAsync(
+                userId,
+                gameId
+            );
+            placementBoard = BuildFullPlacementBoard(
+                placementResult.Value!,
+                opponentAttacksResult.IsSuccess ? opponentAttacksResult.Value : null
+            );
         }
 
         var vm = new AttackBoardViewModel
         {
             GameId = gameId,
             OpponentId = opponentId,
-            OpponentName = opponent != null ? $"{opponent.FirstName} {opponent.LastName}".Trim() : "Oponente",
+            OpponentName =
+                opponent != null ? $"{opponent.FirstName} {opponent.LastName}".Trim() : "Oponente",
             IsMyTurn = board.IsMyTurn,
             IsGameOver = board.IsGameOver,
             WinnerId = board.WinnerId,
@@ -302,18 +324,19 @@ public class BattleshipController : BaseController
             CurrentUserId = userId,
             Board = ConvertToCellArray(board.Grid),
             MyPlacementBoard = placementBoard ?? new CellViewModel[12, 12],
-            TurnMessage = board.IsGameOver
-                ? "Partida finalizada"
-                : board.IsMyTurn
-                    ? "Es tu turno de atacar"
-                    : $"Es turno de {(opponent != null ? opponent.UserName : "oponente")} de atacar"
+            TurnMessage =
+                board.IsGameOver ? "Partida finalizada"
+                : board.IsMyTurn ? "Es tu turno de atacar"
+                : $"Es turno de {(opponent != null ? opponent.UserName : "oponente")} de atacar",
         };
 
-        await this.PopulateMenuCountersAsync(_currentUserService, _friendRequestService, _notificationService);
+        await this.PopulateMenuCountersAsync(
+            _currentUserService,
+            _friendRequestService,
+            _notificationService
+        );
         return View("Attack/AttackBoard", vm);
     }
-
-    // ====================== EXECUTE ATTACK ======================
 
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -332,17 +355,25 @@ public class BattleshipController : BaseController
             if (isAjax)
             {
                 if (!result.IsSuccess)
-                    return Json(new { success = false, message = result.Error?.Message ?? "No se pudo realizar el ataque." });
+                    return Json(
+                        new
+                        {
+                            success = false,
+                            message = result.Error?.Message ?? "No se pudo realizar el ataque.",
+                        }
+                    );
 
-                return Json(new
-                {
-                    success = true,
-                    isHit = result.Value!.IsHit,
-                    isSunk = result.Value.IsSunk,
-                    isGameOver = result.Value.IsGameOver,
-                    winnerId = result.Value.WinnerId,
-                    message = result.Value.IsHit ? "¡Acierto!" : "Agua"
-                });
+                return Json(
+                    new
+                    {
+                        success = true,
+                        isHit = result.Value!.IsHit,
+                        isSunk = result.Value.IsSunk,
+                        isGameOver = result.Value.IsGameOver,
+                        winnerId = result.Value.WinnerId,
+                        message = result.Value.IsHit ? "¡Acierto!" : "Agua",
+                    }
+                );
             }
 
             if (!result.IsSuccess)
@@ -359,15 +390,11 @@ public class BattleshipController : BaseController
         return RedirectToAction(nameof(AttackBoard), new { gameId });
     }
 
-    // ====================== REFRESH TURN ======================
-
     [HttpGet]
     public async Task<IActionResult> RefreshTurn(long gameId)
     {
         return await AttackBoard(gameId);
     }
-
-    // ====================== GAME STATE (JSON for AJAX polling) ======================
 
     [HttpGet]
     public async Task<IActionResult> GetGameState(long gameId)
@@ -383,21 +410,19 @@ public class BattleshipController : BaseController
         var opponentId = detail?.OpponentId ?? "";
         var opponent = await _profileService.GetByIdAsync(opponentId);
 
-        return Json(new
-        {
-            isMyTurn = board.IsMyTurn,
-            isGameOver = board.IsGameOver,
-            winnerId = board.WinnerId,
-            currentTurnUserId = board.CurrentTurnUserId,
-            turnMessage = board.IsGameOver
-                ? "Partida finalizada"
-                : board.IsMyTurn
-                    ? "Es tu turno de atacar"
-                    : $"Es turno de {(opponent != null ? opponent.UserName : "oponente")} de atacar"
-        });
+        return Json(
+            new
+            {
+                isMyTurn = board.IsMyTurn,
+                isGameOver = board.IsGameOver,
+                winnerId = board.WinnerId,
+                currentTurnUserId = board.CurrentTurnUserId,
+                turnMessage = board.IsGameOver ? "Partida finalizada"
+                : board.IsMyTurn ? "Es tu turno de atacar"
+                : $"Es turno de {(opponent != null ? opponent.UserName : "oponente")} de atacar",
+            }
+        );
     }
-
-    // ====================== MY BOARD ======================
 
     [HttpGet]
     public async Task<IActionResult> MyBoard(long gameId)
@@ -415,11 +440,15 @@ public class BattleshipController : BaseController
         var placement = placementResult.Value!;
         var attack = attackResult.IsSuccess ? attackResult.Value : null;
 
-        // Construir matriz de celdas con info de barcos
         var board = new CellViewModel[12, 12];
         for (var r = 0; r < 12; r++)
         for (var c = 0; c < 12; c++)
-            board[r, c] = new CellViewModel { X = c, Y = r, State = BoardCellState.Empty };
+            board[r, c] = new CellViewModel
+            {
+                X = c,
+                Y = r,
+                State = BoardCellState.Empty,
+            };
 
         foreach (var ship in placement.Ships)
         {
@@ -434,34 +463,40 @@ public class BattleshipController : BaseController
                         Y = y,
                         State = ship.IsSunk ? BoardCellState.Sunk : BoardCellState.Ship,
                         ShipId = ship.Id,
-                        ShipSize = (int)ship.Size
+                        ShipSize = (int)ship.Size,
                     };
             }
         }
 
         // Construir tablero de ataques recibidos del oponente
         CellViewModel[,]? receivedAttacks = null;
-        var opponentAttacksResult = await _battleshipService.GetOpponentAttackBoardAsync(userId, gameId);
+        var opponentAttacksResult = await _battleshipService.GetOpponentAttackBoardAsync(
+            userId,
+            gameId
+        );
         if (opponentAttacksResult.IsSuccess)
         {
             var opponentAttacks = opponentAttacksResult.Value!;
             receivedAttacks = new CellViewModel[12, 12];
             for (var r = 0; r < 12; r++)
             for (var c = 0; c < 12; c++)
-                receivedAttacks[r, c] = new CellViewModel { X = c, Y = r, State = opponentAttacks.Grid[c, r] };
+                receivedAttacks[r, c] = new CellViewModel
+                {
+                    X = c,
+                    Y = r,
+                    State = opponentAttacks.Grid[c, r],
+                };
         }
 
         var vm = new MyPlacementBoardViewModel
         {
             GameId = gameId,
             Board = board,
-            ReceivedAttacksBoard = receivedAttacks
+            ReceivedAttacksBoard = receivedAttacks,
         };
 
         return View("Attack/MyBoard", vm);
     }
-
-    // ====================== SURRENDER ======================
 
     [HttpGet]
     public IActionResult Surrender(long gameId)
@@ -497,8 +532,6 @@ public class BattleshipController : BaseController
         }
     }
 
-    // ====================== HISTORY ======================
-
     [HttpGet]
     public async Task<IActionResult> History()
     {
@@ -508,20 +541,21 @@ public class BattleshipController : BaseController
 
         var list = pagedResult.Items.ToList();
         var items = new List<GameHistoryItemViewModel>(list.Count);
-        foreach (var d in list) items.Add(MapToGameListItemToHistory(d, userId));
-        var stats = statsResult.IsSuccess ? MapToGameStats(statsResult.Value!) : new GameStatsViewModel();
+        foreach (var d in list)
+            items.Add(MapToGameListItemToHistory(d, userId));
+        var stats = statsResult.IsSuccess
+            ? MapToGameStats(statsResult.Value!)
+            : new GameStatsViewModel();
 
-        var vm = new GameDetailViewModel
-        {
-            History = items,
-            Stats = stats
-        };
+        var vm = new GameDetailViewModel { History = items, Stats = stats };
 
-        await this.PopulateMenuCountersAsync(_currentUserService, _friendRequestService, _notificationService);
+        await this.PopulateMenuCountersAsync(
+            _currentUserService,
+            _friendRequestService,
+            _notificationService
+        );
         return View("History/Index", vm);
     }
-
-    // ====================== RESULT ======================
 
     [HttpGet]
     public async Task<IActionResult> Result(long gameId)
@@ -546,7 +580,7 @@ public class BattleshipController : BaseController
             DurationHours = dto.DurationHours,
             MyAttackBoard = ConvertToCellArray(dto.MyAttackBoard.Grid),
             OpponentAttackBoard = ConvertToCellArray(dto.OpponentAttackBoard.Grid),
-            MyPlacementBoard = ConvertToCellArray(dto.MyPlacementBoard.Ships)
+            MyPlacementBoard = ConvertToCellArray(dto.MyPlacementBoard.Ships),
         };
 
         return View("History/Result", vm);
@@ -567,7 +601,7 @@ public class BattleshipController : BaseController
         var vm = new OpponentAttackBoardViewModel
         {
             GameId = gameId,
-            Board = ConvertToCellArray(result.Value!.Grid)
+            Board = ConvertToCellArray(result.Value!.Grid),
         };
 
         return View("History/OpponentBoard", vm);
@@ -589,7 +623,12 @@ public class BattleshipController : BaseController
         var board = new CellViewModel[12, 12];
         for (var r = 0; r < 12; r++)
         for (var c = 0; c < 12; c++)
-            board[r, c] = new CellViewModel { X = c, Y = r, State = BoardCellState.Empty };
+            board[r, c] = new CellViewModel
+            {
+                X = c,
+                Y = r,
+                State = BoardCellState.Empty,
+            };
 
         foreach (var ship in placementResult.Value!.Ships)
         {
@@ -604,7 +643,7 @@ public class BattleshipController : BaseController
                         Y = y,
                         State = ship.IsSunk ? BoardCellState.Sunk : BoardCellState.Ship,
                         ShipId = ship.Id,
-                        ShipSize = (int)ship.Size
+                        ShipSize = (int)ship.Size,
                     };
             }
         }
@@ -614,8 +653,10 @@ public class BattleshipController : BaseController
             for (var r = 0; r < 12; r++)
             for (var c = 0; c < 12; c++)
             {
-                if (attackResult.Value.Grid[c, r] == BoardCellState.Hit ||
-                    attackResult.Value.Grid[c, r] == BoardCellState.Sunk)
+                if (
+                    attackResult.Value.Grid[c, r] == BoardCellState.Hit
+                    || attackResult.Value.Grid[c, r] == BoardCellState.Sunk
+                )
                     board[r, c].State = attackResult.Value.Grid[c, r];
             }
         }
@@ -630,9 +671,10 @@ public class BattleshipController : BaseController
         return paged.Items.Select(MapToFriendListItem).ToList();
     }
 
-    // ====================== PRIVATE HELPERS ======================
-
-    private static ActiveGameListItemViewModel MapToActiveGameListItem(GameListItemDto dto, string currentUserId)
+    private static ActiveGameListItemViewModel MapToActiveGameListItem(
+        GameListItemDto dto,
+        string currentUserId
+    )
     {
         return new ActiveGameListItemViewModel
         {
@@ -644,7 +686,7 @@ public class BattleshipController : BaseController
             StartedAt = dto.StartedAt.UtcDateTime,
             HoursElapsed = dto.Duration.HasValue ? dto.Duration.Value.TotalHours : 0,
             CurrentTurnUserId = dto.CurrentTurnUserId,
-            CurrentUserId = currentUserId
+            CurrentUserId = currentUserId,
         };
     }
 
@@ -660,19 +702,21 @@ public class BattleshipController : BaseController
             FinishedAt = dto.FinishedAt.UtcDateTime,
             DurationHours = dto.Duration.TotalHours,
             Result = dto.IsWon ? "Ganada" : "Perdida",
-            Winner = dto.Winner
+            Winner = dto.Winner,
         };
     }
 
-    private GameHistoryItemViewModel MapToGameListItemToHistory(GameListItemDto dto, string currentUserId)
+    private GameHistoryItemViewModel MapToGameListItemToHistory(
+        GameListItemDto dto,
+        string currentUserId
+    )
     {
         var isWon = dto.WinnerId == currentUserId;
         var duration = dto.Duration ?? TimeSpan.Zero;
-        var winner = dto.WinnerId == null
-            ? "Empate"
-            : isWon
-                ? "Yo"
-                : dto.OpponentName;
+        var winner =
+            dto.WinnerId == null ? "Empate"
+            : isWon ? "Yo"
+            : dto.OpponentName;
 
         return new GameHistoryItemViewModel
         {
@@ -684,7 +728,7 @@ public class BattleshipController : BaseController
             FinishedAt = (dto.FinishedAt ?? dto.StartedAt).UtcDateTime,
             DurationHours = duration.TotalHours,
             Result = isWon ? "Ganada" : "Perdida",
-            Winner = winner
+            Winner = winner,
         };
     }
 
@@ -694,7 +738,7 @@ public class BattleshipController : BaseController
         {
             TotalGames = dto.TotalGames,
             WonGames = dto.WonGames,
-            LostGames = dto.LostGames
+            LostGames = dto.LostGames,
         };
     }
 
@@ -705,11 +749,13 @@ public class BattleshipController : BaseController
             UserId = friend.FriendId,
             FullName = friend.FriendName,
             UserName = friend.FriendUserName,
-            ProfilePicturePath = friend.FriendProfilePicturePath
+            ProfilePicturePath = friend.FriendProfilePicturePath,
         };
     }
 
-    private static FriendListItemViewModel MapToFriendListItem(LinkUpPro.Application.DTOs.Friendship.Responses.FriendListItemDto dto)
+    private static FriendListItemViewModel MapToFriendListItem(
+        LinkUpPro.Application.DTOs.Friendship.Responses.FriendListItemDto dto
+    )
     {
         return new FriendListItemViewModel
         {
@@ -717,7 +763,7 @@ public class BattleshipController : BaseController
             FriendName = dto.FriendName,
             FriendUserName = dto.FriendUserName,
             FriendProfilePicturePath = dto.FriendProfilePicturePath,
-            CommonFriendsCount = dto.CommonFriendsCount
+            CommonFriendsCount = dto.CommonFriendsCount,
         };
     }
 
@@ -738,14 +784,16 @@ public class BattleshipController : BaseController
             var isPlaced = idx <= placedCount;
             var name = ShipToPlaceViewModel.GetName(size, idx);
 
-            result.Add(new ShipToPlaceViewModel
-            {
-                Size = size,
-                Index = idx,
-                Label = required.Count(s => s == size) > 1 ? $"{name}" : name,
-                DisplayName = name,
-                IsPlaced = isPlaced
-            });
+            result.Add(
+                new ShipToPlaceViewModel
+                {
+                    Size = size,
+                    Index = idx,
+                    Label = required.Count(s => s == size) > 1 ? $"{name}" : name,
+                    DisplayName = name,
+                    IsPlaced = isPlaced,
+                }
+            );
         }
 
         return result.Where(s => !s.IsPlaced).ToList();
@@ -756,7 +804,12 @@ public class BattleshipController : BaseController
         var board = new CellViewModel[12, 12];
         for (var r = 0; r < 12; r++)
         for (var c = 0; c < 12; c++)
-            board[r, c] = new CellViewModel { X = c, Y = r, State = BoardCellState.Empty };
+            board[r, c] = new CellViewModel
+            {
+                X = c,
+                Y = r,
+                State = BoardCellState.Empty,
+            };
 
         foreach (var ship in placedShips)
         {
@@ -769,22 +822,28 @@ public class BattleshipController : BaseController
                         Y = cell.Y,
                         State = BoardCellState.Ship,
                         ShipId = ship.ShipId,
-                        ShipSize = ship.Size
+                        ShipSize = ship.Size,
                     };
             }
         }
         return board;
     }
 
-    private static CellViewModel[,] BuildFullPlacementBoard(PlacementBoardDto placement, AttackBoardDto? opponentAttacks)
+    private static CellViewModel[,] BuildFullPlacementBoard(
+        PlacementBoardDto placement,
+        AttackBoardDto? opponentAttacks
+    )
     {
         var board = BuildBoardFromPlacedShips(placement.Ships.Select(MapToPlacedShip).ToList());
-        if (opponentAttacks is null) return board;
+        if (opponentAttacks is null)
+            return board;
         for (var r = 0; r < 12; r++)
         for (var c = 0; c < 12; c++)
         {
-            if (opponentAttacks.Grid[c, r] == BoardCellState.Hit ||
-                opponentAttacks.Grid[c, r] == BoardCellState.Sunk)
+            if (
+                opponentAttacks.Grid[c, r] == BoardCellState.Hit
+                || opponentAttacks.Grid[c, r] == BoardCellState.Sunk
+            )
                 board[r, c].State = opponentAttacks.Grid[c, r];
         }
         return board;
@@ -800,14 +859,16 @@ public class BattleshipController : BaseController
             StartY = dto.StartY,
             Direction = dto.Direction,
             IsSunk = dto.IsSunk,
-            OccupiedCells = dto.OccupiedCells.Select(c => new CellViewModel
-            {
-                X = c[0],
-                Y = c[1],
-                State = dto.IsSunk ? BoardCellState.Sunk : BoardCellState.Ship,
-                ShipId = dto.Id,
-                ShipSize = (int)dto.Size
-            }).ToList()
+            OccupiedCells = dto
+                .OccupiedCells.Select(c => new CellViewModel
+                {
+                    X = c[0],
+                    Y = c[1],
+                    State = dto.IsSunk ? BoardCellState.Sunk : BoardCellState.Ship,
+                    ShipId = dto.Id,
+                    ShipSize = (int)dto.Size,
+                })
+                .ToList(),
         };
     }
 
@@ -816,7 +877,12 @@ public class BattleshipController : BaseController
         var board = new CellViewModel[12, 12];
         for (var r = 0; r < 12; r++)
         for (var c = 0; c < 12; c++)
-            board[r, c] = new CellViewModel { X = c, Y = r, State = grid[c, r] };
+            board[r, c] = new CellViewModel
+            {
+                X = c,
+                Y = r,
+                State = grid[c, r],
+            };
         return board;
     }
 
@@ -825,7 +891,12 @@ public class BattleshipController : BaseController
         var board = new CellViewModel[12, 12];
         for (var r = 0; r < 12; r++)
         for (var c = 0; c < 12; c++)
-            board[r, c] = new CellViewModel { X = c, Y = r, State = BoardCellState.Empty };
+            board[r, c] = new CellViewModel
+            {
+                X = c,
+                Y = r,
+                State = BoardCellState.Empty,
+            };
 
         foreach (var ship in ships)
         {

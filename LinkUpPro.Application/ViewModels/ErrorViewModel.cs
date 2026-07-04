@@ -1,4 +1,4 @@
-namespace LinkUpPro.WebApp.Models;
+namespace LinkUpPro.Application.ViewModels;
 
 public class ErrorViewModel
 {

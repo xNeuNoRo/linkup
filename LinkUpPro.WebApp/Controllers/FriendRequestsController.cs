@@ -2,8 +2,6 @@ using LinkUpPro.Application.DTOs.FriendRequest.Requests;
 using LinkUpPro.Application.DTOs.FriendRequest.Responses;
 using LinkUpPro.Application.Interfaces.Services;
 using LinkUpPro.Application.ViewModels.FriendRequestViewModels;
-using LinkUpPro.Application.ViewModels.Shared;
-using LinkUpPro.Domain.Enums;
 using LinkUpPro.WebApp.Extensions;
 using LinkUpPro.WebApp.Filters;
 using Microsoft.AspNetCore.Mvc;
@@ -50,10 +48,15 @@ public class FriendRequestsController : BaseController
         var vm = new FriendRequestHistoryViewModel
         {
             PendingRequests = pendingVms,
-            SentRequests = sentVms
+            SentRequests = sentVms,
         };
 
-        await this.PopulateBaseViewModelAsync(vm, _currentUserService, _friendRequestService, _notificationService);
+        await this.PopulateBaseViewModelAsync(
+            vm,
+            _currentUserService,
+            _friendRequestService,
+            _notificationService
+        );
         return View(vm);
     }
 
@@ -152,7 +155,9 @@ public class FriendRequestsController : BaseController
             );
 
             if (!result.IsSuccess)
-                ShowError(result.Error?.Message ?? "No se pudo eliminar la solicitud del historial.");
+                ShowError(
+                    result.Error?.Message ?? "No se pudo eliminar la solicitud del historial."
+                );
             else
                 ShowAlert("La solicitud fue eliminada de su historial.");
         }
@@ -171,7 +176,12 @@ public class FriendRequestsController : BaseController
     public async Task<IActionResult> SearchUsers(string search, int page = 1, int pageSize = 20)
     {
         var userId = _currentUserService.UserId!;
-        var pagedResult = await _friendRequestService.SearchAvailableUsersAsync(userId, search, page, pageSize);
+        var pagedResult = await _friendRequestService.SearchAvailableUsersAsync(
+            userId,
+            search,
+            page,
+            pageSize
+        );
 
         var items = pagedResult.Items.Select(MapToAvailableUser).ToList();
 
@@ -179,7 +189,7 @@ public class FriendRequestsController : BaseController
         {
             SearchText = search,
             IsSearching = !string.IsNullOrWhiteSpace(search),
-            AvailableUsers = items
+            AvailableUsers = items,
         };
 
         return PartialView("_AvailableUsersPartial", vm);
@@ -191,16 +201,25 @@ public class FriendRequestsController : BaseController
     public async Task<IActionResult> SendRequest(string? search)
     {
         var userId = _currentUserService.UserId!;
-        var pagedResult = await _friendRequestService.SearchAvailableUsersAsync(userId, search, 1, 50);
+        var pagedResult = await _friendRequestService.SearchAvailableUsersAsync(
+            userId,
+            search,
+            1,
+            50
+        );
 
         var vm = new SendFriendRequestViewModel
         {
             SearchText = search,
             IsSearching = !string.IsNullOrWhiteSpace(search),
-            AvailableUsers = pagedResult.Items.Select(MapToAvailableUser).ToList()
+            AvailableUsers = pagedResult.Items.Select(MapToAvailableUser).ToList(),
         };
 
-        await this.PopulateMenuCountersAsync(_currentUserService, _friendRequestService, _notificationService);
+        await this.PopulateMenuCountersAsync(
+            _currentUserService,
+            _friendRequestService,
+            _notificationService
+        );
         return View(vm);
     }
 
@@ -212,7 +231,10 @@ public class FriendRequestsController : BaseController
     {
         if (string.IsNullOrEmpty(model.SelectedUserId))
         {
-            ModelState.AddModelError(string.Empty, "Debe seleccionar un usuario para enviar la solicitud de amistad.");
+            ModelState.AddModelError(
+                string.Empty,
+                "Debe seleccionar un usuario para enviar la solicitud de amistad."
+            );
             return await SendRequest(model.SearchText);
         }
 
@@ -225,7 +247,10 @@ public class FriendRequestsController : BaseController
 
             if (!result.IsSuccess)
             {
-                ModelState.AddModelError(string.Empty, result.Error?.Message ?? "No se pudo enviar la solicitud.");
+                ModelState.AddModelError(
+                    string.Empty,
+                    result.Error?.Message ?? "No se pudo enviar la solicitud."
+                );
                 return await SendRequest(model.SearchText);
             }
 
@@ -252,7 +277,7 @@ public class FriendRequestsController : BaseController
             SenderUserName = dto.SenderUserName,
             SenderProfilePicture = dto.SenderProfilePicture,
             CommonFriendsCount = dto.CommonFriendsCount,
-            SentAt = dto.SentAt.UtcDateTime
+            SentAt = dto.SentAt.UtcDateTime,
         };
     }
 
@@ -270,7 +295,7 @@ public class FriendRequestsController : BaseController
             Status = dto.Status,
             RespondedAt = dto.RespondedAt?.UtcDateTime,
             IsVisibleForSender = dto.IsVisibleForSender,
-            SenderName = dto.SenderName
+            SenderName = dto.SenderName,
         };
     }
 
@@ -282,7 +307,7 @@ public class FriendRequestsController : BaseController
             Name = dto.Name,
             UserName = dto.UserName,
             ProfilePicturePath = dto.ProfilePicturePath,
-            CommonFriendsCount = dto.CommonFriendsCount
+            CommonFriendsCount = dto.CommonFriendsCount,
         };
     }
 }
