@@ -46,36 +46,6 @@ public class SessionAuthorizeAttribute : Attribute, IAsyncAuthorizationFilter
             );
             return;
         }
-
-        // Validar inactividad de sesión
-        var principal = currentUserService.GetPrincipal();
-        if (principal == null)
-        {
-            SetErrorAndRedirect(context, "Su sesión ha expirado. Inicie sesión nuevamente.");
-            return;
-        }
-
-        var lastActivityClaim = principal.FindFirst("LastActivityAt")?.Value;
-        var rememberMeClaim = principal.FindFirst("RememberMe")?.Value;
-
-        if (
-            DateTimeOffset.TryParse(lastActivityClaim, out var lastActivity)
-            && bool.TryParse(rememberMeClaim, out var rememberMe)
-        )
-        {
-            var timeout = rememberMe
-                ? DomainConstants.PersistentSessionDuration
-                : DomainConstants.SessionInactivityTimeout;
-
-            if (DateTimeOffset.UtcNow - lastActivity > timeout)
-            {
-                SetErrorAndRedirect(
-                    context,
-                    "Su sesión finalizó por inactividad. Inicie sesión nuevamente para continuar."
-                );
-                return;
-            }
-        }
     }
 
     private static void SetErrorAndRedirect(

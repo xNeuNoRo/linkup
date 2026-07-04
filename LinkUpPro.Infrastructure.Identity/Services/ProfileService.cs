@@ -7,6 +7,7 @@ using LinkUpPro.Domain.Common;
 using LinkUpPro.Domain.Interfaces.Persistence;
 using LinkUpPro.Domain.ValueObjects;
 using LinkUpPro.Infrastructure.Identity.Entities;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -88,12 +89,18 @@ public sealed class ProfileService : IProfileService
 
         if (string.IsNullOrWhiteSpace(firstName))
             return Result<EditProfileResponseDto>.Failure(
-                new DomainError("Profile.FirstNameRequired", "El nombre es requerido y no puede contener solo espacios.")
+                new DomainError(
+                    "Profile.FirstNameRequired",
+                    "El nombre es requerido y no puede contener solo espacios."
+                )
             );
 
         if (string.IsNullOrWhiteSpace(lastName))
             return Result<EditProfileResponseDto>.Failure(
-                new DomainError("Profile.LastNameRequired", "El apellido es requerido y no puede contener solo espacios.")
+                new DomainError(
+                    "Profile.LastNameRequired",
+                    "El apellido es requerido y no puede contener solo espacios."
+                )
             );
 
         if (firstName != oldFirstName)
@@ -180,30 +187,35 @@ public sealed class ProfileService : IProfileService
         try
         {
             var roles = await _userManager.GetRolesAsync(user);
-            var rememberMeClaim = _httpContextAccessor
-                .HttpContext?
-                .User.FindFirst("RememberMe")?.Value;
-            var rememberMe = bool.TryParse(rememberMeClaim, out var rm) && rm;
+
+            var authResult = await _httpContextAccessor.HttpContext!.AuthenticateAsync(
+                IdentityConstants.ApplicationScheme
+            );
+            var isPersistent = authResult?.Properties?.IsPersistent ?? false;
 
             var claims = new List<System.Security.Claims.Claim>
             {
                 new("FirstName", user.FirstName ?? string.Empty),
                 new("LastName", user.LastName ?? string.Empty),
                 new("ProfilePicturePath", user.ProfilePicturePath ?? string.Empty),
-                new("RememberMe", rememberMe.ToString()),
-                new("LastActivityAt", DateTimeOffset.UtcNow.ToString("O")),
             };
 
             foreach (var role in roles)
             {
-                claims.Add(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, role));
+                claims.Add(
+                    new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, role)
+                );
             }
 
-            await _signInManager.SignInWithClaimsAsync(user, rememberMe, claims);
+            await _signInManager.SignInWithClaimsAsync(user, isPersistent, claims);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "No se pudo refrescar la cookie de autenticación tras actualizar perfil del usuario {UserId}. El usuario verá la foto anterior hasta que cierre sesión y vuelva a iniciarla.", user.Id);
+            _logger.LogWarning(
+                ex,
+                "No se pudo refrescar la cookie de autenticación tras actualizar perfil del usuario {UserId}. El usuario verá la foto anterior hasta que cierre sesión y vuelva a iniciarla.",
+                user.Id
+            );
         }
     }
 
@@ -230,12 +242,18 @@ public sealed class ProfileService : IProfileService
 
         if (string.IsNullOrWhiteSpace(request.ConfirmPassword))
             return Result<EditProfileResponseDto>.Failure(
-                new DomainError("Password.ConfirmRequired", "La confirmacion de contraseña es requerida.")
+                new DomainError(
+                    "Password.ConfirmRequired",
+                    "La confirmacion de contraseña es requerida."
+                )
             );
 
         if (request.NewPassword != request.ConfirmPassword)
             return Result<EditProfileResponseDto>.Failure(
-                new DomainError("Password.Mismatch", "La nueva contraseña y su confirmacion no coinciden.")
+                new DomainError(
+                    "Password.Mismatch",
+                    "La nueva contraseña y su confirmacion no coinciden."
+                )
             );
 
         var passwordValid = await _userManager.CheckPasswordAsync(user, request.CurrentPassword);
@@ -246,7 +264,10 @@ public sealed class ProfileService : IProfileService
 
         if (request.CurrentPassword == request.NewPassword)
             return Result<EditProfileResponseDto>.Failure(
-                new DomainError("Password.SameAsCurrent", "La nueva contraseña no puede ser igual a la actual.")
+                new DomainError(
+                    "Password.SameAsCurrent",
+                    "La nueva contraseña no puede ser igual a la actual."
+                )
             );
 
         var strength = PasswordStrength.Calculate(request.NewPassword);
@@ -397,8 +418,6 @@ public sealed class ProfileService : IProfileService
     private string GetOrigin()
     {
         var request = _httpContextAccessor.HttpContext?.Request;
-        return request != null
-            ? $"{request.Scheme}://{request.Host.Value}"
-            : "https://localhost";
+        return request != null ? $"{request.Scheme}://{request.Host.Value}" : "https://localhost";
     }
 }

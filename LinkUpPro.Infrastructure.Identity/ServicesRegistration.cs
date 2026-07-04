@@ -75,8 +75,7 @@ public static class ServicesRegistration
                 IdentityConstants.ApplicationScheme,
                 opt =>
                 {
-                    // Configuramos el tiempo de vida de la cookie de autenticación
-                    opt.ExpireTimeSpan = DomainConstants.PersistentSessionDuration;
+                    opt.ExpireTimeSpan = DomainConstants.SessionInactivityTimeout;
                     opt.SlidingExpiration = true;
                     opt.LoginPath = "/Auth/Login";
                     opt.AccessDeniedPath = "/Auth/Login";
@@ -84,6 +83,16 @@ public static class ServicesRegistration
                     opt.Cookie.HttpOnly = true;
                     opt.Cookie.SameSite = SameSiteMode.Lax;
                     opt.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                    opt.Events.OnSigningIn = context =>
+                    {
+                        if (context.Properties.IsPersistent)
+                        {
+                            context.Properties.ExpiresUtc = DateTimeOffset.UtcNow.Add(
+                                DomainConstants.PersistentSessionDuration
+                            );
+                        }
+                        return Task.CompletedTask;
+                    };
                 }
             );
 

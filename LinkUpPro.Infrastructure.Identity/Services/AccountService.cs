@@ -111,11 +111,6 @@ public class AccountService : IAccountService
                 "ProfilePicturePath",
                 user.ProfilePicturePath ?? string.Empty
             ),
-            new("RememberMe", rememberMe.ToString()),
-            new(
-                "LastActivityAt",
-                DateTimeOffset.UtcNow.ToString("O")
-            ),
         };
 
         foreach (var role in roles)
