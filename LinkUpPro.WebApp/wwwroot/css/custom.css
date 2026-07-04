@@ -380,3 +380,239 @@ button:not([class*="cursor-"]) {
   padding-top: 0 !important;
   padding-bottom: 0 !important;
 }
+
+/* =============================================================
+   USER CARDS - Stagger fade-in animation
+   ============================================================= */
+
+.user-card-wrapper {
+  animation: card-fade-in 0.35s ease both;
+}
+
+@keyframes card-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* =============================================================
+   TAB PANELS - Smooth transitions
+   ============================================================= */
+
+.tab-panel {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.tab-panel.hidden {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  position: absolute;
+  width: 100%;
+}
+
+/* =============================================================
+   POST CARDS - Stagger animation
+   ============================================================= */
+
+.post-card-wrapper {
+  animation: card-fade-in 0.35s ease both;
+}
+
+.post-card-wrapper:nth-child(1) { animation-delay: 0ms; }
+.post-card-wrapper:nth-child(2) { animation-delay: 60ms; }
+.post-card-wrapper:nth-child(3) { animation-delay: 120ms; }
+.post-card-wrapper:nth-child(4) { animation-delay: 180ms; }
+.post-card-wrapper:nth-child(5) { animation-delay: 240ms; }
+
+/* =============================================================
+   FRIEND CARDS - Stagger animation
+   ============================================================= */
+
+.friend-card-wrapper {
+  animation: card-fade-in 0.3s ease both;
+}
+
+.friend-card-wrapper:nth-child(1) { animation-delay: 0ms; }
+.friend-card-wrapper:nth-child(2) { animation-delay: 40ms; }
+.friend-card-wrapper:nth-child(3) { animation-delay: 80ms; }
+.friend-card-wrapper:nth-child(4) { animation-delay: 120ms; }
+.friend-card-wrapper:nth-child(5) { animation-delay: 160ms; }
+
+/* =============================================================
+   LOAD MORE BUTTON - Hover effect
+   ============================================================= */
+
+.load-more-btn {
+  transition: all 0.2s ease;
+}
+
+.load-more-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+}
+
+.load-more-btn:active {
+  transform: translateY(0);
+}
+
+/* =============================================================
+   TOGGLE SWITCH - Used for checkboxes styled as switches
+   ============================================================= */
+
+.switch {
+  position: relative;
+  display: inline-flex;
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #d1d5db;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 24px;
+}
+
+.dark .slider {
+  background-color: #4b5563;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .slider {
+  background-color: #4f46e5;
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+input:focus-visible + .slider {
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3);
+}
+
+/* =============================================================
+   BATTLESHIP PLACEMENT PREVIEW
+   ============================================================= */
+
+@keyframes ghost-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+@keyframes ghost-invalid-pulse {
+  0%, 100% { background: rgba(239, 68, 68, 0.25) !important; }
+  50% { background: rgba(239, 68, 68, 0.5) !important; }
+}
+
+.battleship-cell.preview-ghost {
+  background: rgba(16, 185, 129, 0.35) !important;
+  border: 2px solid #10b981 !important;
+  animation: ghost-pulse 1.2s ease-in-out infinite;
+  z-index: 3;
+}
+.battleship-cell.preview-ghost.dir-active {
+  background: rgba(99, 102, 241, 0.45) !important;
+  border: 2px solid #6366f1 !important;
+  animation: none;
+}
+.battleship-cell.preview-ghost.invalid {
+  background: rgba(239, 68, 68, 0.25) !important;
+  border: 2px dashed #ef4444 !important;
+  animation: ghost-invalid-pulse 0.8s ease-in-out infinite;
+}
+.battleship-cell.preview-ghost.invalid.dir-active {
+  background: rgba(239, 68, 68, 0.45) !important;
+  border: 2px solid #ef4444 !important;
+  animation: none;
+}
+
+.dir-arrow-btn {
+  transition: all 0.15s ease;
+}
+.dir-arrow-btn:hover:not(.disabled) {
+  transform: scale(1.05);
+}
+.dir-arrow-btn.active {
+  border-color: #4f46e5 !important;
+  background: #eef2ff !important;
+  box-shadow: 0 0 0 2px rgba(79,70,229,0.2);
+}
+.dark .dir-arrow-btn.active {
+  background: rgba(79,70,229,0.15) !important;
+}
+
+/* =============================================================
+   NOTIFICATION ICON BUTTONS
+   ============================================================= */
+
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  flex-shrink: 0;
+}
+.btn-icon:hover {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+.dark .btn-icon:hover {
+  background: rgba(79, 70, 229, 0.12);
+  color: #818cf8;
+}
+.btn-icon:active {
+  transform: scale(0.92);
+}
+
+.notif-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.375rem;
+  border-radius: 9999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .btn-icon { min-height: 44px; min-width: 44px; }
+}

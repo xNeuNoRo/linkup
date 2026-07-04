@@ -3,8 +3,6 @@ using LinkUpPro.Application.DTOs.Comment.Responses;
 using LinkUpPro.Application.DTOs.Reaction.Requests;
 using LinkUpPro.Application.Interfaces.Services;
 using LinkUpPro.Application.ViewModels.CommentViewModels;
-using LinkUpPro.Domain.Common;
-using LinkUpPro.Domain.Enums;
 using LinkUpPro.WebApp.Filters;
 using Mapster;
 using Microsoft.AspNetCore.Mvc;
@@ -88,7 +86,10 @@ public class PostsController : BaseController
         try
         {
             var request = model.Adapt<CreateReplyRequest>();
-            var result = await _commentService.CreateReplyAsync(_currentUserService.UserId!, request);
+            var result = await _commentService.CreateReplyAsync(
+                _currentUserService.UserId!,
+                request
+            );
 
             if (!result.IsSuccess)
             {
@@ -117,7 +118,11 @@ public class PostsController : BaseController
         try
         {
             var request = new UpdateCommentRequest(content);
-            var result = await _commentService.UpdateAsync(_currentUserService.UserId!, id, request);
+            var result = await _commentService.UpdateAsync(
+                _currentUserService.UserId!,
+                id,
+                request
+            );
 
             if (!result.IsSuccess)
             {
@@ -171,13 +176,19 @@ public class PostsController : BaseController
     {
         var userId = _currentUserService.UserId!;
         var nextDepth = depth + 1;
-        var result = await _commentService.GetCommentRepliesAsync(userId, parentCommentId, page, 5, currentDepth: nextDepth);
+        var result = await _commentService.GetCommentRepliesAsync(
+            userId,
+            parentCommentId,
+            page,
+            5,
+            currentDepth: nextDepth
+        );
 
         if (!result.Items.Any())
             return Content("");
 
-        var viewModels = result.Items
-            .Select(dto => MapCommentTreeToViewModel(dto, userId, canReply: true))
+        var viewModels = result
+            .Items.Select(dto => MapCommentTreeToViewModel(dto, userId, canReply: true))
             .ToList();
 
         ViewData["ParentCommentId"] = parentCommentId;
@@ -225,10 +236,14 @@ public class PostsController : BaseController
             IsTruncated = node.IsTruncated,
             ReplyingToUserName = node.ReplyingToUserName,
             ShowConnector = node.ShowConnector,
-            Replies = node.Replies.Select(r => MapCommentTreeToViewModel(r, currentUserId, canReply && !c.IsDeleted)).ToList(),
+            Replies = node
+                .Replies.Select(r =>
+                    MapCommentTreeToViewModel(r, currentUserId, canReply && !c.IsDeleted)
+                )
+                .ToList(),
             IsDeleted = c.IsDeleted,
             IsOwn = c.AuthorId == currentUserId,
-            CanReply = canReply && !c.IsDeleted
+            CanReply = canReply && !c.IsDeleted,
         };
         return vm;
     }
@@ -253,26 +268,38 @@ public class PostsController : BaseController
             // 0 = quitar reacción
             if (reactionType == 0)
             {
-                var deleteResult = await _reactionService.DeleteAsync(_currentUserService.UserId!, postId);
+                var deleteResult = await _reactionService.DeleteAsync(
+                    _currentUserService.UserId!,
+                    postId
+                );
                 if (!deleteResult.IsSuccess)
-                    return Json(new { success = false, message = deleteResult.Error?.Message ?? "Error" });
+                    return Json(
+                        new { success = false, message = deleteResult.Error?.Message ?? "Error" }
+                    );
             }
             else
             {
                 var request = new CreateReactionRequest(postId, reactionType);
-                var result = await _reactionService.ReactAsync(_currentUserService.UserId!, request);
+                var result = await _reactionService.ReactAsync(
+                    _currentUserService.UserId!,
+                    request
+                );
                 if (!result.IsSuccess)
-                    return Json(new { success = false, message = result.Error?.Message ?? "Error" });
+                    return Json(
+                        new { success = false, message = result.Error?.Message ?? "Error" }
+                    );
             }
 
             var counts = await _reactionService.GetCountsAsync(postId);
-            return Json(new
-            {
-                success = true,
-                likes = counts.Value?.Likes ?? 0,
-                dislikes = counts.Value?.Dislikes ?? 0,
-                userReaction = reactionType
-            });
+            return Json(
+                new
+                {
+                    success = true,
+                    likes = counts.Value?.Likes ?? 0,
+                    dislikes = counts.Value?.Dislikes ?? 0,
+                    userReaction = reactionType,
+                }
+            );
         }
         catch (Exception ex)
         {

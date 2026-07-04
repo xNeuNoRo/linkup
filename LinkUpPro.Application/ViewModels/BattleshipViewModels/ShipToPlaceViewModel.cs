@@ -1,27 +1,31 @@
 namespace LinkUpPro.Application.ViewModels.BattleshipViewModels;
 
-/// <summary>
-/// ViewModel para un barco pendiente de colocar.
-/// </summary>
 public class ShipToPlaceViewModel
 {
-    /// <summary>
-    /// Tamaño del barco (2, 3, 4 o 5).
-    /// </summary>
     public int Size { get; set; }
-
-    /// <summary>
-    /// Etiqueta legible (ej. "Barco de 5", "Barco de 3 (1)").
-    /// </summary>
     public string Label { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Índice del barco cuando hay varios del mismo tamaño (1, 2, etc.).
-    /// </summary>
+    public string DisplayName { get; set; } = string.Empty;
     public int Index { get; set; }
-
-    /// <summary>
-    /// Indica si ya fue colocado.
-    /// </summary>
     public bool IsPlaced { get; set; }
+
+    private static readonly Dictionary<int, (string Name, string Icon)> ShipInfo = new()
+    {
+        { 5, ("Portaaviones", "anchor") },
+        { 4, ("Acorazado", "ship") },
+        { 3, ("Submarino", "waves") },
+        { 2, ("Destructor", "zap") },
+    };
+
+    private static readonly Dictionary<int, string[]> ShipNamesByIndex = new()
+    {
+        { 3, ["Submarino", "Crucero"] },
+    };
+
+    public static string GetName(int size, int index = 1) =>
+        ShipNamesByIndex.TryGetValue(size, out var names) && index <= names.Length
+            ? names[index - 1]
+            : ShipInfo.GetValueOrDefault(size).Name ?? $"Barco de {size}";
+
+    public static string GetIcon(int size) =>
+        ShipInfo.GetValueOrDefault(size).Icon ?? "anchor";
 }

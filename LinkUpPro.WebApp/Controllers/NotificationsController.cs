@@ -44,7 +44,6 @@ public class NotificationsController : BaseController
     {
         var userId = _currentUserService.UserId!;
 
-        // Get notification by ID directly (optimized - single query)
         var notifResult = await _notificationService.GetByIdAsync(userId, id);
         if (!notifResult.IsSuccess || notifResult.Value is null)
         {
@@ -54,20 +53,27 @@ public class NotificationsController : BaseController
 
         var notif = notifResult.Value;
 
-        // Mark as read
         await _notificationService.MarkAsReadAsync(userId, new MarkAsReadRequest(id));
 
-        // Determine destination
         switch (notif.RelatedEntityType)
         {
             case RelatedEntityType.Post:
             case RelatedEntityType.Comment:
                 if (notif.RelatedEntityId.HasValue)
                 {
-                    var postResult = await _postService.GetByIdAsync(userId, notif.RelatedEntityId.Value);
+                    var postResult = await _postService.GetByIdAsync(
+                        userId,
+                        notif.RelatedEntityId.Value
+                    );
                     if (postResult.IsSuccess)
-                        return RedirectToAction("Index", "Home", new { highlightPostId = notif.RelatedEntityId.Value });
-                    ShowError("El contenido relacionado con esta notificación ya no se encuentra disponible.");
+                        return RedirectToAction(
+                            "Index",
+                            "Home",
+                            new { highlightPostId = notif.RelatedEntityId.Value }
+                        );
+                    ShowError(
+                        "El contenido relacionado con esta notificación ya no se encuentra disponible."
+                    );
                     return RedirectToAction(nameof(Index));
                 }
                 break;
@@ -86,7 +92,12 @@ public class NotificationsController : BaseController
     {
         var userId = _currentUserService.UserId!;
 
-        var pagedResult = await _notificationService.GetNotificationsAsync(userId, unreadOnly, page, pageSize);
+        var pagedResult = await _notificationService.GetNotificationsAsync(
+            userId,
+            unreadOnly,
+            page,
+            pageSize
+        );
         var unreadCount = await _notificationService.GetUnreadCountAsync(userId);
 
         var items = pagedResult.Items.Select(MapToListItem).ToList();
@@ -98,13 +109,18 @@ public class NotificationsController : BaseController
                 Items = items,
                 Page = pagedResult.Page,
                 PageSize = pagedResult.PageSize,
-                TotalItems = pagedResult.TotalCount
+                TotalItems = pagedResult.TotalCount,
             },
             UnreadOnly = unreadOnly,
-            UnreadNotificationsCount = unreadCount.Count
+            UnreadNotificationsCount = unreadCount.Count,
         };
 
-        await this.PopulateBaseViewModelAsync(vm, _currentUserService, _friendRequestService, _notificationService);
+        await this.PopulateBaseViewModelAsync(
+            vm,
+            _currentUserService,
+            _friendRequestService,
+            _notificationService
+        );
         return View(vm);
     }
 
@@ -156,7 +172,9 @@ public class NotificationsController : BaseController
             var result = await _notificationService.MarkAllAsReadAsync(_currentUserService.UserId!);
             if (!result.IsSuccess)
             {
-                ShowError(result.Error?.Message ?? "No se pudieron marcar las notificaciones como leídas.");
+                ShowError(
+                    result.Error?.Message ?? "No se pudieron marcar las notificaciones como leídas."
+                );
             }
             else
             {
@@ -183,13 +201,21 @@ public class NotificationsController : BaseController
             {
                 case RelatedEntityType.Post:
                 case RelatedEntityType.Comment:
-                    actionUrl = Url.Action("Index", "Home", new { highlightPostId = dto.RelatedEntityId.Value });
+                    actionUrl = Url.Action(
+                        "Index",
+                        "Home",
+                        new { highlightPostId = dto.RelatedEntityId.Value }
+                    );
                     break;
                 case RelatedEntityType.FriendRequest:
                     actionUrl = Url.Action("Index", "FriendRequests");
                     break;
                 default:
-                    actionUrl = Url.Action("Index", "Home", new { highlightPostId = dto.RelatedEntityId.Value });
+                    actionUrl = Url.Action(
+                        "Index",
+                        "Home",
+                        new { highlightPostId = dto.RelatedEntityId.Value }
+                    );
                     break;
             }
         }
@@ -206,7 +232,7 @@ public class NotificationsController : BaseController
             IsRead = dto.IsRead,
             RelatedEntityType = dto.RelatedEntityType,
             RelatedEntityId = dto.RelatedEntityId,
-            ActionUrl = actionUrl
+            ActionUrl = actionUrl,
         };
     }
 }

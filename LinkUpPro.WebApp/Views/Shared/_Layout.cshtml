@@ -138,52 +138,123 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
         .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; }
 
-        /* Battleship grid (Tailwind no cubre grid-template dinámico) */
+        /* Battleship grid */
         .battleship-board {
             display: grid;
             grid-template-columns: 2.5rem repeat(12, 1fr);
             grid-template-rows: 2.5rem repeat(12, 1fr);
             gap: 1px;
-            background: #e5e7eb;
+            background: #93c5fd;
             aspect-ratio: 1;
             max-width: 100%;
             border-radius: 0.75rem;
             overflow: hidden;
         }
-        .dark .battleship-board { background: #374151; }
+        .dark .battleship-board { background: #1e3a5f; }
         .battleship-cell {
             aspect-ratio: 1;
-            background: white;
+            background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
             border: none;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all 100ms ease;
+            transition: all 120ms ease;
             position: relative;
         }
-        .dark .battleship-cell { background: #1f2937; }
+        .dark .battleship-cell { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
         .battleship-cell:hover:not(.disabled):not(.hit):not(.miss):not(.sunk) {
-            background: #eef2ff;
+            background: #bfdbfe;
+            transform: scale(1.08);
+            z-index: 2;
         }
         .dark .battleship-cell:hover:not(.disabled):not(.hit):not(.miss):not(.sunk) {
-            background: #312e81;
+            background: #1e3a5f;
         }
-        .battleship-cell.hit { background: #fee2e2; cursor: not-allowed; }
-        .battleship-cell.miss { background: #dcfce7; cursor: not-allowed; }
-        .battleship-cell.ship { background: #e5e7eb; cursor: default; }
-        .dark .battleship-cell.ship { background: #374151; }
-        .battleship-cell.sunk { background: #fecaca; cursor: not-allowed; }
+        .battleship-cell.hit {
+            background: linear-gradient(135deg, #fecaca 0%, #fee2e2 100%) !important;
+            cursor: not-allowed;
+        }
+        .dark .battleship-cell.hit {
+            background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%) !important;
+        }
+        .battleship-cell.miss {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%) !important;
+            cursor: not-allowed;
+        }
+        .dark .battleship-cell.miss {
+            background: linear-gradient(135deg, #064e3b 0%, #065f46 100%) !important;
+        }
+        .battleship-cell.ship {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+            cursor: default;
+        }
+        .dark .battleship-cell.ship {
+            background: linear-gradient(135deg, #3730a3 0%, #312e81 100%) !important;
+        }
+        .battleship-cell.sunk {
+            background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%) !important;
+            cursor: not-allowed;
+            border: 1px solid rgba(255,255,255,0.2) !important;
+        }
+        .battleship-cell.sunk::after {
+            content: '';
+            display: block;
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 1px;
+            background: rgba(255,255,255,0.15);
+            rotate: 45deg;
+        }
+        .battleship-cell.sunk i {
+            position: absolute;
+            opacity: 0.9;
+        }
+        .dark .battleship-cell.sunk {
+            background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%) !important;
+            border-color: rgba(255,255,255,0.08) !important;
+        }
+        .dark .battleship-cell.sunk::after {
+            background: rgba(255,255,255,0.08);
+        }
+        .battleship-cell.placement-preview {
+            background: linear-gradient(135deg, #a5b4fc 0%, #c7d2fe 100%) !important;
+            transform: scale(1.05);
+        }
+        .dark .battleship-cell.placement-preview {
+            background: linear-gradient(135deg, #3730a3 0%, #4338ca 100%) !important;
+        }
         .battleship-cell.disabled { cursor: not-allowed; opacity: 0.5; }
         .battleship-label {
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 0.65rem;
-            font-weight: 600;
-            color: #6b7280;
+            font-weight: 700;
+            color: #4b5563;
+            background: rgba(255,255,255,0.5);
         }
-        .dark .battleship-label { color: #9ca3af; }
+        .dark .battleship-label { color: #9ca3af; background: rgba(0,0,0,0.3); }
+
+        @@keyframes cell-pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            70% { transform: scale(1.15); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .battleship-cell.hit i, .battleship-cell.miss div {
+            animation: cell-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .battleship-cell.ship::after {
+            content: '';
+            display: block;
+            width: 1.25rem;
+            height: 0.35rem;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.85);
+        }
+        .battleship-cell.ship.sunk::after {
+            background: rgba(153,27,27,0.6);
+        }
     </style>
 </head>
 <body class="font-sans antialiased min-h-screen overflow-x-hidden" style="background-color: var(--color-bg); color: var(--color-text);">
@@ -196,7 +267,7 @@
         <div id="sidebar-backdrop" class="fixed inset-0 bg-gray-900/40 z-40 hidden lg:hidden transition-opacity backdrop-blur-sm"></div>
 
         <!-- Sidebar (fija en desktop, drawer en mobile) -->
-        <aside id="sidebar" aria-label="Menú principal" style="view-transition-name: app-sidebar;" class="fixed inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 shrink-0 flex flex-col z-50 -translate-x-full lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen transition-transform duration-300 shadow-sm border-r border-gray-200 dark:border-gray-700">
+        <aside id="sidebar" aria-label="Menú principal" style="view-transition-name: app-sidebar;" class="fixed inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 shrink-0 flex flex-col z-50 lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen transition-transform duration-300 shadow-sm border-r border-gray-200 dark:border-gray-700">
 
             <!-- Header Sidebar: Logo + Close (mobile) -->
             <div class="h-16 flex items-center justify-between px-5 border-b border-gray-200 dark:border-gray-700 shrink-0">
@@ -250,6 +321,12 @@
                     <i data-lucide="moon" id="dark-mode-icon" class="w-5 h-5 shrink-0"></i>
                     <span class="text-sm flex-1 text-left" id="dark-mode-text">Modo Oscuro</span>
                 </button>
+
+                <!-- Créditos -->
+                <a asp-controller="Credits" asp-action="Index" class="@GetActiveClass("Credits")" data-tooltip="Créditos">
+                    <i data-lucide="award" class="w-5 h-5 shrink-0"></i>
+                    <span class="text-sm flex-1">Créditos</span>
+                </a>
             </nav>
 
             <!-- Footer Sidebar: Status -->

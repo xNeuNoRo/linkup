@@ -5,31 +5,33 @@
 
 <div class="max-w-3xl mx-auto space-y-6">
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-            <h1 class="text-2xl font-black text-gray-900 dark:text-gray-100 flex items-center gap-3">
-                Notificaciones
-                @if (Model.UnreadNotificationsCount > 0)
-                {
-                    <span class="px-2.5 py-1 bg-red-500 text-white text-xs font-bold rounded-full">@Model.UnreadNotificationsCount</span>
-                }
-            </h1>
-            <p class="text-gray-500 dark:text-gray-400 text-sm">Revisa las interacciones en tus publicaciones y comentarios.</p>
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex items-center gap-3">
+            <h1 class="text-2xl font-black text-gray-900 dark:text-gray-100">Notificaciones</h1>
+            @if (Model.UnreadNotificationsCount > 0)
+            {
+                <span class="notif-badge bg-red-500 text-white">@Model.UnreadNotificationsCount</span>
+            }
         </div>
-
-        <div class="flex items-center gap-2">
-            <a asp-action="Index" asp-route-unreadOnly="true" class="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors @(Model.UnreadOnly == true ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300" : "")">
-                <i data-lucide="circle-dot" class="w-4 h-4 inline-block -mt-0.5"></i> No leídas
+        <div class="flex items-center gap-2 flex-wrap">
+            <a asp-action="Index" asp-route-unreadOnly="true"
+               class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-bold transition-all duration-200 @(Model.UnreadOnly == true
+                   ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 shadow-sm"
+                   : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600")">
+                <i data-lucide="circle-dot" class="w-4 h-4"></i> No leídas
             </a>
-            <a asp-action="Index" class="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors @(Model.UnreadOnly == null ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300" : "")">
-                <i data-lucide="list" class="w-4 h-4 inline-block -mt-0.5"></i> Todas
+            <a asp-action="Index"
+               class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-bold transition-all duration-200 @(Model.UnreadOnly != true
+                   ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 shadow-sm"
+                   : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600")">
+                <i data-lucide="list" class="w-4 h-4"></i> Todas
             </a>
             @if (Model.UnreadNotificationsCount > 0)
             {
-                <form asp-action="MarkAllAsRead" method="post" class="inline">
+                <form asp-action="MarkAllAsRead" method="post" id="mark-all-form" class="contents">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors flex items-center gap-1">
-                        <i data-lucide="check-check" class="w-4 h-4"></i> Marcar todas leídas
+                    <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-700 transition-all duration-200 shadow-sm">
+                        <i data-lucide="check-check" class="w-4 h-4"></i> Marcar todas
                     </button>
                 </form>
             }

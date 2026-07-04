@@ -1214,25 +1214,7 @@
             });
         }
 
-        const placementBoard = document.getElementById('placement-board');
-        if (placementBoard && !placementBoard.dataset.bound) {
-            placementBoard.dataset.bound = '1';
-            placementBoard.querySelectorAll('.battleship-cell:not(.disabled)').forEach(function (cell) {
-                cell.addEventListener('click', function () {
-                    placementBoard.querySelectorAll('.battleship-cell').forEach(function (c) {
-                        c.classList.remove('ring-2', 'ring-indigo-500');
-                    });
-                    cell.classList.add('ring-2', 'ring-indigo-500');
-
-                    const url = placementBoard.dataset.selectDirectionUrl
-                        + '?gameId=' + encodeURIComponent(placementBoard.dataset.gameId)
-                        + '&shipSize=' + encodeURIComponent(placementBoard.dataset.shipSize)
-                        + '&startX=' + encodeURIComponent(cell.dataset.x)
-                        + '&startY=' + encodeURIComponent(cell.dataset.y);
-                    window.location.href = url;
-                });
-            });
-        }
+        // ponytail: removed old placement board navigation - replaced by unified Placement/Index.cshtml
     }
 
     function initCreateGameSelection() {
@@ -1257,34 +1239,182 @@
     }
 
     function initCommonFriendsButtons() {
-        document.querySelectorAll('[data-common-friends-id]').forEach(function (btn) {
-            if (btn.dataset.bound) return;
-            btn.dataset.bound = '1';
+        document.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-common-friends-id]');
+            if (!btn) return;
 
-            btn.addEventListener('click', function () {
-                const friendId = btn.dataset.commonFriendsId;
-                const friendName = btn.dataset.commonFriendsName || 'este usuario';
+            var friendId = btn.dataset.commonFriendsId;
+            var friendName = btn.dataset.commonFriendsName || 'este usuario';
 
-                fetch('/Friends/CommonFriends?id=' + encodeURIComponent(friendId), {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            fetch('/Friends/CommonFriends?id=' + encodeURIComponent(friendId), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(function (response) { return response.text(); })
+                .then(function (html) {
+                    if (window.Swal) {
+                        Swal.fire({
+                            title: 'Amigos en común con ' + friendName,
+                            html: html,
+                            showConfirmButton: false,
+                            showCloseButton: true,
+                            width: '500px',
+                            customClass: { popup: 'animate__animated animate__zoomIn animate__faster' }
+                        });
+                        setTimeout(function () { if (window.lucide) window.lucide.createIcons(); }, 50);
+                    }
                 })
-                    .then(function (response) { return response.text(); })
-                    .then(function (html) {
-                        if (window.Swal) {
-                            Swal.fire({
-                                title: 'Amigos en común con ' + friendName,
-                                html: html,
-                                showConfirmButton: false,
-                                showCloseButton: true,
-                                width: '500px',
-                                customClass: { popup: 'animate__animated animate__zoomIn animate__faster' }
-                            });
-                            setTimeout(function () { if (window.lucide) window.lucide.createIcons(); }, 50);
-                        }
-                    })
-                    .catch(function () { Toast.error('No se pudieron cargar los amigos en común.'); });
+                .catch(function () { Toast.error('No se pudieron cargar los amigos en común.'); });
+        });
+    }
+
+    function initUserCardSelection() {
+        var cards = document.querySelectorAll('.user-card');
+        if (!cards.length) return;
+
+        cards.forEach(function (card) {
+            if (card.dataset.bound) return;
+            card.dataset.bound = '1';
+
+            card.addEventListener('click', function () {
+                // Toggle selection (single select)
+                cards.forEach(function (c) { c.dataset.selected = 'false'; });
+                this.dataset.selected = 'true';
+
+                // Update hidden input
+                var userIdInput = document.getElementById('SelectedUserId');
+                if (userIdInput) userIdInput.value = this.dataset.userId;
+
+                // Show and enable send button
+                var btn = document.getElementById('send-btn');
+                var bar = document.getElementById('send-action-bar');
+                var info = document.getElementById('selection-info');
+
+                if (bar) bar.style.display = 'flex';
+                if (btn) {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+                if (info) {
+                    var name = this.dataset.userName || 'usuario';
+                    var username = this.dataset.userUsername || '';
+                    info.innerHTML = 'Seleccionado: <strong>' + name + '</strong> @' + username;
+                }
+            });
+
+            // Keyboard support
+            card.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    this.click();
+                }
             });
         });
+    }
+
+    function initFriendRequestSearch() {
+        var searchInput = document.getElementById('search-input');
+        var loadingEl = document.getElementById('search-loading');
+        var resultsEl = document.getElementById('search-results');
+        var clearBtn = document.getElementById('clear-search');
+        var searchTimeout;
+        var currentAbortController = null;
+
+        if (!searchInput) return;
+
+        function showSkeleton() {
+            if (loadingEl) loadingEl.classList.remove('hidden');
+        }
+
+        function hideSkeleton() {
+            if (loadingEl) loadingEl.classList.add('hidden');
+        }
+
+        async function performSearch(term) {
+            // Cancel previous request if still pending
+            if (currentAbortController) currentAbortController.abort();
+            currentAbortController = new AbortController();
+
+            showSkeleton();
+
+            try {
+                var response = await fetch('/FriendRequests/SearchUsers?search=' + encodeURIComponent(term), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    signal: currentAbortController.signal
+                });
+
+                if (response.ok) {
+                    var html = await response.text();
+                    if (html) {
+                        resultsEl.innerHTML = html;
+                        // Re-init Lucide icons and card selection for new DOM
+                        if (window.lucide) window.lucide.createIcons();
+                        if (window.LinkUpPro) window.LinkUpPro.initUserCardSelection();
+                        // Reset selection
+                        document.getElementById('SelectedUserId').value = '';
+                        var bar = document.getElementById('send-action-bar');
+                        if (bar) bar.style.display = 'none';
+                    }
+                }
+            } catch (e) {
+                if (e.name === 'AbortError') return; // Aborted, ignore
+                console.error('Search error:', e);
+            } finally {
+                hideSkeleton();
+                currentAbortController = null;
+            }
+        }
+
+        function triggerSearch(term) {
+            if (!term || term.length < 2) {
+                // Clear results and show empty state
+                if (loadingEl) loadingEl.classList.add('hidden');
+                // Show initial empty state
+                fetch('/FriendRequests/SearchUsers?search=', {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                    .then(function (r) { return r.ok ? r.text() : Promise.reject(); })
+                    .then(function (html) {
+                        resultsEl.innerHTML = html;
+                        if (window.lucide) window.lucide.createIcons();
+                    })
+                    .catch(function () { /* silent */ });
+                return;
+            }
+
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(function () {
+                performSearch(term);
+            }, 300);
+        }
+
+        // Debounced input handler
+        searchInput.addEventListener('input', function () {
+            var term = this.value.trim();
+            if (term.length < 2 && term.length > 0) return; // wait for more input
+            triggerSearch(term);
+        });
+
+        // Enter key triggers immediate search
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                var term = this.value.trim();
+                if (term.length >= 2) {
+                    clearTimeout(searchTimeout);
+                    performSearch(term);
+                }
+            }
+        });
+
+        // Clear button
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                searchInput.value = '';
+                triggerSearch('');
+                searchInput.focus();
+            });
+        }
     }
 
     // Auto-init everything on DOMContentLoaded
@@ -1311,6 +1441,8 @@
         initBattleshipBoards();
         initCreateGameSelection();
         initCommonFriendsButtons();
+        initUserCardSelection();
+        initFriendRequestSearch();
         if (window.lucide) window.lucide.createIcons();
     }
 
@@ -1332,6 +1464,8 @@
         escapeHtml,
         toast: Toast,
         theme: Theme,
+        initUserCardSelection,
+        initFriendRequestSearch,
         init: initAll,
         initAll
     };

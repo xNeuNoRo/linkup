@@ -622,6 +622,7 @@ public sealed class BattleshipService : IBattleshipService
         return new PlacementBoardDto(gameId, playerId, shipDtos);
     }
 
+
     private async Task<Result<AttackBoardDto>> GetAttackBoardAsync(
         string requesterId,
         long gameId,
@@ -639,13 +640,30 @@ public sealed class BattleshipService : IBattleshipService
             attackerId
         );
 
+        var opponentId = game.GetOpponentId(attackerId).Value;
+        var opponentShips = await _battleshipRepository.GetShipsByGameAndPlayerAsync(gameId, opponentId);
+
         var grid = new BoardCellState[DomainConstants.BoardSize, DomainConstants.BoardSize];
 
+        // First, mark all attacks
         foreach (var attack in attacks)
         {
             grid[attack.TargetX, attack.TargetY] = attack.IsHit
                 ? BoardCellState.Hit
                 : BoardCellState.Miss;
+        }
+
+        // Then, override with Sunk state for fully sunk ships
+        foreach (var ship in opponentShips)
+        {
+            if (ship.IsSunk)
+            {
+                var cells = ship.GetOccupiedCells();
+                foreach (var cell in cells)
+                {
+                    grid[cell.X, cell.Y] = BoardCellState.Sunk;
+                }
+            }
         }
 
         return Result<AttackBoardDto>.Success(
@@ -660,7 +678,6 @@ public sealed class BattleshipService : IBattleshipService
             )
         );
     }
-
     private async Task<Result<PlacementBoardDto>> GetPlacementBoardAsync(
         string requesterId,
         long gameId,

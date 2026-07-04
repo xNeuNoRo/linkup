@@ -2,6 +2,8 @@
 @{
     var action = ViewBag.FilterAction as string ?? "Index";
     var controller = ViewBag.FilterController as string ?? "Home";
+    var ajaxFilterAction = ViewBag.AjaxFilterAction as string ?? "FilterPosts";
+    var ajaxFilterController = ViewBag.AjaxFilterController as string ?? "Home";
     var showFriendFilter = ViewBag.ShowFriendFilter as bool? ?? false;
     var allFriends = ViewBag.AllFriends as List<dynamic> ?? [];
 
@@ -14,7 +16,7 @@
 }
 
 <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-    <form method="get" action="@Url.Action(action, controller)" class="divide-y divide-gray-100 dark:divide-gray-700" id="filter-form" data-ajax-filter="@Url.Action("FilterPosts", "Home")">
+    <form method="get" action="@Url.Action(action, controller)" class="divide-y divide-gray-100 dark:divide-gray-700" id="filter-form" data-ajax-filter="@Url.Action(ajaxFilterAction, ajaxFilterController)">
         <!-- Search + Toggle -->
         <div class="flex items-center gap-2 p-3">
             <div class="relative flex-1">
