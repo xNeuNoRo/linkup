@@ -1,0 +1,33 @@
+@model (string? Text, string Variant, string? Icon, bool Dot)
+@{
+    var variant = Model.Variant ?? "default";
+    var variantClass = variant switch
+    {
+        "success" => "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300",
+        "warning" => "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300",
+        "danger" => "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300",
+        "info" => "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
+        "indigo" => "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300",
+        _ => "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+    };
+    var dotColor = variant switch
+    {
+        "success" => "bg-green-500",
+        "warning" => "bg-amber-500",
+        "danger" => "bg-red-500",
+        "info" => "bg-blue-500",
+        "indigo" => "bg-indigo-500",
+        _ => "bg-gray-500"
+    };
+}
+<span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full @variantClass">
+    @if (Model.Dot)
+    {
+        <span class="w-1.5 h-1.5 rounded-full @dotColor"></span>
+    }
+    @if (!string.IsNullOrEmpty(Model.Icon))
+    {
+        <i data-lucide="@Model.Icon" class="w-3 h-3"></i>
+    }
+    @Model.Text
+</span>

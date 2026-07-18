@@ -1,0 +1,90 @@
+@model LinkUpPro.Application.ViewModels.PostViewModels.CreatePostViewModel
+@{
+    var avatarUrl = ViewBag.CurrentUserAvatar as string;
+    var userName = ViewBag.CurrentUserFullName as string ?? "Usuario";
+}
+<form asp-action="CreatePost" asp-controller="Home" method="post" enctype="multipart/form-data" class="space-y-4">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3" role="alert"></div>
+
+    <div class="flex items-start gap-3">
+        @await Html.PartialAsync("/Views/Shared/Components/_Avatar.cshtml", (avatarUrl, userName, "md", (string?)null))
+
+        <div class="flex-1 min-w-0 space-y-3">
+            <textarea asp-for="Content" id="post-content" rows="3" maxlength="1000" placeholder="¿Qué estás pensando?" class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none transition-all"></textarea>
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] text-gray-400"><span id="char-count">0</span>/1000</span>
+                <span asp-validation-for="Content" class="text-red-500 text-xs"></span>
+            </div>
+
+            <!-- Tipo Contenido (segment buttons) -->
+            <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-0.5 w-fit" role="radiogroup" aria-label="Tipo de contenido">
+                <label class="relative flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all has-[:checked]:bg-white dark:has-[:checked]:bg-gray-600 has-[:checked]:text-gray-900 dark:has-[:checked]:text-gray-100 has-[:checked]:shadow-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300" data-post-type="1">
+                    <input type="radio" name="ContentType" value="1" checked data-post-type-trigger="1" class="absolute opacity-0 w-0 h-0" />
+                    <i data-lucide="image" class="w-4 h-4"></i>
+                    <span>Imagen</span>
+                </label>
+                <label class="relative flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all has-[:checked]:bg-white dark:has-[:checked]:bg-gray-600 has-[:checked]:text-gray-900 dark:has-[:checked]:text-gray-100 has-[:checked]:shadow-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300" data-post-type="2">
+                    <input type="radio" name="ContentType" value="2" data-post-type-trigger="2" class="absolute opacity-0 w-0 h-0" />
+                    <i data-lucide="video" class="w-4 h-4"></i>
+                    <span>Video</span>
+                </label>
+            </div>
+
+            <!-- Campo Imagen -->
+            <div id="image-field">
+                <input asp-for="ImageFile" accept=".jpg,.jpeg,.png,.webp" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Formatos: JPG, PNG, WEBP. Máximo 5 MB.</p>
+                <span asp-validation-for="ImageFile" class="text-red-500 text-xs mt-1 block"></span>
+                <img id="image-preview" src="#" alt="Preview" class="hidden mt-3 max-h-48 rounded-xl object-cover" />
+            </div>
+
+            <!-- Campo YouTube -->
+            <div id="youtube-field" class="hidden">
+                <input asp-for="YouTubeUrl" placeholder="https://www.youtube.com/watch?v=..." class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" id="youtube-url-input" />
+                <span asp-validation-for="YouTubeUrl" class="text-red-500 text-xs mt-1 block"></span>
+                <div id="youtube-preview" class="hidden mt-3 relative">
+                    <div class="aspect-video w-full rounded-xl overflow-hidden bg-black">
+                        <img id="youtube-thumbnail" src="" alt="YouTube preview" class="w-full h-full object-cover" />
+                    </div>
+                    <p id="youtube-video-title" class="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate"></p>
+                </div>
+                <div id="youtube-error" class="hidden mt-2 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-400 text-xs">
+                    No se pudo cargar la vista previa del video. Verifica el enlace.
+                </div>
+            </div>
+
+            <!-- Privacidad + Comentarios -->
+            <div class="flex flex-wrap items-center gap-4 pt-2 border-t border-gray-100 dark:border-gray-700">
+                <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-0.5" role="radiogroup" aria-label="Privacidad">
+                    <label class="relative flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg cursor-pointer transition-all has-[:checked]:bg-white dark:has-[:checked]:bg-gray-600 has-[:checked]:text-gray-900 dark:has-[:checked]:text-gray-100 has-[:checked]:shadow-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                        <input type="radio" name="Privacy" value="1" checked class="absolute opacity-0 w-0 h-0" />
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                        <span class="hidden sm:inline">Amigos</span>
+                    </label>
+                    <label class="relative flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg cursor-pointer transition-all has-[:checked]:bg-white dark:has-[:checked]:bg-gray-600 has-[:checked]:text-gray-900 dark:has-[:checked]:text-gray-100 has-[:checked]:shadow-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                        <input type="radio" name="Privacy" value="2" class="absolute opacity-0 w-0 h-0" />
+                        <i data-lucide="lock" class="w-4 h-4"></i>
+                        <span class="hidden sm:inline">Solo yo</span>
+                    </label>
+                </div>
+                <div class="ml-auto">
+                    @await Html.PartialAsync("/Views/Shared/Components/_Switch.cshtml", (
+                        Name: "AllowComments",
+                        Checked: true,
+                        Label: "Permitir comentarios",
+                        Description: (string?)null,
+                        Icon: "message-circle",
+                        Color: "indigo",
+                        Disabled: false,
+                        Id: (string?)null
+                    ))
+                </div>
+            </div>
+
+            <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold rounded-xl hover:from-indigo-700 hover:to-violet-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50">
+                <i data-lucide="send" class="w-4 h-4"></i> Publicar
+            </button>
+        </div>
+    </div>
+</form>

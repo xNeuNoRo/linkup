@@ -1,0 +1,85 @@
+@model LinkUpPro.Application.ViewModels.CommentViewModels.CommentViewModel
+@{
+    var isOwnComment = Model.IsOwn;
+    var isTruncated = Model.IsTruncated;
+}
+<article class="comment-thread @(isTruncated ? "comment-thread--truncated" : "")"
+         data-comment-id="@Model.Id">
+  <div class="comment-avatar">
+    @await Html.PartialAsync("/Views/Shared/Components/_Avatar.cshtml", (Model.AuthorProfilePicture, Model.AuthorName, "xs", (string?)null))
+  </div>
+
+  <div class="comment-content">
+    <header class="flex items-center gap-2 flex-wrap mb-0.5">
+      <span class="font-bold text-sm text-gray-900 dark:text-gray-100">@Model.AuthorName</span>
+      <span class="text-[10px] text-gray-500 dark:text-gray-400">@Model.CreatedAt.ToString("dd MMM, HH:mm")</span>
+      @if (Model.IsEdited)
+      {
+        <span class="text-[9px] text-gray-400 dark:text-gray-500 font-bold uppercase">Editado</span>
+      }
+    </header>
+
+    @if (Model.IsDeleted)
+    {
+      <p class="text-sm text-gray-400 dark:text-gray-500 italic">Este comentario fue eliminado.</p>
+    }
+    else
+    {
+      @if (isTruncated)
+      {
+        <p class="text-[11px] text-gray-500 dark:text-gray-400 italic flex items-center gap-1">
+          <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+          Respondiendo a <strong class="text-gray-600 dark:text-gray-300">@Model.ReplyingToUserName</strong>
+        </p>
+      }
+      <div class="bg-gray-50 dark:bg-gray-700/50 rounded-2xl px-3 py-2 @(isTruncated ? "mt-1.5" : "")">
+        <p class="comment-content whitespace-pre-wrap break-words text-sm text-gray-700 dark:text-gray-300">@Model.Content</p>
+      </div>
+    }
+
+    <footer class="flex items-center gap-1 mt-1 pl-1">
+      @if (!Model.IsDeleted)
+      {
+        @if (Model.CanReply)
+        {
+          <button type="button" class="comment-action-btn" data-toggle-reply="@Model.Id" data-reply-to-name="@Model.AuthorName" aria-label="Responder" title="Responder">
+            <i data-lucide="reply" class="w-4 h-4"></i>
+          </button>
+        }
+        @if (isOwnComment)
+        {
+          <button type="button" class="comment-action-btn" data-edit-comment="@Model.Id" data-edit-comment-content="@Model.Content" aria-label="Editar" title="Editar">
+            <i data-lucide="edit-3" class="w-4 h-4"></i>
+          </button>
+          <form asp-action="DeleteComment" asp-controller="Posts" asp-route-id="@Model.Id" method="post" class="inline" data-confirm="¿Eliminar este comentario?" data-confirm-text="Esta acción no se puede deshacer.">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="comment-action-btn comment-action-btn--danger" aria-label="Eliminar" title="Eliminar">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </form>
+        }
+      }
+    </footer>
+  </div>
+
+  <!-- Reply Form (hidden, lazy-loaded) -->
+  @if (!Model.IsDeleted && Model.CanReply)
+  {
+    <div id="reply-form-@Model.Id" class="reply-form hidden" data-post-id="@Model.PostId">
+      <p class="reply-context hidden text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium"></p>
+    </div>
+  }
+
+  <!-- Nested replies -->
+  @if (Model.RepliesCount > 0)
+  {
+    <div class="comment-replies" data-comment-id="@Model.Id">
+      <a href="#"
+         class="inline-flex flex-row items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 px-2 py-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all cursor-pointer"
+         data-load-replies="@Model.Id" data-next-page="1" data-depth="@Model.VisualDepth">
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+        @(Model.RepliesCount == 1 ? "Ver 1 respuesta" : $"Ver {Model.RepliesCount} respuestas")
+      </a>
+    </div>
+  }
+</article>

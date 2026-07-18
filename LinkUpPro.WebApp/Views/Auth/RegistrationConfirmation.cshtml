@@ -1,0 +1,70 @@
+@{
+    ViewData["Title"] = "Registro exitoso";
+    Layout = "_LayoutAuth";
+    string? userName = ViewData["UserName"] as string;
+    string? email = ViewData["Email"] as string;
+}
+
+<div class="max-w-md w-full">
+    <div class="text-center mb-8">
+        <a asp-controller="Home" asp-action="Index" class="inline-flex items-center gap-3 text-indigo-600 font-black text-2xl">
+            <div class="w-12 h-12 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
+                <i data-lucide="link-2" class="w-6 h-6 text-white"></i>
+            </div>
+            <span>LinkUp<span class="text-violet-600">Pro</span></span>
+        </a>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 p-8 text-center">
+        <!-- Icono -->
+        <div class="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i data-lucide="mail-check" class="w-10 h-10 text-green-600 dark:text-green-400"></i>
+        </div>
+
+        <h1 class="text-2xl font-black text-gray-900 dark:text-gray-100 mb-2">Su cuenta fue creada correctamente</h1>
+        <p class="text-gray-500 dark:text-gray-400 mb-6">
+            Hemos enviado un enlace de activación a su correo electrónico.
+        </p>
+
+        @if (!string.IsNullOrEmpty(email))
+        {
+            <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-xl p-4 mb-6">
+                <p class="text-xs text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wide mb-1">Cuenta creada para</p>
+                <p class="text-sm font-bold text-indigo-900 dark:text-indigo-300">@userName</p>
+                <p class="text-xs text-gray-600 dark:text-gray-400">@email</p>
+            </div>
+        }
+
+        <div class="space-y-3 text-left bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 mb-6">
+            <p class="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2">
+                <i data-lucide="check" class="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5 shrink-0"></i>
+                Revise su bandeja de entrada
+            </p>
+            <p class="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2">
+                <i data-lucide="check" class="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5 shrink-0"></i>
+                El enlace expira en 24 horas
+            </p>
+            <p class="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2">
+                <i data-lucide="check" class="w-4 h-4 text-green-600 dark:text-green-400 mt-0.5 shrink-0"></i>
+                Si no lo encuentra, revise la carpeta de spam
+            </p>
+        </div>
+
+        <div class="space-y-2">
+            <a asp-action="Login"
+               class="block w-full py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold rounded-xl hover:from-indigo-700 hover:to-violet-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50">
+                Ir a Iniciar sesión
+            </a>
+            <a asp-action="ResendActivation"
+               class="block w-full py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                Reenviar enlace de activación
+            </a>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        lucide.createIcons();
+    </script>
+}

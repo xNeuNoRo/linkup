@@ -1,0 +1,123 @@
+@model LinkUpPro.Application.ViewModels.BattleshipViewModels.CreateGameViewModel
+@{
+    ViewData["Title"] = "Nueva partida";
+}
+<div class="max-w-3xl mx-auto space-y-6">
+    <div class="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-3">
+        <div>
+            <h1 class="text-2xl font-black text-gray-900 dark:text-gray-100">Nueva partida</h1>
+            <p class="text-gray-500 dark:text-gray-400 text-sm">Selecciona un amigo para retar a Battleship.</p>
+        </div>
+        <a asp-action="Index" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm shrink-0">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Volver
+        </a>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
+        <div class="relative">
+            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"></i>
+            <input type="text"
+                   id="opponent-search-input"
+                   placeholder="Buscar amigo por nombre de usuario..."
+                   autocomplete="off"
+                   class="w-full pl-10 pr-10 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <button type="button"
+                    id="clear-opponent-search"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors hidden"
+                    title="Limpiar búsqueda">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+
+    <form asp-action="CreateGame" method="post" id="start-form">
+        @Html.AntiForgeryToken()
+
+        <div id="opponent-list-container" class="space-y-4">
+            <div class="flex justify-center py-16">
+                <div class="flex items-center gap-3 text-gray-500 dark:text-gray-400">
+                    <div class="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span class="text-sm font-medium">Cargando amigos disponibles...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 flex items-center justify-between" id="start-bar">
+            <p class="text-sm text-gray-500 dark:text-gray-400" id="selection-info">Selecciona un amigo para comenzar</p>
+            <div class="flex gap-2">
+                <a asp-action="Index" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm">Volver</a>
+                <button type="submit" id="start-btn" disabled
+                        class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold rounded-xl opacity-50 cursor-not-allowed transition-all text-sm flex items-center gap-1.5 shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50">
+                    <i data-lucide="swords" class="w-4 h-4"></i> Iniciar partida
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        lucide.createIcons();
+
+        (function() {
+            var searchTimer;
+            var input = document.getElementById('opponent-search-input');
+            var container = document.getElementById('opponent-list-container');
+            var clearBtn = document.getElementById('clear-opponent-search');
+            var startBtn = document.getElementById('start-btn');
+            var info = document.getElementById('selection-info');
+
+            function loadOpponents(term) {
+                var params = new URLSearchParams();
+                if (term) params.set('search', term);
+
+                container.innerHTML = '<div class="flex justify-center py-16"><div class="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div></div>';
+
+                fetch('@Url.Action("SearchOpponents", "Battleship")?' + params.toString(), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(function(r) { return r.ok ? r.text() : Promise.reject(); })
+                .then(function(html) {
+                    container.innerHTML = html;
+                    if (window.lucide) lucide.createIcons();
+                    // Reset selection
+                    if (startBtn) { startBtn.disabled = true; startBtn.classList.add('opacity-50', 'cursor-not-allowed'); }
+                    if (info) info.textContent = 'Selecciona un amigo para comenzar';
+                    if (clearBtn) clearBtn.classList.toggle('hidden', term.length === 0);
+                })
+                .catch(function() {
+                    container.innerHTML = '<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center"><p class="text-red-500 dark:text-red-400">Error al cargar amigos. <button onclick="location.reload()" class="text-indigo-600 dark:text-indigo-400 hover:underline">Reintentar</button></p></div>';
+                });
+            }
+
+            // Delegated radio change handler
+            container.addEventListener('change', function(e) {
+                var radio = e.target.closest('.opponent-radio');
+                if (!radio || !radio.checked) return;
+                var name = radio.closest('.opponent-card')?.querySelector('.font-bold')?.textContent || 'Amigo';
+                if (startBtn) { startBtn.disabled = false; startBtn.classList.remove('opacity-50', 'cursor-not-allowed'); }
+                if (info) info.textContent = 'Seleccionado: ' + name;
+            });
+
+            // Debounced search
+            input.addEventListener('input', function() {
+                clearTimeout(searchTimer);
+                var term = this.value.trim();
+                searchTimer = setTimeout(function() { loadOpponents(term); }, 400);
+            });
+
+            // Clear search
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function() {
+                    input.value = '';
+                    clearBtn.classList.add('hidden');
+                    loadOpponents('');
+                });
+            }
+
+            // Load initial list
+            loadOpponents('');
+        })();
+    </script>
+}

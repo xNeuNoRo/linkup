@@ -1,0 +1,30 @@
+@model (string? Src, string Name, string Size, string? CssClass)
+@using LinkUpPro.Application.Common.Avatar
+@{
+    var size = Model.Size ?? "md";
+    var sizeClass = size switch
+    {
+        "xs" => "w-6 h-6",
+        "sm" => "w-8 h-8",
+        "md" => "w-10 h-10",
+        "lg" => "w-16 h-16",
+        "xl" => "w-24 h-24",
+        _ => "w-10 h-10"
+    };
+
+    var isDefault = AvatarResolver.IsDefaultAvatar(Model.Src);
+    var icon = AvatarResolver.GetIcon(Model.Name);
+    var palette = AvatarResolver.GetPalette(Model.Name);
+    var initials = AvatarResolver.GetInitials(Model.Name);
+    var iconClass = AvatarResolver.GetIconClass(size);
+}
+@if (!isDefault && !string.IsNullOrEmpty(Model.Src))
+{
+    <img src="@Model.Src" alt="@Model.Name" class="@sizeClass rounded-full object-cover @Model.CssClass" loading="lazy" />
+}
+else
+{
+    <div class="@sizeClass rounded-full bg-gradient-to-br from-@palette.from to-@palette.to text-white font-black flex items-center justify-center shrink-0 @Model.CssClass" aria-label="@Model.Name" role="img" title="@Model.Name">
+        <i data-lucide="@icon" class="@iconClass"></i>
+    </div>
+}

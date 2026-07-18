@@ -1,0 +1,21 @@
+@model (string Icon, string Title, string? Description, string? Action)
+@{
+    var iconBg = "bg-gray-100 dark:bg-gray-700";
+    var iconColor = "text-gray-400";
+}
+<div class="text-center py-8 sm:py-12 px-4">
+    <div class="w-16 h-16 @iconBg rounded-full flex items-center justify-center mx-auto mb-4">
+        <i data-lucide="@Model.Icon" class="w-8 h-8 @iconColor"></i>
+    </div>
+    <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">@Model.Title</h3>
+    @if (!string.IsNullOrEmpty(Model.Description))
+    {
+        <p class="text-gray-500 dark:text-gray-400 text-sm max-w-md mx-auto">@Model.Description</p>
+    }
+    @if (!string.IsNullOrEmpty(Model.Action))
+    {
+        <div class="mt-4">
+            @Html.Raw(Model.Action)
+        </div>
+    }
+</div>

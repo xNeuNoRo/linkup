@@ -1,0 +1,34 @@
+using FluentValidation;
+using LinkUpPro.Application.Mappings;
+using LinkUpPro.Application.Services;
+using LinkUpPro.Application.Interfaces.Services;
+using Mapster;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace LinkUpPro.Application;
+
+public static class ServicesRegistration
+{
+    public static IServiceCollection AddApplication(this IServiceCollection services)
+    {
+        MappingConfig.RegisterMappings();
+        ValueObjectMappingConfig.RegisterValueObjectMappings();
+
+        var config = TypeAdapterConfig.GlobalSettings;
+        services.AddSingleton(config);
+
+        services.AddValidatorsFromAssemblyContaining<ApplicationMarker>();
+
+        services.AddScoped<IPostService, PostService>();
+        services.AddScoped<ICommentService, CommentService>();
+        services.AddScoped<IReactionService, ReactionService>();
+        services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IFriendshipService, FriendshipService>();
+        services.AddScoped<IFriendRequestService, FriendRequestService>();
+        services.AddScoped<IBattleshipService, BattleshipService>();
+
+        return services;
+    }
+}
+
+public class ApplicationMarker { }

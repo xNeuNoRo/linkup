@@ -1,0 +1,187 @@
+@model LinkUpPro.Application.ViewModels.AuthViewModels.RegisterViewModel
+@{
+    ViewData["Title"] = "Crear cuenta";
+    Layout = "_LayoutAuth";
+}
+
+<div class="w-full max-w-2xl">
+    <!-- Logo Header -->
+    <div class="text-center mb-6">
+        <a asp-controller="Home" asp-action="Index" class="inline-flex items-center gap-3 text-indigo-600 font-black text-2xl">
+            <div class="w-12 h-12 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
+                <i data-lucide="link-2" class="w-6 h-6 text-white"></i>
+            </div>
+            <span>LinkUp<span class="text-violet-600">Pro</span></span>
+        </a>
+    </div>
+
+    <!-- Card -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 p-6 sm:p-8">
+        <div class="mb-6">
+            <h1 class="text-2xl font-black text-gray-900 dark:text-gray-100 mb-1">Crear cuenta</h1>
+            <p class="text-gray-500 dark:text-gray-400 text-sm">Complete el formulario para registrarse en la plataforma.</p>
+        </div>
+
+        <!-- Stepper -->
+        <div class="mb-8" id="register-stepper">
+            <div class="flex items-center justify-between mb-2">
+                @for (int i = 1; i <= 4; i++)
+                {
+                    <div class="flex items-center @(i < 4 ? "flex-1" : "")">
+                        <div class="step-indicator flex items-center justify-center w-9 h-9 rounded-full text-sm font-black transition-all
+                            @(i == 1 ? "bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-200" : "bg-gray-100 dark:bg-gray-700 text-gray-400")"
+                            data-step="@i">
+                            @if (i < 99)
+                            {
+                                <i data-lucide="check" class="w-4 h-4 hidden completed-icon"></i>
+                                <span class="step-num">@i</span>
+                            }
+                        </div>
+                        @if (i < 4)
+                        {
+                            <div class="flex-1 h-0.5 mx-1 bg-gray-200 dark:bg-gray-700 step-line" data-line="@i"></div>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="flex items-center justify-between text-[10px] sm:text-xs">
+                <span class="text-gray-600 dark:text-gray-400 font-medium">Datos</span>
+                <span class="text-gray-400 dark:text-gray-500 font-medium">Contacto</span>
+                <span class="text-gray-400 dark:text-gray-500 font-medium">Credenciales</span>
+                <span class="text-gray-400 dark:text-gray-500 font-medium">Foto</span>
+            </div>
+        </div>
+
+        <form asp-action="Register" asp-controller="Auth" method="post" enctype="multipart/form-data" id="register-form" class="space-y-5">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3" role="alert"></div>
+
+            <!-- STEP 1: Datos personales -->
+            <div data-step-panel="1" class="space-y-4">
+                <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <i data-lucide="user" class="w-5 h-5 text-indigo-600"></i> Datos personales
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label asp-for="FirstName" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5"></label>
+                        <input asp-for="FirstName" placeholder="Juan" data-step-input class="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        <span asp-validation-for="FirstName" class="text-red-500 text-xs mt-1 block"></span>
+                    </div>
+                    <div>
+                        <label asp-for="LastName" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5"></label>
+                        <input asp-for="LastName" placeholder="Pérez" data-step-input class="w-full px-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        <span asp-validation-for="LastName" class="text-red-500 text-xs mt-1 block"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 2: Contacto -->
+            <div data-step-panel="2" class="space-y-4 hidden">
+                <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <i data-lucide="phone-call" class="w-5 h-5 text-indigo-600"></i> Datos de contacto
+                </h2>
+                <div>
+                    <label asp-for="PhoneNumber" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5"></label>
+                    <div class="relative">
+                        <i data-lucide="phone" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                        <input asp-for="PhoneNumber" type="tel" placeholder="809-555-1234" data-step-input data-phone-mask class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Formato: 809-555-1234, 829-555-1234 o 849-555-1234</p>
+                    <span asp-validation-for="PhoneNumber" class="text-red-500 text-xs mt-1 block"></span>
+                </div>
+                <div>
+                    <label asp-for="Email" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5"></label>
+                    <div class="relative">
+                        <i data-lucide="mail" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                        <input asp-for="Email" type="email" placeholder="tu@correo.com" data-step-input class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    </div>
+                    <span asp-validation-for="Email" class="text-red-500 text-xs mt-1 block"></span>
+                </div>
+            </div>
+
+            <!-- STEP 3: Credenciales -->
+            <div data-step-panel="3" class="space-y-4 hidden">
+                <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <i data-lucide="key" class="w-5 h-5 text-indigo-600"></i> Credenciales
+                </h2>
+                <div>
+                    <label asp-for="UserName" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5"></label>
+                    <div class="relative">
+                        <i data-lucide="at-sign" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                        <input asp-for="UserName" placeholder="usuario123" data-step-input class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    </div>
+                    <span asp-validation-for="UserName" class="text-red-500 text-xs mt-1 block"></span>
+                </div>
+                <div>
+                    <label asp-for="Password" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5"></label>
+                    <div class="relative">
+                        <input asp-for="Password" type="password" autocomplete="new-password" id="password-input" data-step-input class="w-full px-4 pr-12 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer" data-toggle-password="password-input">
+                            <i data-lucide="eye" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                    <div class="mt-2">
+                        <div class="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div id="strength-bar" class="h-full bg-gray-300 dark:bg-gray-600 transition-all duration-300 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <p id="strength-text" class="text-xs text-gray-500 dark:text-gray-400 mt-1">Fortaleza: —</p>
+                    </div>
+                    <span asp-validation-for="Password" class="text-red-500 text-xs mt-1 block"></span>
+                </div>
+                <div>
+                    <label asp-for="ConfirmPassword" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5"></label>
+                    <div class="relative">
+                        <input asp-for="ConfirmPassword" type="password" autocomplete="new-password" id="confirm-password-input" data-step-input class="w-full px-4 pr-12 py-2.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                        <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer" data-toggle-password="confirm-password-input">
+                            <i data-lucide="eye" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                    <span asp-validation-for="ConfirmPassword" class="text-red-500 text-xs mt-1 block"></span>
+                </div>
+            </div>
+
+            <!-- STEP 4: Foto de perfil -->
+            <div data-step-panel="4" class="space-y-4 hidden">
+                <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <i data-lucide="camera" class="w-5 h-5 text-indigo-600"></i> Foto de perfil
+                </h2>
+                <div>
+                    <label asp-for="ProfilePictureFile" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5"></label>
+                    <div class="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-6 text-center hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors" id="photo-drop-zone">
+                        <input asp-for="ProfilePictureFile" type="file" accept=".jpg,.jpeg,.png,.webp" id="photo-input" data-step-input class="hidden" />
+                        <div id="photo-preview-zone">
+                            <i data-lucide="upload-cloud" class="w-10 h-10 text-gray-400 mx-auto mb-2"></i>
+                            <p class="text-sm text-gray-700 dark:text-gray-300 font-medium">Haz clic o arrastra una imagen</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">JPG, PNG o WEBP (máx. 5 MB)</p>
+                        </div>
+                        <img id="photo-preview" class="hidden max-h-48 mx-auto rounded-xl object-cover" alt="Vista previa" />
+                    </div>
+                    <span asp-validation-for="ProfilePictureFile" class="text-red-500 text-xs mt-1 block"></span>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="flex items-center justify-between gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <button type="button" id="btn-prev" class="items-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-all text-sm" style="display:none">
+                    <i data-lucide="chevron-left" class="w-4 h-4"></i> Anterior
+                </button>
+                <a asp-action="Login" class="text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline">
+                    Ya tienes cuenta?
+                </a>
+                <button type="button" id="btn-next" class="items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold rounded-xl hover:from-indigo-700 hover:to-violet-700 transition-all text-sm shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50">
+                    Siguiente <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                </button>
+                <button type="submit" id="btn-submit" class="items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold rounded-xl hover:from-indigo-700 hover:to-violet-700 transition-all text-sm shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50" style="display:none">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i> Registrarse
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        lucide.createIcons();
+    </script>
+}

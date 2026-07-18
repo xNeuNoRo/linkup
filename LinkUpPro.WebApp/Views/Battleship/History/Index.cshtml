@@ -1,0 +1,60 @@
+@model LinkUpPro.Application.ViewModels.BattleshipViewModels.GameDetailViewModel
+@{
+    ViewData["Title"] = "Historial de partidas";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="max-w-5xl mx-auto space-y-6">
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
+            <p class="text-4xl font-black text-gray-900 dark:text-gray-100">@Model.Stats.TotalGames</p>
+            <p class="text-gray-500 dark:text-gray-400">Partidas jugadas</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
+            <p class="text-4xl font-black text-green-600">@Model.Stats.WonGames</p>
+            <p class="text-gray-500 dark:text-gray-400">Ganadas</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
+            <p class="text-4xl font-black text-red-600">@Model.Stats.LostGames</p>
+            <p class="text-gray-500 dark:text-gray-400">Perdidas</p>
+        </div>
+    </div>
+
+    <!-- Historial Listado -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Historial completo</h2>
+            <a asp-action="Index" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">← Volver al dashboard</a>
+        </div>
+        <div class="divide-y divide-gray-100 dark:divide-gray-700">
+            @if (Model.History.Any())
+            {
+                @foreach (var game in Model.History)
+                {
+                    <div class="px-5 py-4 flex items-center gap-3">
+                        @await Html.PartialAsync("/Views/Shared/Components/_Avatar.cshtml", (game.OpponentProfilePicture, game.OpponentName, "md", (string?)null))
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-gray-900 dark:text-gray-100">@game.OpponentName</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                @game.StartedAt.ToString("dd MMM") - @game.FinishedAt.ToString("dd MMM") · @game.DurationHours.ToString("F1") h
+                            </p>
+                        </div>
+                        <span class="@(game.Result == "Ganada" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300") px-2 py-1 text-xs font-bold rounded-lg">
+                            @game.Result
+                        </span>
+                        <a asp-action="Result" asp-route-gameId="@game.GameId" class="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl transition-colors" title="Ver resultado">
+                            <i data-lucide="eye" class="w-4 h-4"></i>
+                        </a>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="p-12 text-center text-gray-500 dark:text-gray-400">No tienes partidas finalizadas.</div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts { <script>lucide.createIcons();</script> }

@@ -1,0 +1,55 @@
+@model LinkUpPro.Application.ViewModels.FriendshipViewModels.FriendsFeedPartialViewModel
+@{
+    var hasPosts = Model.Posts.Items.Any();
+}
+
+<!-- Filtros (reutiliza componente compartido de Home) -->
+@{
+    ViewBag.FilterAction = "Index";
+    ViewBag.FilterController = "Friends";
+    ViewBag.AjaxFilterAction = "FilterFeedPosts";
+    ViewBag.AjaxFilterController = "Friends";
+    ViewBag.ShowFriendFilter = true;
+}
+@await Html.PartialAsync("/Views/Shared/Components/_PostFiltersPartial.cshtml", Model.Filters)
+
+<!-- Lista de publicaciones -->
+<div id="posts-container" class="mt-6 space-y-6">
+    @if (hasPosts)
+    {
+        @foreach (var post in Model.Posts.Items)
+        {
+            <div class="post-card-wrapper">
+                @await Html.PartialAsync("/Views/Posts/_PostCard.cshtml", post)
+            </div>
+        }
+
+        @if (Model.HasMorePages)
+        {
+            <div id="load-more-sentinel" data-load-url="@Url.Action("LoadMoreFeedPosts", "Friends")" data-container="#posts-container"></div>
+        }
+    }
+    else
+    {
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+            @{
+                bool hasFilters = !string.IsNullOrWhiteSpace(Model.Filters.SearchText)
+                    || Model.Filters.ContentType.HasValue
+                    || Model.Filters.FromDate.HasValue
+                    || Model.Filters.ToDate.HasValue
+                    || Model.Filters.EditedOnly == true
+                    || !string.IsNullOrWhiteSpace(Model.Filters.FriendId);
+            }
+            @await Html.PartialAsync("/Views/Shared/Components/_EmptyState.cshtml", (
+                Icon: hasPosts || hasFilters ? "search-x" : "newspaper",
+                Title: hasPosts || hasFilters ? "No se encontraron publicaciones" : "No hay publicaciones disponibles",
+                Description: "Tus amigos aún no han realizado publicaciones visibles para ti.",
+                Action: (string?)null
+            ))
+        </div>
+    }
+</div>
+
+<div id="post-skeleton-template" class="hidden">
+    @await Html.PartialAsync("/Views/Posts/_PostSkeleton.cshtml")
+</div>

@@ -1,0 +1,28 @@
+@model LinkUpPro.Application.ViewModels.FriendshipViewModels.CommonFriendsViewModel
+
+@if (Model.Friends.Any())
+{
+    <div class="max-h-96 overflow-y-auto rounded-xl bg-white dark:bg-gray-800">
+        <div class="divide-y divide-gray-200 dark:divide-gray-700">
+            @foreach (var f in Model.Friends)
+            {
+                <a asp-controller="Friends" asp-action="Detail" asp-route-id="@f.FriendId"
+                   class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                    @await Html.PartialAsync("/Views/Shared/Components/_Avatar.cshtml", (f.FriendProfilePicturePath, f.FriendName, "sm", (string?)null))
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">@f.FriendName</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 truncate">@@@f.FriendUserName</p>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400 shrink-0"></i>
+                </a>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <div class="text-center py-8 bg-white dark:bg-gray-800 rounded-xl">
+        <i data-lucide="users" class="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2"></i>
+        <p class="text-gray-500 dark:text-gray-400 text-sm">No tienen amigos en común.</p>
+    </div>
+}

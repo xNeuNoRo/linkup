@@ -1,0 +1,22 @@
+{
+  "name": "linkuppro.webapp",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "css:build": "bunx @tailwindcss/cli -i ./Styles/app.css -o ./wwwroot/css/site.css",
+    "css:watch": "bunx @tailwindcss/cli -i ./Styles/app.css -o ./wwwroot/css/site.css --watch",
+    "dev": "concurrently -n css,dotnet -c cyan,magenta \"bun css:watch\" \"dotnet watch --project ../LinkUpPro.WebApp\"",
+    "dev:backend": "dotnet watch --project ../LinkUpPro.WebApp",
+    "dev:css": "bun css:watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.0",
+    "@types/bun": "latest",
+    "concurrently": "^9.1.2",
+    "tailwindcss": "^4.3.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

@@ -1,0 +1,58 @@
+@model LinkUpPro.Application.ViewModels.FriendshipViewModels.FriendDetailViewModel
+@{
+    ViewData["Title"] = Model.Friend.FriendName;
+    var currentUserId = ViewBag.CurrentUserId as string;
+}
+
+<div class="space-y-6 max-w-3xl mx-auto">
+    <!-- Perfil Header -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <!-- Cover gradient -->
+        <div class="h-32 bg-gradient-to-r from-indigo-500 via-violet-500 to-pink-500"></div>
+        <div class="px-6 pb-6 -mt-12">
+            <div class="flex items-end gap-4 flex-wrap">
+                @await Html.PartialAsync("/Views/Shared/Components/_Avatar.cshtml", (Model.Friend.FriendProfilePicturePath, Model.Friend.FriendName, "xl", "border-4 border-white dark:border-gray-800 shadow-lg"))
+                <div class="flex-1 min-w-0 pt-2">
+                    <h1 class="text-2xl font-black text-gray-900 dark:text-gray-100">@Model.Friend.FriendName</h1>
+                    <p class="text-gray-500 dark:text-gray-400">@@@Model.Friend.FriendUserName</p>
+                </div>
+                <div class="flex items-center gap-2 pt-2">
+                    <button type="button" data-common-friends-id="@Model.Friend.FriendId" data-common-friends-name="@Model.Friend.FriendName" class="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 rounded-xl text-sm font-medium flex items-center gap-1.5 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors">
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                        <span>@Model.Friend.CommonFriendsCount @(Model.Friend.CommonFriendsCount == 1 ? "amigo" : "amigos") en común</span>
+                    </button>
+                    <a asp-controller="Friends" asp-action="Index" class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl transition-colors" title="Volver">
+                        <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Publicaciones del amigo -->
+    <div>
+        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+            <i data-lucide="file-text" class="w-5 h-5 text-indigo-600"></i>
+            Publicaciones
+        </h2>
+
+        @if (Model.Posts.Items.Any())
+        {
+            <div class="space-y-6">
+                @foreach (var post in Model.Posts.Items)
+                {
+                    @await Html.PartialAsync("/Views/Posts/_PostCard.cshtml", post)
+                }
+            </div>
+        }
+        else
+        {
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-12 text-center">
+                <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="file-x" class="w-8 h-8 text-gray-400"></i>
+                </div>
+                <p class="text-gray-500 dark:text-gray-400">Este amigo no tiene publicaciones disponibles.</p>
+            </div>
+        }
+    </div>
+</div>

@@ -1,0 +1,46 @@
+@model (string Name, bool Checked, string? Label, string? Description, string? Icon, string Color, bool Disabled, string? Id)
+@{
+    var inputId = !string.IsNullOrEmpty(Model.Id) ? Model.Id : $"switch-{Model.Name}";
+    var color = Model.Color ?? "indigo";
+    var colorClass = color switch
+    {
+        "green" => "peer-checked:bg-green-600",
+        "red" => "peer-checked:bg-red-600",
+        "amber" => "peer-checked:bg-amber-600",
+        "blue" => "peer-checked:bg-blue-600",
+        _ => "peer-checked:bg-gradient-to-r peer-checked:from-indigo-600 peer-checked:to-violet-600"
+    };
+}
+<label for="@inputId" class="@(Model.Disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer") flex items-center justify-between gap-3 group">
+    <div class="flex items-center gap-3 min-w-0 flex-1">
+        @if (!string.IsNullOrEmpty(Model.Icon))
+        {
+            <div class="w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/30 transition-colors">
+                <i data-lucide="@Model.Icon" class="w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors"></i>
+            </div>
+        }
+        <div class="min-w-0">
+            @if (!string.IsNullOrEmpty(Model.Label))
+            {
+                <p class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">@Model.Label</p>
+            }
+            @if (!string.IsNullOrEmpty(Model.Description))
+            {
+                <p class="text-xs text-gray-500 dark:text-gray-400 truncate">@Model.Description</p>
+            }
+        </div>
+    </div>
+    <div class="relative shrink-0">
+        <input type="checkbox"
+               id="@inputId"
+               name="@Model.Name"
+               value="true"
+               @(Model.Checked ? "checked" : "")
+               @(Model.Disabled ? "disabled" : "")
+               role="switch"
+               aria-checked="@(Model.Checked ? "true" : "false")"
+
+               class="peer sr-only switch-input" />
+        <div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500/20 dark:peer-focus:ring-indigo-400/20 rounded-full @colorClass peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:after:border-white"></div>
+    </div>
+</label>

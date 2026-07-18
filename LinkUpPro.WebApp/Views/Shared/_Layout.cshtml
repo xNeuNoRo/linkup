@@ -1,50 +1,517 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+﻿@using LinkUpPro.Application.Interfaces.Services
+@using Microsoft.AspNetCore.Hosting
+@inject ICurrentUserService CurrentUser
+@inject IFriendRequestService FriendRequestService
+@inject INotificationService NotificationService
+@inject IWebHostEnvironment WebHostEnv
+@{
+    string currentController = ViewContext.RouteData.Values["Controller"]?.ToString() ?? "";
+    string currentAction = ViewContext.RouteData.Values["Action"]?.ToString() ?? "";
+
+    string GetActiveClass(string targetController, string? targetAction = null)
+    {
+        bool isActive = string.Equals(currentController, targetController, StringComparison.OrdinalIgnoreCase);
+        if (targetAction != null) isActive = isActive && string.Equals(currentAction, targetAction, StringComparison.OrdinalIgnoreCase);
+
+        return isActive
+            ? "active nav-item flex items-center gap-3 px-3 py-2.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 rounded-xl font-bold transition-all"
+            : "nav-item flex items-center gap-3 px-3 py-2.5 text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl font-medium transition-all";
+    }
+
+    // Layout carga SUS PROPIOS contadores — sin depender de ViewBag
+    bool isAuthenticated = CurrentUser.IsAuthenticated && !string.IsNullOrEmpty(CurrentUser.UserId);
+    int pendingRequests = 0;
+    int unreadNotifications = 0;
+    if (isAuthenticated)
+    {
+        try
+        {
+            pendingRequests = await FriendRequestService.GetPendingCountAsync(CurrentUser.UserId!);
+            unreadNotifications = (await NotificationService.GetUnreadCountAsync(CurrentUser.UserId!)).Count;
+        }
+        catch { /* fallback silencioso */ }
+    }
+
+    string? currentUserId = CurrentUser.UserId;
+    string? currentFullName = CurrentUser.FullName ?? "Usuario";
+    string? currentUserName = CurrentUser.UserName ?? "";
+    string? currentAvatar = CurrentUser.ProfilePicturePath;
+}
+<!DOCTYPE html>
+<html lang="es" class="h-full">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - LinkUpPro.WebApp</title>
-    <script type="importmap"></script>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <title>@ViewData["Title"] - LinkUp Pro</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <link rel="icon" href="~/enlace-roto.ico" type="image/x-icon" />
+    <link rel="manifest" href="~/manifest.json" />
+    <meta name="view-transition" content="same-origin" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/LinkUpPro.WebApp.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/custom.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/transitions.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        /* Premium Page Entry Animation */
+        .page-entry {
+            animation: fancyFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            will-change: opacity, transform, filter;
+        }
+
+        @@keyframes fancyFadeIn {
+            0% {
+                opacity: 0;
+                transform: translateY(20px) scale(0.98);
+                filter: blur(4px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                filter: blur(0);
+            }
+        }
+
+        /* Sidebar fija estilo social */
+        #sidebar {
+            transition: transform 0.3s cubic-bezier(0.25, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Nav items */
+        .nav-item {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Active State: Luxury highlight */
+        .nav-item.active {
+            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.15);
+        }
+
+        /* Mobile drawer */
+        @@media (max-width: 1023px) {
+            #sidebar {
+                transform: translateX(-100%);
+                position: fixed;
+                z-index: 50;
+                height: 100vh;
+            }
+            #sidebar.open {
+                transform: translateX(0);
+            }
+            #sidebar-backdrop {
+                display: none;
+            }
+            #sidebar-backdrop.visible {
+                display: block;
+            }
+            main {
+                padding-bottom: 5rem;
+            }
+        }
+
+        @@media (min-width: 1024px) {
+            main {
+                padding-bottom: 0;
+            }
+        }
+
+        /* Badge contador */
+        .badge-count {
+            font-size: 0.65rem;
+            padding: 0.125rem 0.5rem;
+            border-radius: 9999px;
+            font-weight: 700;
+        }
+
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; }
+
+        /* Battleship grid */
+        .battleship-board {
+            display: grid;
+            grid-template-columns: 2.5rem repeat(12, 1fr);
+            grid-template-rows: 2.5rem repeat(12, 1fr);
+            gap: 1px;
+            background: #93c5fd;
+            aspect-ratio: 1;
+            max-width: 100%;
+            border-radius: 0.75rem;
+            overflow: hidden;
+        }
+        .dark .battleship-board { background: #1e3a5f; }
+        .battleship-cell {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 120ms ease;
+            position: relative;
+        }
+        .dark .battleship-cell { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
+        .battleship-cell:hover:not(.disabled):not(.hit):not(.miss):not(.sunk) {
+            background: #bfdbfe;
+            transform: scale(1.08);
+            z-index: 2;
+        }
+        .dark .battleship-cell:hover:not(.disabled):not(.hit):not(.miss):not(.sunk) {
+            background: #1e3a5f;
+        }
+        .battleship-cell.hit {
+            background: linear-gradient(135deg, #fecaca 0%, #fee2e2 100%) !important;
+            cursor: not-allowed;
+        }
+        .dark .battleship-cell.hit {
+            background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%) !important;
+        }
+        .battleship-cell.miss {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%) !important;
+            cursor: not-allowed;
+        }
+        .dark .battleship-cell.miss {
+            background: linear-gradient(135deg, #064e3b 0%, #065f46 100%) !important;
+        }
+        .battleship-cell.ship {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+            cursor: default;
+        }
+        .dark .battleship-cell.ship {
+            background: linear-gradient(135deg, #3730a3 0%, #312e81 100%) !important;
+        }
+        .battleship-cell.sunk {
+            background: linear-gradient(135deg, #c2410c 0%, #9a3412 100%) !important;
+            cursor: not-allowed;
+            border: 1px solid rgba(255,255,255,0.2) !important;
+        }
+        .battleship-cell.sunk::after {
+            content: '';
+            display: block;
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 1px;
+            background: rgba(255,255,255,0.15);
+            rotate: 45deg;
+        }
+        .battleship-cell.sunk i {
+            position: absolute;
+            opacity: 0.9;
+            color: #f97316 !important;
+        }
+        .dark .battleship-cell.sunk {
+            background: linear-gradient(135deg, #7c2d12 0%, #9a3412 100%) !important;
+            border-color: rgba(255,255,255,0.08) !important;
+        }
+        .dark .battleship-cell.sunk::after {
+            background: rgba(255,255,255,0.08);
+        }
+        .battleship-cell.placement-preview {
+            background: linear-gradient(135deg, #a5b4fc 0%, #c7d2fe 100%) !important;
+            transform: scale(1.05);
+        }
+        .dark .battleship-cell.placement-preview {
+            background: linear-gradient(135deg, #3730a3 0%, #4338ca 100%) !important;
+        }
+        .battleship-cell.disabled { cursor: not-allowed; opacity: 0.5; }
+        .battleship-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #4b5563;
+            background: rgba(255,255,255,0.5);
+        }
+        .dark .battleship-label { color: #9ca3af; background: rgba(0,0,0,0.3); }
+
+        @@keyframes cell-pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            70% { transform: scale(1.15); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .battleship-cell.hit i, .battleship-cell.miss div {
+            animation: cell-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .battleship-cell.ship::after {
+            content: '';
+            display: block;
+            width: 1.25rem;
+            height: 0.35rem;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.85);
+        }
+        .battleship-cell.ship.sunk::after {
+            background: rgba(194,65,12,0.6);
+        }
+    </style>
 </head>
-<body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">LinkUpPro.WebApp</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
+<body class="font-sans antialiased min-h-screen overflow-x-hidden" style="background-color: var(--color-bg); color: var(--color-text);">
+
+    <a href="#main-content" class="skip-link">Saltar al contenido</a>
+
+    <div class="flex min-h-screen w-full relative">
+
+        <!-- Mobile Backdrop -->
+        <div id="sidebar-backdrop" class="fixed inset-0 bg-gray-900/40 z-40 hidden lg:hidden transition-opacity backdrop-blur-sm"></div>
+
+        <!-- Sidebar (fija en desktop, drawer en mobile) -->
+        <aside id="sidebar" aria-label="Menú principal" style="view-transition-name: app-sidebar;" class="fixed inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 shrink-0 flex flex-col z-50 lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen transition-transform duration-300 shadow-sm border-r border-gray-200 dark:border-gray-700">
+
+            <!-- Header Sidebar: Logo + Close (mobile) -->
+            <div class="h-16 flex items-center justify-between px-5 border-b border-gray-200 dark:border-gray-700 shrink-0">
+                <a asp-controller="Home" asp-action="Index" class="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+                    <div class="w-9 h-9 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50">
+                        <i data-lucide="link-2" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <span class="text-lg font-black text-gray-900 dark:text-gray-100 tracking-tighter whitespace-nowrap">LinkUp<span class="text-indigo-600">Pro</span></span>
+                </a>
+                <button id="close-sidebar-btn" type="button" aria-label="Cerrar menú" class="lg:hidden p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl cursor-pointer">
+                    <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                    </ul>
+            </div>
+
+            <!-- Navegación Principal -->
+            <nav class="flex-1 py-4 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+
+                <!-- Home -->
+                <a asp-controller="Home" asp-action="Index" class="@GetActiveClass("Home")" data-tooltip="Inicio">
+                    <i data-lucide="home" class="w-5 h-5 shrink-0"></i>
+                    <span class="text-sm flex-1">Home</span>
+                </a>
+
+                <!-- Amigos -->
+                <a asp-controller="Friends" asp-action="Index" class="@GetActiveClass("Friends") relative" data-tooltip="Amigos">
+                    <i data-lucide="users" class="w-5 h-5 shrink-0"></i>
+                    <span class="text-sm flex-1">Amigos</span>
+                </a>
+
+                <!-- Solicitudes -->
+                <a asp-controller="FriendRequests" asp-action="Index" class="@GetActiveClass("FriendRequests") relative" data-tooltip="Solicitudes">
+                    <i data-lucide="user-plus" class="w-5 h-5 shrink-0"></i>
+                    <span class="text-sm flex-1">Solicitudes</span>
+                    @if (pendingRequests > 0)
+                    {
+                        <span class="badge-count bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">@pendingRequests</span>
+                    }
+                </a>
+
+                <!-- Battleship -->
+                <a asp-controller="Battleship" asp-action="Index" class="@GetActiveClass("Battleship")" data-tooltip="Battleship">
+                    <i data-lucide="grid" class="w-5 h-5 shrink-0"></i>
+                    <span class="text-sm flex-1">Battleship</span>
+                </a>
+
+                <!-- Divider -->
+                <div class="my-3 mx-3 h-px bg-gray-200 dark:bg-gray-700"></div>
+
+                <!-- Dark Mode Toggle -->
+                <button id="dark-mode-toggle" type="button" class="w-full nav-item flex items-center gap-3 px-3 py-2.5 text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl font-medium transition-all cursor-pointer" data-tooltip="Tema">
+                    <i data-lucide="moon" id="dark-mode-icon" class="w-5 h-5 shrink-0"></i>
+                    <span class="text-sm flex-1 text-left" id="dark-mode-text">Modo Oscuro</span>
+                </button>
+
+                <!-- Créditos -->
+                <a asp-controller="Credits" asp-action="Index" class="@GetActiveClass("Credits")" data-tooltip="Créditos">
+                    <i data-lucide="award" class="w-5 h-5 shrink-0"></i>
+                    <span class="text-sm flex-1">Créditos</span>
+                </a>
+            </nav>
+
+            <!-- Footer Sidebar: Status -->
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 shrink-0">
+                <div class="flex items-center gap-3 px-3 py-2 bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-900/20 dark:to-violet-900/20 rounded-xl">
+                    <div class="relative flex items-center justify-center shrink-0">
+                        <div class="w-2.5 h-2.5 bg-indigo-500 rounded-full animate-pulse"></div>
+                        <div class="absolute w-4 h-4 bg-indigo-500/20 rounded-full animate-ping"></div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[10px] font-black text-gray-900 dark:text-gray-100 tracking-tighter uppercase">LinkUp Pro</p>
+                        <p class="text-[8px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">v1.0</p>
+                    </div>
                 </div>
             </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex flex-col min-w-0">
+
+            <!-- Top Navbar -->
+            <header style="view-transition-name: app-header;" class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 sm:px-6 z-30 shrink-0 sticky top-0 shadow-sm/30">
+
+                <!-- Left: Mobile Menu + Title/Breadcrumb -->
+                <div class="flex items-center gap-4 min-w-0 flex-1">
+                    <button id="open-sidebar-btn" type="button" aria-label="Abrir menú" class="lg:hidden p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors cursor-pointer shrink-0">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+
+                    <h1 class="text-lg font-bold text-gray-900 dark:text-gray-100 truncate">@ViewData["Title"]</h1>
+                </div>
+
+                <!-- Right: Notifications + User Dropdown -->
+                <div class="flex items-center gap-2 shrink-0">
+                    <div class="relative">
+                    <button id="notification-menu-btn" type="button" data-notification-url="@Url.Action("Recent", "Notifications")" class="relative inline-flex items-center justify-center w-10 h-10 rounded-xl text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:text-gray-300 dark:hover:text-indigo-400 dark:hover:bg-indigo-900/20 transition-colors" aria-label="Notificaciones" aria-expanded="false" aria-controls="notification-dropdown">
+                        <i data-lucide="bell" class="w-5 h-5"></i>
+                        @if (unreadNotifications > 0)
+                        {
+                            <span class="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center">@unreadNotifications</span>
+                        }
+                    </button>
+                    <div id="notification-dropdown" class="absolute right-0 mt-3 w-80 sm:w-96 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-50 hidden overflow-hidden animate__animated animate__fadeInUp animate__faster">
+                        <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                            <p class="text-sm font-black text-gray-900 dark:text-gray-100">Notificaciones</p>
+                            <a asp-controller="Notifications" asp-action="Index" class="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline">Abrir</a>
+                        </div>
+                        <div id="notification-dropdown-content" class="min-h-24">
+                            <div class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">Cargando...</div>
+                        </div>
+                    </div>
+                    </div>
+
+                    <div class="relative">
+                    <button id="user-menu-btn" type="button" aria-expanded="false" aria-controls="user-dropdown" class="flex items-center gap-3 pl-3 border-l border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 py-2 pr-2 rounded-xl transition-colors cursor-pointer group">
+                        <div class="hidden md:flex flex-col items-end">
+                            <span class="text-sm font-bold text-gray-900 dark:text-gray-100 tracking-tight leading-tight">@currentFullName</span>
+                            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-tight">@currentUserName</span>
+                        </div>
+                        @await Html.PartialAsync("/Views/Shared/Components/_Avatar.cshtml", (currentAvatar, currentFullName ?? "Usuario", "sm", "border-2 border-indigo-700 shadow-lg group-hover:scale-110 transition-transform"))
+                        <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors"></i>
+                    </button>
+
+                    <!-- Dropdown Menu -->
+                    <div id="user-dropdown" class="absolute right-0 mt-3 w-56 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 py-2 z-50 hidden animate__animated animate__fadeInUp animate__faster">
+                        <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                            <p class="text-[10px] font-black uppercase tracking-wide text-gray-400 dark:text-gray-500">Cuenta</p>
+                        </div>
+                        <a asp-controller="Profile" asp-action="Index" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <i data-lucide="user" class="w-5 h-5 text-gray-400"></i>
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Mi Perfil</span>
+                        </a>
+                        <a asp-controller="Profile" asp-action="Edit" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <i data-lucide="settings" class="w-5 h-5 text-gray-400"></i>
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Configuración</span>
+                        </a>
+                        <a asp-controller="Profile" asp-action="ChangePassword" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <i data-lucide="key" class="w-5 h-5 text-gray-400"></i>
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Cambiar Contraseña</span>
+                        </a>
+                        <div class="h-px bg-gray-100 dark:bg-gray-700 my-2 mx-3"></div>
+                        <form asp-controller="Auth" asp-action="Logout" method="post" class="contents">
+                            <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left text-red-600">
+                                <i data-lucide="log-out" class="w-5 h-5"></i>
+                                <span class="text-sm font-medium">Cerrar Sesión</span>
+                            </button>
+                        </form>
+                    </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <main id="main-content" class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900">
+                <div style="view-transition-name: main-content;" class="page-entry w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+                    @RenderBody()
+                </div>
+            </main>
+        </div>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - LinkUpPro.WebApp - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-        </div>
-    </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
+
     @await RenderSectionAsync("Scripts", required: false)
+
+    <script>
+        // Global SweetAlert2 "Luxury" Settings
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
+
+        // Set default animations for all standard Swal.fire calls globally
+        const originalSwalFire = Swal.fire;
+        Swal.fire = function() {
+            if (arguments.length > 0 && typeof arguments[0] === 'object') {
+                if (!arguments[0].showClass) {
+                    arguments[0].showClass = { popup: 'animate__animated animate__zoomIn animate__faster' };
+                }
+                if (!arguments[0].hideClass) {
+                    arguments[0].hideClass = { popup: 'animate__animated animate__zoomOut animate__faster' };
+                }
+            }
+            return originalSwalFire.apply(this, arguments);
+        };
+
+        // --- SweetAlert Trigger from TempData ---
+        @if (TempData["SweetAlertMessage"] != null)
+        {
+            <text>
+            document.addEventListener('DOMContentLoaded', function() {
+                var alertType = '@TempData["SweetAlertType"]' || 'success';
+                var alertMessage = '@Html.Raw(TempData["SweetAlertMessage"]?.ToString()?.Replace("'", "\\'"))';
+
+                setTimeout(() => {
+                    Toast.fire({
+                        icon: alertType,
+                        title: alertMessage
+                    });
+                }, 500);
+            });
+            </text>
+        }
+
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <text>
+            document.addEventListener('DOMContentLoaded', function() {
+                var alertMessage = '@Html.Raw(TempData["ErrorMessage"]?.ToString()?.Replace("'", "\\'"))';
+
+                setTimeout(() => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Atención',
+                        text: alertMessage,
+                        confirmButtonText: 'Entendido',
+                        confirmButtonColor: '#4f46e5',
+                        customClass: {
+                            confirmButton: 'px-6 py-2.5 text-sm font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all cursor-pointer'
+                        }
+                    });
+                }, 500);
+            });
+            </text>
+        }
+    </script>
+    @if (!WebHostEnv.IsDevelopment())
+    {
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function () {
+                    navigator.serviceWorker.register('/sw.js');
+                });
+            }
+        </script>
+    }
 </body>
 </html>
