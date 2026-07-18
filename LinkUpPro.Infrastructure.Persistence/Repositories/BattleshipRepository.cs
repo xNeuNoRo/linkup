@@ -47,19 +47,7 @@ public sealed class BattleshipRepository
         CancellationToken cancellationToken = default
     )
     {
-        var ships = await _context
-            .Set<BattleshipShip>()
-            .Where(s => s.GameId == gameId)
-            .ToListAsync(cancellationToken);
-
-        var attacks = await _context
-            .Set<BattleshipAttack>()
-            .Where(a => a.GameId == gameId)
-            .ToListAsync(cancellationToken);
-
-        var game = await _dbSet.FirstOrDefaultAsync(g => g.Id == gameId, cancellationToken);
-
-        return game;
+        return await _dbSet.FirstOrDefaultAsync(g => g.Id == gameId, cancellationToken);
     }
 
     public async Task<bool> HasActiveGameBetweenAsync(

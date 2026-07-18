@@ -1,3 +1,4 @@
+using FluentValidation;
 using LinkUpPro.Application.DTOs.Post.Requests;
 using LinkUpPro.Application.DTOs.Profile.Responses;
 using LinkUpPro.Application.Interfaces;
@@ -81,6 +82,16 @@ public class PostServiceTests : InMemoryTestBase
             .Setup(x => x.UploadFileAsync(It.IsAny<IFormFile>(), It.IsAny<string>()))
             .ReturnsAsync("/uploads/posts/test-image.jpg");
 
+        var createPostValidatorMock = new Mock<IValidator<CreatePostRequest>>();
+        createPostValidatorMock
+            .Setup(x => x.ValidateAsync(It.IsAny<CreatePostRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FluentValidation.Results.ValidationResult());
+
+        var filterValidatorMock = new Mock<IValidator<PostFilterRequest>>();
+        filterValidatorMock
+            .Setup(x => x.ValidateAsync(It.IsAny<PostFilterRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FluentValidation.Results.ValidationResult());
+
         var implType = ImplementationDiscovery.FindImplementation<IPostService>()!;
         _service = (IPostService)
             Activator.CreateInstance(
@@ -91,7 +102,9 @@ public class PostServiceTests : InMemoryTestBase
                 commentRepo,
                 profileServiceMock.Object,
                 unitOfWorkMock.Object,
-                _fileServiceMock.Object
+                _fileServiceMock.Object,
+                createPostValidatorMock.Object,
+                filterValidatorMock.Object
             )!;
     }
 

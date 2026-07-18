@@ -1,0 +1,65 @@
+@model LinkUpPro.Application.ViewModels.AuthViewModels.ResendActivationViewModel
+@{
+    ViewData["Title"] = "Reenviar activación";
+    Layout = "_LayoutAuth";
+}
+
+<div class="max-w-md w-full">
+    <div class="text-center mb-8">
+        <a asp-controller="Home" asp-action="Index" class="inline-flex items-center gap-3 text-indigo-600 font-black text-2xl">
+            <div class="w-12 h-12 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
+                <i data-lucide="link-2" class="w-6 h-6 text-white"></i>
+            </div>
+            <span>LinkUp<span class="text-violet-600">Pro</span></span>
+        </a>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 p-8">
+        <div class="mb-6">
+            <h1 class="text-2xl font-black text-gray-900 dark:text-gray-100 mb-1">Reenviar activación</h1>
+            <p class="text-gray-500 dark:text-gray-400 text-sm">Ingrese su nombre de usuario para recibir un nuevo enlace de activación.</p>
+        </div>
+
+        <form asp-action="ResendActivation" asp-controller="Auth" method="post" class="space-y-5">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3" role="alert"></div>
+
+            <div>
+                <label asp-for="UserName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"></label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i data-lucide="user" class="w-5 h-5 text-gray-400"></i>
+                    </div>
+                    <input asp-for="UserName"
+                           autocomplete="username"
+                           class="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all" />
+                </div>
+                <span asp-validation-for="UserName" class="text-red-500 text-xs mt-1 block"></span>
+            </div>
+
+            <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-xl p-3 flex items-start gap-2">
+                <i data-lucide="clock" class="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0"></i>
+                <p class="text-xs text-amber-700 dark:text-amber-300">
+                    Debe esperar al menos 5 minutos entre solicitudes de reenvío.
+                </p>
+            </div>
+
+            <div class="flex flex-col-reverse sm:flex-row gap-3">
+                <a asp-action="Login" class="flex-1 py-2.5 text-center bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                    Volver atrás
+                </a>
+                <button type="submit"
+                        class="flex-1 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold rounded-xl hover:from-indigo-700 hover:to-violet-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50">
+                    Reenviar enlace
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        lucide.createIcons();
+    </script>
+}

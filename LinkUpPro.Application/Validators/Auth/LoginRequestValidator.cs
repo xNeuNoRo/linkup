@@ -9,6 +9,6 @@ public class LoginRequestValidator : AbstractValidator<LoginRequest>
     {
         RuleFor(x => x.UserName).NotEmpty().WithMessage("El nombre de usuario es requerido.");
 
-        RuleFor(x => x.Password).NotEmpty().WithMessage("La contrasena es requerida.");
+        RuleFor(x => x.Password).NotEmpty().WithMessage("La contraseña es requerida.");
     }
 }

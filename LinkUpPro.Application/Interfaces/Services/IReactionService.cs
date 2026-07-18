@@ -14,4 +14,9 @@ public interface IReactionService
     Task<Result<ReactionCountsDto>> GetCountsAsync(long postId);
 
     Task<ReactionType?> GetUserReactionAsync(string userId, long postId);
+
+    Task<IReadOnlyDictionary<long, ReactionType?>> GetUserReactionsAsync(
+        string userId,
+        IEnumerable<long> postIds
+    );
 }

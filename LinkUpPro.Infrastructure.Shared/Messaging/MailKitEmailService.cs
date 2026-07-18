@@ -21,7 +21,8 @@ public class MailKitEmailService : IEmailService
     public MailKitEmailService(
         IServiceScopeFactory scopeFactory,
         ILogger<MailKitEmailService> logger,
-        IOptions<MailSettings> mailSettings)
+        IOptions<MailSettings> mailSettings
+    )
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
@@ -33,18 +34,18 @@ public class MailKitEmailService : IEmailService
         string subject,
         string templateName,
         T model,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
         where T : IEmailModel
     {
-        bool acquired = await _smtpSemaphore.WaitAsync(
-            TimeSpan.FromSeconds(30),
-            cancellationToken);
+        bool acquired = await _smtpSemaphore.WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
 
         if (!acquired)
         {
             _logger.LogError(
                 "No se pudo obtener turno en el semaforo SMTP. Tiempo de espera agotado para: {Email}",
-                to);
+                to
+            );
             return false;
         }
 
@@ -58,7 +59,8 @@ public class MailKitEmailService : IEmailService
                 AppContext.BaseDirectory,
                 "Templates",
                 "Emails",
-                $"{sanitizedTemplateName}.cshtml");
+                $"{sanitizedTemplateName}.cshtml"
+            );
 
             if (!File.Exists(templatePath))
             {
@@ -69,7 +71,9 @@ public class MailKitEmailService : IEmailService
             string htmlBody = await renderer.RenderTemplateAsync(templatePath, model);
 
             var message = new MimeMessage();
-            message.From.Add(new MailboxAddress(_mailSettings.DisplayName, _mailSettings.EmailFrom));
+            message.From.Add(
+                new MailboxAddress(_mailSettings.DisplayName, _mailSettings.EmailFrom)
+            );
             message.To.Add(new MailboxAddress(string.Empty, to));
             message.Subject = subject;
 
@@ -85,14 +89,16 @@ public class MailKitEmailService : IEmailService
                 _mailSettings.SmtpHost,
                 _mailSettings.SmtpPort,
                 secureSocketOptions,
-                cancellationToken);
+                cancellationToken
+            );
 
             if (!string.IsNullOrEmpty(_mailSettings.SmtpUser))
             {
                 await client.AuthenticateAsync(
                     _mailSettings.SmtpUser,
                     _mailSettings.SmtpPass,
-                    cancellationToken);
+                    cancellationToken
+                );
             }
 
             await client.SendAsync(message, cancellationToken);
@@ -101,7 +107,8 @@ public class MailKitEmailService : IEmailService
             _logger.LogInformation(
                 "Correo enviado exitosamente a {Email}. Asunto: {Subject}",
                 to,
-                subject);
+                subject
+            );
 
             return true;
         }

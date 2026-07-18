@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LinkUpPro.Infrastructure.Identity.Contexts;
 
-public class IdentityContext : IdentityDbContext<AppUser, IdentityRole<string>, string>
+public class IdentityContext : IdentityDbContext<AppUser, AppRole, string>
 {
     public IdentityContext(DbContextOptions<IdentityContext> options)
         : base(options) { }
@@ -40,7 +40,7 @@ public class IdentityContext : IdentityDbContext<AppUser, IdentityRole<string>, 
         # endregion
 
         # region Role Configuration
-        builder.Entity<IdentityRole<string>>(entity =>
+        builder.Entity<AppRole>(entity =>
         {
             entity.ToTable("Roles");
         });

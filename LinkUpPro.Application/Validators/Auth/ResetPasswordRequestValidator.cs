@@ -11,12 +11,12 @@ public class ResetPasswordRequestValidator : AbstractValidator<ResetPasswordRequ
 
         RuleFor(x => x.Token).NotEmpty().WithMessage("El token es requerido.");
 
-        RuleFor(x => x.Password).NotEmpty().WithMessage("La contrasena es requerida.");
+        RuleFor(x => x.Password).NotEmpty().WithMessage("La contraseña es requerida.");
 
         RuleFor(x => x.ConfirmPassword)
             .NotEmpty()
-            .WithMessage("La confirmacion de contrasena es requerida.")
+            .WithMessage("La confirmacion de contraseña es requerida.")
             .Equal(x => x.Password)
-            .WithMessage("Las contrasenas no coinciden.");
+            .WithMessage("Las contraseñas no coinciden.");
     }
 }

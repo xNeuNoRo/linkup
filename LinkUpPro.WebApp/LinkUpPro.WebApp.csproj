@@ -13,15 +13,14 @@
     </PackageReference>
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Update="Templates/**/*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <PreserveCompilationContext>true</PreserveCompilationContext>
   </PropertyGroup>
+
+  <Target Name="TailwindBuild" BeforeTargets="Build" Condition="Exists('package.json')">
+    <Exec Command="bun css:build" WorkingDirectory="$(MSBuildProjectDirectory)" ContinueOnError="true" />
+  </Target>
 </Project>

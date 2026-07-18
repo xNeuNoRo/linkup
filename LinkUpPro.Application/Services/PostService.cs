@@ -1,6 +1,6 @@
+using FluentValidation;
 using LinkUpPro.Application.DTOs.Post.Requests;
 using LinkUpPro.Application.DTOs.Post.Responses;
-using LinkUpPro.Application.DTOs.Profile.Responses;
 using LinkUpPro.Application.Interfaces;
 using LinkUpPro.Application.Interfaces.Services;
 using LinkUpPro.Domain.Common;
@@ -23,6 +23,8 @@ public sealed class PostService : IPostService
     private readonly IProfileService _profileService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IFileService _fileService;
+    private readonly IValidator<CreatePostRequest> _createPostValidator;
+    private readonly IValidator<PostFilterRequest> _filterValidator;
 
     public PostService(
         IPostRepository postRepository,
@@ -31,7 +33,9 @@ public sealed class PostService : IPostService
         ICommentRepository commentRepository,
         IProfileService profileService,
         IUnitOfWork unitOfWork,
-        IFileService fileService
+        IFileService fileService,
+        IValidator<CreatePostRequest> createPostValidator,
+        IValidator<PostFilterRequest> filterValidator
     )
     {
         _postRepository = postRepository;
@@ -41,6 +45,8 @@ public sealed class PostService : IPostService
         _profileService = profileService;
         _unitOfWork = unitOfWork;
         _fileService = fileService;
+        _createPostValidator = createPostValidator;
+        _filterValidator = filterValidator;
     }
 
     public async Task<Result<PostResponseDto>> CreateAsync(
@@ -48,13 +54,25 @@ public sealed class PostService : IPostService
         CreatePostRequest request
     )
     {
+        var validationResult = await _createPostValidator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            var error = validationResult.Errors.First();
+            return Result<PostResponseDto>.Failure(
+                new DomainError("Post.Validation." + error.PropertyName, error.ErrorMessage)
+            );
+        }
+
         var contentType = (PostContentType)request.ContentType;
         var privacy = (PrivacyLevel)request.Privacy;
 
         // Validación defensiva: no permitir imagen y YouTube simultáneamente
         if (request.ImageFile is not null && !string.IsNullOrEmpty(request.YouTubeUrl))
             return Result<PostResponseDto>.Failure(
-                new DomainError("Post.MediaConflict", "No debe permitirse enviar simultáneamente una imagen y un enlace de YouTube.")
+                new DomainError(
+                    "Post.MediaConflict",
+                    "No debe permitirse enviar simultáneamente una imagen y un enlace de YouTube."
+                )
             );
 
         string mediaPath;
@@ -133,9 +151,12 @@ public sealed class PostService : IPostService
             );
 
         // Validación defensiva: no permitir imagen y YouTube simultáneamente
-        if (request.ImageFile is not null && !string.IsNullOrEmpty(request.YouTubeUrl))
+        if (request.ImageFile is not null && request.ImageFile.Length > 0 && !string.IsNullOrEmpty(request.YouTubeUrl))
             return Result<PostResponseDto>.Failure(
-                new DomainError("Post.MediaConflict", "No debe permitirse enviar simultáneamente una imagen y un enlace de YouTube.")
+                new DomainError(
+                    "Post.MediaConflict",
+                    "No debe permitirse enviar simultáneamente una imagen y un enlace de YouTube."
+                )
             );
 
         var content = request.Content ?? post.Content;
@@ -143,22 +164,70 @@ public sealed class PostService : IPostService
             ? (PostContentType)request.ContentType.Value
             : post.ContentType;
 
+        var isContentTypeChanged = request.ContentType.HasValue && (int)post.ContentType != request.ContentType.Value;
+        var oldMediaPath = post.MediaPath;
+        var oldContentType = post.ContentType;
+
         string mediaPath;
         try
         {
-            mediaPath = contentType switch
+            if (contentType == PostContentType.YouTubeVideo)
             {
-                PostContentType.YouTubeVideo => YouTubeVideoId
-                    .Create(request.YouTubeUrl ?? post.MediaPath)
-                    .Value,
-                PostContentType.Image => request.ImageFile is not null
-                    ? await ValidateAndUploadImageAsync(request.ImageFile)
-                    : post.MediaPath,
-                _ => throw new DomainException(
-                    "Post.InvalidContentType",
-                    "El tipo de contenido seleccionado no es valido."
-                ),
-            };
+                if (!string.IsNullOrWhiteSpace(request.YouTubeUrl))
+                {
+                    mediaPath = YouTubeVideoId.Create(request.YouTubeUrl).Value;
+                }
+                else if (isContentTypeChanged)
+                {
+                    return Result<PostResponseDto>.Failure(
+                        new DomainError("Post.YouTubeUrlRequired", "Debe ingresar un enlace valido de YouTube.")
+                    );
+                }
+                else
+                {
+                    // Mismo tipo YouTube, conservar URL actual
+                    mediaPath = post.MediaPath;
+                }
+            }
+            else if (contentType == PostContentType.Image)
+            {
+                if (request.ImageFile is not null && request.ImageFile.Length > 0)
+                {
+                    mediaPath = await ValidateAndUploadImageAsync(request.ImageFile);
+                }
+                else if (isContentTypeChanged)
+                {
+                    return Result<PostResponseDto>.Failure(
+                        new DomainError("Post.ImageRequired", "Debe seleccionar una imagen para la publicacion.")
+                    );
+                }
+                else
+                {
+                    // Mismo tipo Image, conservar imagen actual
+                    mediaPath = post.MediaPath;
+                }
+            }
+            else
+            {
+                return Result<PostResponseDto>.Failure(
+                    new DomainError("Post.InvalidContentType", "El tipo de contenido seleccionado no es valido.")
+                );
+            }
+
+            // Limpiar media anterior cuando corresponde
+            var hasNewFile = request.ImageFile is not null && request.ImageFile.Length > 0;
+            var hasNewYouTubeUrl = !string.IsNullOrWhiteSpace(request.YouTubeUrl);
+
+            if (isContentTypeChanged && oldContentType == PostContentType.Image && !string.IsNullOrEmpty(oldMediaPath))
+            {
+                // Cambio de Image → YouTube: eliminar imagen anterior del disco
+                await _fileService.DeleteFileAsync(oldMediaPath);
+            }
+            else if (!isContentTypeChanged && contentType == PostContentType.Image && hasNewFile && !string.IsNullOrEmpty(oldMediaPath))
+            {
+                // Mismo Image pero nueva imagen: eliminar anterior del disco
+                await _fileService.DeleteFileAsync(oldMediaPath);
+            }
         }
         catch (DomainException ex)
         {
@@ -204,14 +273,25 @@ public sealed class PostService : IPostService
         PostFilterRequest filter
     )
     {
+        var validationResult = await _filterValidator.ValidateAsync(filter);
+        if (!validationResult.IsValid)
+        {
+            var clamped = filter with
+            {
+                Page = Math.Max(1, filter.Page),
+                PageSize = Math.Clamp(filter.PageSize, 1, 100),
+            };
+            filter = clamped;
+        }
+
         var contentType = filter.ContentType.HasValue
             ? (PostContentType?)filter.ContentType.Value
             : null;
 
         var options = new QueryOptions<Post>
         {
-            Skip = (filter.Page - 1) * filter.PageSize,
-            Take = filter.PageSize,
+            Skip = Math.Max(0, (filter.Page - 1) * filter.PageSize),
+            Take = Math.Max(1, filter.PageSize),
             OrderBy = q => q.OrderByDescending(p => p.CreatedAt),
             IsTracking = false,
         };
@@ -254,8 +334,8 @@ public sealed class PostService : IPostService
 
         var options = new QueryOptions<Post>
         {
-            Skip = (filter.Page - 1) * filter.PageSize,
-            Take = filter.PageSize,
+            Skip = Math.Max(0, (filter.Page - 1) * filter.PageSize),
+            Take = Math.Max(1, filter.PageSize),
             OrderBy = q => q.OrderByDescending(p => p.CreatedAt),
             IsTracking = false,
         };
@@ -303,8 +383,8 @@ public sealed class PostService : IPostService
 
         var options = new QueryOptions<Post>
         {
-            Skip = (filter.Page - 1) * filter.PageSize,
-            Take = filter.PageSize,
+            Skip = Math.Max(0, (filter.Page - 1) * filter.PageSize),
+            Take = Math.Max(1, filter.PageSize),
             OrderBy = q => q.OrderByDescending(p => p.CreatedAt),
             IsTracking = false,
         };
@@ -321,20 +401,10 @@ public sealed class PostService : IPostService
 
         var visiblePosts = posts.Where(p => p.CanBeViewedBy(requesterId, isFriend)).ToList();
 
-        var totalVisible = await _postRepository.CountAsync(p =>
-            p.AuthorId == targetUserId
-            && (contentType == null || p.ContentType == contentType)
-            && (
-                string.IsNullOrWhiteSpace(filter.SearchText)
-                || p.Content.Contains(filter.SearchText)
-            )
-            && (!filter.FromDate.HasValue || p.CreatedAt >= filter.FromDate)
-            && (!filter.ToDate.HasValue || p.CreatedAt <= filter.ToDate)
-            && (filter.EditedOnly != true || p.IsEdited)
-        );
-
+        var isSelf = requesterId == targetUserId;
         var total = await _postRepository.CountAsync(p =>
-            p.AuthorId == targetUserId && p.CanBeViewedBy(requesterId, isFriend)
+            p.AuthorId == targetUserId
+            && (isSelf || (p.Privacy == PrivacyLevel.FriendsOnly && isFriend))
         );
 
         var items = await MapToListItemDtosAsync(visiblePosts);
@@ -405,11 +475,8 @@ public sealed class PostService : IPostService
         var userDict = await _profileService.GetByIdsAsync(authorIds);
 
         var postIds = posts.Select(p => p.Id).ToList();
-        var reactionCountsTask = _reactionRepository.GetCountsForPostsAsync(postIds);
-        var commentCountsTask = _commentRepository.GetCountsForPostsAsync(postIds);
-        await Task.WhenAll(reactionCountsTask, commentCountsTask);
-        var reactionCounts = reactionCountsTask.Result;
-        var commentCounts = commentCountsTask.Result;
+        var reactionCounts = await _reactionRepository.GetCountsForPostsAsync(postIds);
+        var commentCounts = await _commentRepository.GetCountsForPostsAsync(postIds);
 
         foreach (var post in posts)
         {

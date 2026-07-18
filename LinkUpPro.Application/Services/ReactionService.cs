@@ -111,6 +111,15 @@ public sealed class ReactionService : IReactionService
         return reaction?.Type;
     }
 
+    public async Task<IReadOnlyDictionary<long, ReactionType?>> GetUserReactionsAsync(
+        string userId,
+        IEnumerable<long> postIds
+    )
+    {
+        var reactions = await _reactionRepository.GetByUserAndPostsAsync(userId, postIds);
+        return reactions.ToDictionary(kv => kv.Key, kv => kv.Value?.Type);
+    }
+
     private async Task CreateReactionNotificationAsync(
         long postId,
         string actorId,

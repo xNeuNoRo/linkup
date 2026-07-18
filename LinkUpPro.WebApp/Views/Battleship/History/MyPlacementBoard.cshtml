@@ -1,0 +1,56 @@
+@model LinkUpPro.Application.ViewModels.BattleshipViewModels.MyPlacementBoardViewModel
+@{
+    ViewData["Title"] = "Mi posicionamiento";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h1 class="text-xl font-black text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <i data-lucide="grid" class="w-5 h-5 text-indigo-600"></i>
+                Cómo posicionaste tus barcos
+            </h1>
+            <a asp-action="Result" asp-route-gameId="@Model.GameId" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">← Volver</a>
+        </div>
+
+        <div class="overflow-x-auto">
+            <div class="battleship-board">
+                <div class="battleship-label"></div>
+                @for (int c = 0; c < 12; c++)
+                {
+                    <div class="battleship-label">@((char)('A' + c))</div>
+                }
+                @for (int r = 0; r < 12; r++)
+                {
+                    <div class="battleship-label">@(r + 1)</div>
+                    @for (int c = 0; c < 12; c++)
+                    {
+                        var cell = Model.Board[r, c];
+                        var css = "battleship-cell";
+                        if (cell.State == LinkUpPro.Domain.Enums.BoardCellState.Hit) css += " hit";
+                        else if (cell.State == LinkUpPro.Domain.Enums.BoardCellState.Miss) css += " miss";
+                        else if (cell.State == LinkUpPro.Domain.Enums.BoardCellState.Ship) css += " ship";
+                        else if (cell.State == LinkUpPro.Domain.Enums.BoardCellState.Sunk) css += " sunk";
+                        <div class="@css">
+                            @switch (cell.State)
+                            {
+                                case LinkUpPro.Domain.Enums.BoardCellState.Hit:
+                                    <i data-lucide="x" class="w-5 h-5 text-red-600"></i>
+                                    break;
+                                case LinkUpPro.Domain.Enums.BoardCellState.Miss:
+                                    <div class="w-2 h-2 rounded-full bg-green-600"></div>
+                                    break;
+                                case LinkUpPro.Domain.Enums.BoardCellState.Sunk:
+                                    <i data-lucide="x" class="w-5 h-5 text-red-800"></i>
+                                    break;
+                            }
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts { <script>lucide.createIcons();</script> }

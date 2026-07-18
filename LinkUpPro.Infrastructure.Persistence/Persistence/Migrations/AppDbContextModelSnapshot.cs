@@ -372,6 +372,9 @@ namespace LinkUpPro.Infrastructure.Persistence.Persistence.Migrations
                     b.Property<long?>("RelatedEntityId")
                         .HasColumnType("bigint");
 
+                    b.Property<int>("RelatedEntityType")
+                        .HasColumnType("int");
+
                     b.Property<int>("Type")
                         .HasColumnType("int");
 
@@ -382,10 +385,11 @@ namespace LinkUpPro.Infrastructure.Persistence.Persistence.Migrations
 
                     b.HasIndex("RecipientId");
 
-                    b.HasIndex("RelatedEntityId");
-
                     b.HasIndex("RecipientId", "IsRead")
                         .HasDatabaseName("IX_Notifications_Recipient_Unread");
+
+                    b.HasIndex("RelatedEntityType", "RelatedEntityId")
+                        .HasDatabaseName("IX_Notifications_RelatedEntity");
 
                     b.ToTable("Notifications", (string)null);
                 });
@@ -527,14 +531,6 @@ namespace LinkUpPro.Infrastructure.Persistence.Persistence.Migrations
                         .HasForeignKey("PostId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("LinkUpPro.Domain.Entities.Social.Notification", b =>
-                {
-                    b.HasOne("LinkUpPro.Domain.Entities.Social.Post", null)
-                        .WithMany()
-                        .HasForeignKey("RelatedEntityId")
-                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("LinkUpPro.Domain.Entities.Social.Reaction", b =>

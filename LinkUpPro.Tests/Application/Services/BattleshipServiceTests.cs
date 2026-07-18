@@ -2,6 +2,7 @@ using LinkUpPro.Application.DTOs.Battleship.Requests;
 using LinkUpPro.Application.DTOs.Profile.Responses;
 using LinkUpPro.Application.Interfaces.Services;
 using LinkUpPro.Domain.Interfaces.Persistence;
+using LinkUpPro.Domain.Interfaces.Repositories;
 using LinkUpPro.Infrastructure.Persistence.Repositories;
 using LinkUpPro.Tests.Base;
 using Moq;
@@ -14,6 +15,7 @@ public class BattleshipServiceTests : InMemoryTestBase
     private IBattleshipService? _service;
     private Mock<IProfileService> _profileServiceMock = null!;
     private Mock<IUnitOfWork> _unitOfWorkMock = null!;
+    private Mock<INotificationRepository> _notificationRepositoryMock = null!;
     private bool _hasImplementation;
 
     public BattleshipServiceTests()
@@ -61,6 +63,8 @@ public class BattleshipServiceTests : InMemoryTestBase
             .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(1);
 
+        _notificationRepositoryMock = new Mock<INotificationRepository>();
+
         var battleshipRepository = new BattleshipRepository(DbContext);
         var friendshipRepository = new FriendshipRepository(DbContext);
         var unitOfWork = new LinkUpPro.Infrastructure.Persistence.Persistence.UnitOfWork(DbContext);
@@ -72,6 +76,7 @@ public class BattleshipServiceTests : InMemoryTestBase
                 battleshipRepository,
                 friendshipRepository,
                 _profileServiceMock.Object,
+                _notificationRepositoryMock.Object,
                 unitOfWork
             )!;
     }

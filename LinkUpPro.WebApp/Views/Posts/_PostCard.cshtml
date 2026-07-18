@@ -1,0 +1,178 @@
+@model LinkUpPro.Application.ViewModels.PostViewModels.PostListItemViewModel
+@{
+    var hasReaction = Model.CurrentUserReaction != null;
+    var likeActive = Model.CurrentUserReaction == LinkUpPro.Domain.Enums.ReactionType.Like;
+    var dislikeActive = Model.CurrentUserReaction == LinkUpPro.Domain.Enums.ReactionType.Dislike;
+    var privacyLabel = Model.Privacy == LinkUpPro.Domain.Enums.PrivacyLevel.FriendsOnly ? "Solo amigos" : "Solo yo";
+    var currentUserId = ViewBag.CurrentUserId as string;
+    var isOwn = !string.IsNullOrEmpty(currentUserId) && Model.AuthorId == currentUserId;
+}
+
+<article class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow" data-post-id="@Model.Id">
+    <!-- Header -->
+    <div class="p-4 flex items-start gap-3">
+        @await Html.PartialAsync("/Views/Shared/Components/_Avatar.cshtml", (Model.AuthorProfilePicture, Model.AuthorName, "md", (string?)null))
+
+        <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+                @if (isOwn)
+                {
+                    <a asp-controller="Profile" asp-action="Index" class="font-bold text-gray-900 dark:text-gray-100 hover:text-indigo-600 truncate">
+                        @Model.AuthorName
+                    </a>
+                }
+                else
+                {
+                    <a asp-controller="Friends" asp-action="Detail" asp-route-id="@Model.AuthorId" class="font-bold text-gray-900 dark:text-gray-100 hover:text-indigo-600 truncate">
+                        @Model.AuthorName
+                    </a>
+                }
+                <span class="text-gray-400 text-xs" title="@Model.CreatedAt.ToString("dd MMM yyyy HH:mm")">
+                    @Model.CreatedAt.ToString("dd MMM, HH:mm")
+                </span>
+                @if (Model.IsEdited)
+                {
+                    <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-[10px] font-bold text-gray-500 dark:text-gray-400 rounded">Editada</span>
+                }
+                <span class="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 text-[10px] font-bold text-indigo-700 dark:text-indigo-300 rounded inline-flex items-center gap-1">
+                    @if (Model.Privacy == LinkUpPro.Domain.Enums.PrivacyLevel.FriendsOnly)
+                    {
+                        <i data-lucide="users" class="w-3 h-3"></i>
+                    }
+                    else
+                    {
+                        <i data-lucide="lock" class="w-3 h-3"></i>
+                    }
+                    @privacyLabel
+                </span>
+            </div>
+        </div>
+
+        @if (isOwn)
+        {
+            <div class="flex items-center gap-1 shrink-0">
+                <a asp-action="EditPost" asp-controller="Home" asp-route-id="@Model.Id" class="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl transition-colors" title="Editar">
+                    <i data-lucide="edit-2" class="w-4 h-4"></i>
+                </a>
+                <form asp-action="DeletePost" asp-controller="Home" asp-route-id="@Model.Id" method="post" data-confirm="¿Está seguro que desea eliminar esta publicación?" data-confirm-text="Esta acción no se puede deshacer.">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors" title="Eliminar">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </form>
+            </div>
+        }
+    </div>
+
+    <!-- Content -->
+    <div class="px-4 pb-3">
+        <div class="post-content" data-full-content="@Model.Content">
+            <p class="whitespace-pre-wrap break-words text-gray-800 dark:text-gray-200 post-content-text">@Model.Content</p>
+        </div>
+        @if (Model.Content.Length > 300)
+        {
+            <button type="button" class="text-indigo-600 dark:text-indigo-400 text-sm font-medium hover:underline mt-1 show-more-btn">Ver más</button>
+        }
+    </div>
+
+    <!-- Media -->
+    @if (!string.IsNullOrEmpty(Model.MediaPath))
+    {
+        @if (Model.ContentType == LinkUpPro.Domain.Enums.PostContentType.Image)
+        {
+            <a href="@Model.MediaPath" target="_blank" class="block cursor-pointer group">
+                <div class="relative overflow-hidden">
+                    <img src="@Model.MediaPath" alt="Imagen" class="w-full max-h-[500px] object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
+                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                        <i data-lucide="maximize-2" class="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg"></i>
+                    </div>
+                </div>
+            </a>
+        }
+        else if (Model.ContentType == LinkUpPro.Domain.Enums.PostContentType.YouTubeVideo)
+        {
+            var videoId = LinkUpPro.WebApp.Helpers.YouTubeHelper.ExtractVideoId(Model.MediaPath);
+            var thumbnailUrl = LinkUpPro.WebApp.Helpers.YouTubeHelper.GetThumbnailUrl(videoId);
+            <div class="aspect-video w-full bg-black relative group cursor-pointer youtube-thumbnail" data-embed-url="@Model.MediaPath">
+                @if (!string.IsNullOrEmpty(thumbnailUrl))
+                {
+                    <img src="@thumbnailUrl" alt="YouTube video" class="w-full h-full object-cover" loading="lazy" />
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="w-14 h-14 bg-black/70 rounded-full flex items-center justify-center group-hover:bg-red-600 transition-colors shadow-lg">
+                            <i data-lucide="play" class="w-6 h-6 text-white fill-white ml-0.5"></i>
+                        </div>
+                    </div>
+                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors"></div>
+                }
+                else
+                {
+                    <iframe src="@Model.MediaPath" class="w-full h-full" frameborder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen; playsinline"
+                            allowfullscreen
+                            referrerpolicy="strict-origin-when-cross-origin"
+                            loading="lazy"
+                            title="YouTube video player"></iframe>
+                }
+            </div>
+        }
+    }
+
+    <!-- Actions Bar -->
+    <div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2">
+        <!-- Like -->
+        <button type="button"
+                class="reaction-btn flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all @(likeActive ? "bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400" : "text-gray-500 dark:text-gray-400 hover:bg-rose-50 dark:hover:bg-rose-900/20")"
+                data-post-id="@Model.Id" data-reaction="1"
+                aria-pressed="@(likeActive ? "true" : "false")"
+                aria-label="Me gusta@(Model.LikesCount > 0 ? $": {Model.LikesCount}" : "")">
+            <i data-lucide="heart" class="w-4 h-4 @(likeActive ? "fill-current" : "")"></i>
+            <span class="like-count" aria-hidden="true">@Model.LikesCount</span>
+        </button>
+
+        <!-- Dislike -->
+        <button type="button"
+                class="reaction-btn flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all @(dislikeActive ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" : "text-gray-500 dark:text-gray-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20")"
+                data-post-id="@Model.Id" data-reaction="2"
+                aria-pressed="@(dislikeActive ? "true" : "false")"
+                aria-label="No me gusta@(Model.DislikesCount > 0 ? $": {Model.DislikesCount}" : "")">
+            <i data-lucide="thumbs-down" class="w-4 h-4 @(dislikeActive ? "fill-current" : "")"></i>
+            <span class="dislike-count" aria-hidden="true">@Model.DislikesCount</span>
+        </button>
+
+        <div class="flex-1"></div>
+
+        <!-- Toggle comments -->
+        @if (Model.AllowComments)
+        {
+            <button type="button" class="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 px-3 py-1.5 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-sm font-medium transition-colors" data-toggle-comments="@Model.Id">
+                <i data-lucide="message-square" class="w-4 h-4"></i>
+                <span>@Model.CommentsCount @(Model.CommentsCount == 1 ? "comentario" : "comentarios")</span>
+            </button>
+        }
+        else
+        {
+            <span class="text-gray-400 dark:text-gray-500 text-sm italic flex items-center gap-1.5">
+                <i data-lucide="message-square-off" class="w-4 h-4"></i> Comentarios desactivados
+            </span>
+        }
+    </div>
+
+    <!-- Comments Section (collapsible) -->
+    <div id="comments-@Model.Id" class="hidden border-t border-gray-100 dark:border-gray-700">
+        @if (Model.Comments.Any())
+        {
+            <div class="px-4 py-3 space-y-3">
+                @foreach (var comment in Model.Comments)
+                {
+                    @await Html.PartialAsync("/Views/Posts/_CommentThread.cshtml", comment)
+                }
+            </div>
+        }
+        @if (Model.AllowComments)
+        {
+            <div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20">
+                @await Html.PartialAsync("/Views/Posts/_CommentForm.cshtml", new LinkUpPro.Application.ViewModels.CommentViewModels.CreateCommentViewModel { PostId = Model.Id })
+            </div>
+        }
+    </div>
+</article>

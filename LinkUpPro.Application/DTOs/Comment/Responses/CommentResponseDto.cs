@@ -8,6 +8,7 @@ public record CommentResponseDto(
     string? AuthorProfilePicture,
     string Content,
     bool IsEdited,
+    bool IsDeleted,
     DateTimeOffset CreatedAt,
     DateTimeOffset? UpdatedAt,
     long? ParentCommentId,

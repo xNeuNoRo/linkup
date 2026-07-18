@@ -1,0 +1,79 @@
+@model LinkUpPro.Application.ViewModels.CreditsViewModels.CreditsViewModel
+@{
+    ViewData["Title"] = "Créditos";
+}
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+        <div class="h-32 bg-gradient-to-r from-indigo-500 via-violet-500 to-pink-500"></div>
+        <div class="px-6 pb-6 -mt-12">
+            <div class="w-24 h-24 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-200 dark:shadow-indigo-900/50 border-4 border-white dark:border-gray-800">
+                <i data-lucide="link-2" class="w-12 h-12 text-white"></i>
+            </div>
+            <div class="mt-4">
+                <div class="flex items-center gap-3">
+                    <h1 class="text-3xl font-black text-gray-900 dark:text-gray-100">@Model.ProjectName</h1>
+                    <span class="px-2.5 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold rounded-full">v@(Model.Version)</span>
+                </div>
+                <p class="text-gray-500 dark:text-gray-400 mt-1">@Model.Description</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <div class="flex items-center gap-2 mb-6">
+            <div class="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                <i data-lucide="users" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
+            </div>
+            <h2 class="text-lg font-black text-gray-900 dark:text-gray-100">Equipo de Desarrollo</h2>
+        </div>
+
+        <div class="space-y-3">
+            @foreach (var member in Model.Team.Where(m => !m.IsMaster))
+            {
+                <a href="@member.GitHubUrl" target="_blank" class="flex items-center gap-4 p-4 rounded-2xl @member.HoverColor transition-all group border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
+                    <div class="w-12 h-12 rounded-xl @member.AvatarColor flex items-center justify-center text-white text-base font-black shadow-lg @member.AvatarShadow shrink-0">
+                        @member.Initials
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-black text-gray-900 dark:text-gray-100">@member.Name</p>
+                        <p class="text-xs font-black uppercase tracking-widest @member.RoleColor">@member.Role</p>
+                    </div>
+                    <i data-lucide="github" class="w-5 h-5 text-gray-300 dark:text-gray-600 @member.IconColor transition-colors shrink-0"></i>
+                </a>
+            }
+        </div>
+
+        <div class="my-6 mx-3 h-px bg-gray-200 dark:bg-gray-700"></div>
+
+        <div class="flex items-center gap-2 mb-4">
+            <div class="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                <i data-lucide="graduation-cap" class="w-4 h-4 text-amber-600 dark:text-amber-400"></i>
+            </div>
+            <h2 class="text-lg font-black text-gray-900 dark:text-gray-100">Esclavizador</h2>
+        </div>
+
+        <div class="flex items-center gap-4 p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 transition-all cursor-default">
+            <div class="w-12 h-12 rounded-xl bg-amber-500 flex items-center justify-center text-white text-base font-black shadow-lg shadow-amber-200 dark:shadow-amber-900/50 shrink-0">
+                @Model.Team.First(m => m.IsMaster).Initials
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-black text-gray-900 dark:text-gray-100">@Model.Team.First(m => m.IsMaster).Name</p>
+                <p class="text-xs font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">@Model.Team.First(m => m.IsMaster).Role</p>
+            </div>
+            <div class="p-2 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl">
+                <i data-lucide="crown" class="w-5 h-5 fill-amber-600 dark:fill-amber-400"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 text-center">
+        <div class="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+            <i data-lucide="heart" class="w-4 h-4 text-red-500 fill-red-500"></i>
+            <span>Hecho con pasión en</span>
+            <a href="https://itla.edu.do" target="_blank" class="font-bold text-indigo-600 dark:text-indigo-400 hover:underline">ITLA</a>
+        </div>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">LinkUp Pro v@(Model.Version) · @DateTime.Now.Year</p>
+    </div>
+</div>
+
+@section Scripts { <script>lucide.createIcons();</script> }

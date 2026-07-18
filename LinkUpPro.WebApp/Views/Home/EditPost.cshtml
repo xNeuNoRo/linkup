@@ -1,0 +1,121 @@
+@model LinkUpPro.Application.ViewModels.PostViewModels.UpdatePostViewModel
+@{
+    ViewData["Title"] = "Editar publicación";
+    var currentTypeImage = Model.ContentType == 1;
+    var currentTypeYouTube = Model.ContentType == 2;
+}
+
+<div class="max-w-3xl mx-auto">
+    <form asp-action="EditPost" asp-controller="Home" method="post" enctype="multipart/form-data" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 space-y-5">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="PostId" />
+
+        <div asp-validation-summary="ModelOnly" class="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3" role="alert"></div>
+
+        <div>
+            <h1 class="text-2xl font-black text-gray-900 dark:text-gray-100 mb-1">Editar publicación</h1>
+            <p class="text-gray-500 dark:text-gray-400 text-sm">Modifica el contenido de tu publicación. La fecha original se mantiene.</p>
+        </div>
+
+        <!-- Contenido -->
+        <div>
+            <label asp-for="Content" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"></label>
+            <textarea asp-for="Content" rows="4" maxlength="1000" class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none transition-all"></textarea>
+            <span asp-validation-for="Content" class="text-red-500 text-xs mt-1 block"></span>
+        </div>
+
+        <!-- Tipo Contenido (segment buttons) -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Tipo de contenido</label>
+            <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-0.5 w-fit" role="radiogroup" aria-label="Tipo de contenido">
+                <label class="relative flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all has-[:checked]:bg-white dark:has-[:checked]:bg-gray-600 has-[:checked]:text-gray-900 dark:has-[:checked]:text-gray-100 has-[:checked]:shadow-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                    <input type="radio" name="ContentType" value="1" @(currentTypeImage ? "checked" : "") data-edit-post-type="1" class="absolute opacity-0 w-0 h-0" />
+                    <i data-lucide="image" class="w-4 h-4"></i>
+                    <span>Imagen</span>
+                </label>
+                <label class="relative flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all has-[:checked]:bg-white dark:has-[:checked]:bg-gray-600 has-[:checked]:text-gray-900 dark:has-[:checked]:text-gray-100 has-[:checked]:shadow-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                    <input type="radio" name="ContentType" value="2" @(currentTypeYouTube ? "checked" : "") data-edit-post-type="2" class="absolute opacity-0 w-0 h-0" />
+                    <i data-lucide="video" class="w-4 h-4"></i>
+                    <span>Video</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Imagen actual (si existe) -->
+        @if (!string.IsNullOrEmpty(Model.CurrentImagePath))
+        {
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 space-y-2">
+                <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Imagen actual</p>
+                <img src="@Model.CurrentImagePath" class="max-h-48 rounded-xl" alt="Imagen actual" />
+                <p class="text-xs text-gray-500 dark:text-gray-400">Cargue una nueva imagen solo si desea reemplazarla.</p>
+            </div>
+        }
+
+        <!-- Campo Imagen -->
+        <div id="image-field-edit" class="@(currentTypeImage ? "" : "hidden")">
+            <label asp-for="ImageFile" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"></label>
+            <input type="file" name="ImageFile" accept=".jpg,.jpeg,.png,.webp" class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-900/30 dark:file:text-indigo-300" />
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Formatos: JPG, PNG, WEBP. Máximo 5 MB.</p>
+            <span asp-validation-for="ImageFile" class="text-red-500 text-xs mt-1 block"></span>
+        </div>
+
+        <!-- Enlace YouTube actual (si existe) -->
+        @if (!string.IsNullOrEmpty(Model.CurrentYouTubeUrl))
+        {
+            var videoId = LinkUpPro.WebApp.Helpers.YouTubeHelper.ExtractVideoId(Model.CurrentYouTubeUrl);
+            var thumbnailUrl = !string.IsNullOrEmpty(videoId) ? LinkUpPro.WebApp.Helpers.YouTubeHelper.GetThumbnailUrl(videoId) : null;
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 space-y-2">
+                <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Enlace de YouTube actual</p>
+                @if (!string.IsNullOrEmpty(thumbnailUrl))
+                {
+                    <img src="@thumbnailUrl" alt="YouTube preview" class="w-full max-h-48 rounded-xl object-cover" />
+                }
+                <p class="text-sm text-indigo-600 dark:text-indigo-400 break-all">@Model.CurrentYouTubeUrl</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Ingrese un nuevo enlace solo si desea reemplazarlo.</p>
+            </div>
+        }
+
+        <!-- Campo YouTube -->
+        <div id="youtube-field-edit" class="@(currentTypeYouTube ? "" : "hidden")">
+            <label asp-for="YouTubeUrl" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"></label>
+            <input type="url" name="YouTubeUrl" value="@Model.YouTubeUrl" placeholder="https://www.youtube.com/watch?v=..." class="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all" />
+            <span asp-validation-for="YouTubeUrl" class="text-red-500 text-xs mt-1 block"></span>
+        </div>
+
+        <!-- Privacidad + Comentarios -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-gray-100 dark:border-gray-700">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Privacidad</label>
+                <select name="Privacy" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    @if (Model.Privacy == 1) { <option value="1" selected>Solo amigos</option> } else { <option value="1">Solo amigos</option> }
+                    @if (Model.Privacy == 2) { <option value="2" selected>Solo yo</option> } else { <option value="2">Solo yo</option> }
+                </select>
+            </div>
+            <div class="self-end">
+                @await Html.PartialAsync("/Views/Shared/Components/_Switch.cshtml", (
+                    Name: "AllowComments",
+                    Checked: Model.AllowComments == true,
+                    Label: "Permitir comentarios",
+                    Description: (string?)null,
+                    Icon: "message-circle",
+                    Color: "indigo",
+                    Disabled: false,
+                    Id: (string?)null
+                ))
+            </div>
+        </div>
+
+        <div class="flex flex-col-reverse sm:flex-row gap-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+            <a asp-action="Index" class="flex-1 py-2.5 text-center bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                Volver atrás
+            </a>
+            <button type="submit" class="flex-1 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold rounded-xl hover:from-indigo-700 hover:to-violet-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50">
+                Guardar cambios
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

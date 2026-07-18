@@ -9,6 +9,7 @@ using LinkUpPro.Infrastructure.Identity.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Moq;
 using System.IO;
 
@@ -21,6 +22,8 @@ public class AccountServiceTests
     private readonly Mock<IEmailService> _emailServiceMock;
     private readonly Mock<IFileService> _fileServiceMock;
     private readonly Mock<IProfileService> _profileServiceMock;
+    private readonly Mock<IHttpContextAccessor> _httpContextAccessorMock;
+    private readonly Mock<ILogger<AccountService>> _loggerMock;
     private readonly AccountService _sut;
 
     static AccountServiceTests()
@@ -35,6 +38,8 @@ public class AccountServiceTests
         _emailServiceMock = new Mock<IEmailService>();
         _fileServiceMock = new Mock<IFileService>();
         _profileServiceMock = new Mock<IProfileService>();
+        _httpContextAccessorMock = new Mock<IHttpContextAccessor>();
+        _loggerMock = new Mock<ILogger<AccountService>>();
 
         var configMock = new Mock<IConfiguration>();
         configMock.Setup(c => c[It.IsAny<string>()]).Returns("test");
@@ -44,7 +49,9 @@ public class AccountServiceTests
             _signInManagerMock.Object,
             _emailServiceMock.Object,
             _fileServiceMock.Object,
-            _profileServiceMock.Object
+            _profileServiceMock.Object,
+            _httpContextAccessorMock.Object,
+            _loggerMock.Object
         );
     }
 

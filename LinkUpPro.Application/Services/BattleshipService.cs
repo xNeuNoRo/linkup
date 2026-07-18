@@ -1,9 +1,9 @@
 using LinkUpPro.Application.DTOs.Battleship.Requests;
 using LinkUpPro.Application.DTOs.Battleship.Responses;
-using LinkUpPro.Application.DTOs.Profile.Responses;
 using LinkUpPro.Application.Interfaces.Services;
 using LinkUpPro.Domain.Common;
 using LinkUpPro.Domain.Entities.Battleship;
+using LinkUpPro.Domain.Entities.Social;
 using LinkUpPro.Domain.Enums;
 using LinkUpPro.Domain.Exceptions;
 using LinkUpPro.Domain.Interfaces.Persistence;
@@ -18,18 +18,21 @@ public sealed class BattleshipService : IBattleshipService
     private readonly IBattleshipRepository _battleshipRepository;
     private readonly IFriendshipRepository _friendshipRepository;
     private readonly IProfileService _profileService;
+    private readonly INotificationRepository _notificationRepository;
     private readonly IUnitOfWork _unitOfWork;
 
     public BattleshipService(
         IBattleshipRepository battleshipRepository,
         IFriendshipRepository friendshipRepository,
         IProfileService profileService,
+        INotificationRepository notificationRepository,
         IUnitOfWork unitOfWork
     )
     {
         _battleshipRepository = battleshipRepository;
         _friendshipRepository = friendshipRepository;
         _profileService = profileService;
+        _notificationRepository = notificationRepository;
         _unitOfWork = unitOfWork;
     }
 
@@ -64,6 +67,21 @@ public sealed class BattleshipService : IBattleshipService
             );
 
         await _battleshipRepository.AddAsync(gameResult.Value);
+        await _unitOfWork.SaveChangesAsync();
+
+        // Notify opponent about the invitation
+        var creator = await _profileService.GetByIdAsync(creatorId);
+        var creatorName = creator is null
+            ? "Alguien"
+            : $"{creator.FirstName} {creator.LastName}".Trim();
+        var inviteNotif = Notification.CreateBattleshipGameInvited(
+            recipientId: request.OpponentId,
+            actorId: creatorId,
+            gameId: gameResult.Value.Id,
+            actorUserName: creatorName
+        );
+        if (inviteNotif.IsSuccess)
+            await _notificationRepository.AddAsync(inviteNotif.Value);
         await _unitOfWork.SaveChangesAsync();
 
         return Result<GameResponseDto>.Success(gameResult.Value.Adapt<GameResponseDto>());
@@ -132,6 +150,29 @@ public sealed class BattleshipService : IBattleshipService
                 _battleshipRepository.Update(game);
 
             await _unitOfWork.CommitAsync();
+
+            // Notify opponent when game starts (both players placed all ships)
+            if (game.Status == GameStatus.InProgress)
+            {
+                var player = await _profileService.GetByIdAsync(userId);
+                var playerName = player is null
+                    ? "Alguien"
+                    : $"{player.FirstName} {player.LastName}".Trim();
+                var opponentId = game.GetOpponentId(userId);
+                if (opponentId.IsSuccess)
+                {
+                    var startNotif = Notification.CreateBattleshipGameStarted(
+                        recipientId: opponentId.Value,
+                        actorId: userId,
+                        gameId: gameId,
+                        actorUserName: playerName
+                    );
+                    if (startNotif.IsSuccess)
+                        await _notificationRepository.AddAsync(startNotif.Value);
+                    await _unitOfWork.SaveChangesAsync();
+                }
+            }
+
             return Result.Success();
         }
         catch
@@ -202,7 +243,47 @@ public sealed class BattleshipService : IBattleshipService
 
         var isSunk =
             attackResult.Value.TargetShipId.HasValue
-            && opponentShips.Where(s => s.Id == attackResult.Value.TargetShipId).Any(s => s.IsSunk);
+            && opponentShips.Where(s => s.Id == attackResult.Value.TargetShipId.Value).Any(s => s.IsSunk);
+
+        if (isSunk)
+        {
+            var targetShipId = attackResult.Value.TargetShipId!.Value;
+            var attacker = await _profileService.GetByIdAsync(userId);
+            var attackerName = attacker is null
+                ? "Alguien"
+                : $"{attacker.FirstName} {attacker.LastName}".Trim();
+            var sunkShip = opponentShips.First(s => s.Id == targetShipId);
+            var shipSize = (int)sunkShip.Size;
+
+            // Notify defender that their ship was sunk
+            var sunkNotif = Notification.CreateBattleshipShipSunk(
+                recipientId: opponentId.Value,
+                actorId: userId,
+                gameId: gameId,
+                shipSize: shipSize,
+                actorUserName: attackerName
+            );
+            if (sunkNotif.IsSuccess)
+                await _notificationRepository.AddAsync(sunkNotif.Value);
+
+            // Notify attacker that they sunk a ship
+            // Use the defender as actor (ship owner) to avoid self-notification rule
+            var opponentProfile = await _profileService.GetByIdAsync(opponentId.Value);
+            var opponentName = opponentProfile is null
+                ? "Alguien"
+                : $"{opponentProfile.FirstName} {opponentProfile.LastName}".Trim();
+            var sunkByNotif = Notification.CreateBattleshipShipSunkByOpponent(
+                recipientId: userId,
+                actorId: opponentId.Value,
+                gameId: gameId,
+                shipSize: shipSize,
+                actorUserName: opponentName
+            );
+            if (sunkByNotif.IsSuccess)
+                await _notificationRepository.AddAsync(sunkByNotif.Value);
+
+            await _unitOfWork.SaveChangesAsync();
+        }
 
         return Result<AttackResultDto>.Success(
             new AttackResultDto(
@@ -390,6 +471,18 @@ public sealed class BattleshipService : IBattleshipService
 
     public async Task<Result<AttackBoardDto>> GetMyAttackBoardAsync(string userId, long gameId)
     {
+        var game = await _battleshipRepository.GetByIdAsync(gameId);
+        if (game is not null && game.IsPlayerInGame(userId))
+        {
+            var previousStatus = game.Status;
+            game.CheckAbandonment(DateTimeOffset.UtcNow);
+            if (game.Status != previousStatus)
+            {
+                _battleshipRepository.Update(game);
+                await _unitOfWork.SaveChangesAsync();
+            }
+        }
+
         return await GetAttackBoardAsync(userId, gameId, userId);
     }
 
@@ -460,23 +553,12 @@ public sealed class BattleshipService : IBattleshipService
             : game.WinnerId == opponentId ? opponentName
             : "Desconocido";
 
-        var myAttackBoardResult = await GetAttackBoardAsync(userId, gameId, userId);
-        var opponentAttackBoardResult = await GetAttackBoardAsync(userId, gameId, opponentId);
-        var myPlacementBoardResult = await GetPlacementBoardAsync(userId, gameId, userId);
+        var ships = await _battleshipRepository.GetShipsByGameAsync(gameId);
+        var allAttacks = await _battleshipRepository.GetAttacksByGameAsync(gameId);
 
-        if (
-            myAttackBoardResult.IsFailure
-            || opponentAttackBoardResult.IsFailure
-            || myPlacementBoardResult.IsFailure
-        )
-        {
-            return Result<GameResultDto>.Failure(
-                new DomainError(
-                    "Battleship.DataError",
-                    "No se pudo cargar la informacion de la partida."
-                )
-            );
-        }
+        var myAttackBoard = BuildAttackBoardFromData(game, allAttacks, userId);
+        var opponentAttackBoard = BuildAttackBoardFromData(game, allAttacks, opponentId);
+        var myPlacementBoard = BuildPlacementBoardFromData(ships, gameId, userId);
 
         return Result<GameResultDto>.Success(
             new GameResultDto(
@@ -488,12 +570,58 @@ public sealed class BattleshipService : IBattleshipService
                 duration,
                 result,
                 winner,
-                myAttackBoardResult.Value,
-                opponentAttackBoardResult.Value,
-                myPlacementBoardResult.Value
+                myAttackBoard,
+                opponentAttackBoard,
+                myPlacementBoard
             )
         );
     }
+
+    private static AttackBoardDto BuildAttackBoardFromData(
+        BattleshipGame game,
+        IReadOnlyCollection<BattleshipAttack> allAttacks,
+        string attackerId
+    )
+    {
+        var playerAttacks = allAttacks.Where(a => a.AttackerId == attackerId).ToArray();
+        var grid = new BoardCellState[DomainConstants.BoardSize, DomainConstants.BoardSize];
+
+        foreach (var attack in playerAttacks)
+        {
+            grid[attack.TargetX, attack.TargetY] = attack.IsHit
+                ? BoardCellState.Hit
+                : BoardCellState.Miss;
+        }
+
+        return new AttackBoardDto(
+            game.Id,
+            attackerId,
+            grid,
+            game.CurrentTurnUserId,
+            game.CurrentTurnUserId == attackerId,
+            game.IsFinished(),
+            game.WinnerId
+        );
+    }
+
+    private static PlacementBoardDto BuildPlacementBoardFromData(
+        IReadOnlyCollection<BattleshipShip> allShips,
+        long gameId,
+        string playerId
+    )
+    {
+        var ships = allShips.Where(s => s.PlayerId == playerId).ToArray();
+        var shipDtos = ships.Select(s =>
+        {
+            var cells = s.GetOccupiedCells()
+                .Select(c => new[] { (int)c.X, (int)c.Y })
+                .ToArray();
+            return new ShipPlacementDto(s.Id, s.Size, s.StartX, s.StartY, s.Direction, s.IsSunk, cells);
+        }).ToArray();
+
+        return new PlacementBoardDto(gameId, playerId, shipDtos);
+    }
+
 
     private async Task<Result<AttackBoardDto>> GetAttackBoardAsync(
         string requesterId,
@@ -512,13 +640,30 @@ public sealed class BattleshipService : IBattleshipService
             attackerId
         );
 
+        var opponentId = game.GetOpponentId(attackerId).Value;
+        var opponentShips = await _battleshipRepository.GetShipsByGameAndPlayerAsync(gameId, opponentId);
+
         var grid = new BoardCellState[DomainConstants.BoardSize, DomainConstants.BoardSize];
 
+        // First, mark all attacks
         foreach (var attack in attacks)
         {
             grid[attack.TargetX, attack.TargetY] = attack.IsHit
                 ? BoardCellState.Hit
                 : BoardCellState.Miss;
+        }
+
+        // Then, override with Sunk state for fully sunk ships
+        foreach (var ship in opponentShips)
+        {
+            if (ship.IsSunk)
+            {
+                var cells = ship.GetOccupiedCells();
+                foreach (var cell in cells)
+                {
+                    grid[cell.X, cell.Y] = BoardCellState.Sunk;
+                }
+            }
         }
 
         return Result<AttackBoardDto>.Success(
@@ -533,7 +678,6 @@ public sealed class BattleshipService : IBattleshipService
             )
         );
     }
-
     private async Task<Result<PlacementBoardDto>> GetPlacementBoardAsync(
         string requesterId,
         long gameId,

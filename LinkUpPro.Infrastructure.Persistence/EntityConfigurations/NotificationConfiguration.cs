@@ -17,6 +17,7 @@ public sealed class NotificationConfiguration : IEntityTypeConfiguration<Notific
         builder.Property(x => x.Type).IsRequired();
         builder.Property(x => x.Message).IsRequired().HasMaxLength(500);
         builder.Property(x => x.RelatedEntityId).IsRequired(false);
+        builder.Property(x => x.RelatedEntityType).IsRequired();
         builder.Property(x => x.IsRead).IsRequired().HasDefaultValue(false);
 
         // Auditoría
@@ -32,13 +33,8 @@ public sealed class NotificationConfiguration : IEntityTypeConfiguration<Notific
         builder
             .HasIndex(x => new { x.RecipientId, x.IsRead })
             .HasDatabaseName("IX_Notifications_Recipient_Unread");
-
-        // Relaciones
         builder
-            .HasOne<Post>()
-            .WithMany()
-            .HasForeignKey(x => x.RelatedEntityId)
-            .OnDelete(DeleteBehavior.SetNull)
-            .IsRequired(false);
+            .HasIndex(x => new { x.RelatedEntityType, x.RelatedEntityId })
+            .HasDatabaseName("IX_Notifications_RelatedEntity");
     }
 }
